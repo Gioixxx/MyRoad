@@ -1,7 +1,7 @@
 ---
 type: sprint
 tags: [memory, sprint]
-updated: [2026-08-07]
+updated: [2026-08-08]
 ---
 > Aggiornato da /sprint — sessione 2026-08-06: espansione mondo (12 nuovi paesi, 96 club reali su
 > CONCACAF/CAF/AFC) + nuova meccanica "Giant Killer" (sorpresa di coppa) + strumento diagnostico
@@ -10,7 +10,10 @@ updated: [2026-08-07]
 > Traits/archetipo di carriera + Shadow (debito morale), committata come 3965789, poi un refactor
 > di layout/styling (005d674) subito dopo — vedi voci dedicate più sotto. **Sessione 2026-08-07:**
 > rename completo "Carriera" → "My Road - L'Ascesa" (repo GitHub, launcher/exe, UI) — vedi
-> [[decisions]] per il dettaglio completo.
+> [[decisions]] per il dettaglio completo. **Sessione 2026-08-08:** persistenza dell'ultima identità
+> giocatore tra una carriera e l'altra (commit 43d892a); immagini reali dei trofei club/nazionale +
+> premi individuali differenziati per tipo + layout storico/corpo pagina (commit 3ab2020, 1c865ab)
+> — vedi [[decisions]] per il dettaglio completo di entrambe.
 
 # Sprint Corrente
 Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in [[tech-debt]].
@@ -442,6 +445,23 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   0.5.1.0 verificata) e allegato alla [release GitHub
   v0.5.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.5.1), con note che ripetono
   l'avviso già dato in v0.5.0 per chi ha ancora il vecchio `Carriera.exe`.
+
+- [x] **Immagini reali dei trofei (club/nazionale) + premi individuali differenziati + layout
+  storico/corpo pagina** (2026-08-08, commit 3ab2020 + 1c865ab, non ancora rilasciato/taggato a
+  fine di questa voce): su richiesta esplicita dell'utente, nuovo `TrophyImage.tsx` +
+  `COMPETITION_TROPHIES` (campo `strTrophy` di TheSportsDB, 33 competizioni coperte) mostrato
+  accanto al badge già esistente **solo** nell'overlay celebrativo `MomentOverlay.tsx`; `AwardBadge`
+  ora mostra un'immagine diversa per Pallone d'Oro/Player of the Season/capocannoniere (invertendo
+  la scelta "icona generica unica" del 2026-08-05, su decisione informata dell'utente che ha
+  accettato il rischio di marchio). Due problemi scoperti in corsa durante l'implementazione (foto
+  Golden Boot con logo "Barclays" visibile, icona "player of the season" che riproduceva la sagoma
+  della Coppa del Mondo) hanno cambiato la scelta finale delle immagini — vedi [[decisions]] per il
+  dettaglio completo. `MomentOverlay` ingrandito su richiesta dell'utente dopo aver visto la prima
+  versione. Nella stessa sessione, richiesta separata dell'utente: `CareerTable` ("Storico") spostato
+  da sotto il pannello decisioni a una terza colonna a destra (nuovo prop `compact`), corpo pagina
+  allargato su tutti gli step. 356 test (era 342), `tsc` pulito. **Verificato nel browser**: overlay
+  traguardo OVR con le nuove dimensioni, layout storico/corpo pagina su una viewport di 1568px.
+  **Non verificato dal vivo un vero overlay di trofeo/premio vinto** (RNG-gated) — vedi [[tech-debt]].
 
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo

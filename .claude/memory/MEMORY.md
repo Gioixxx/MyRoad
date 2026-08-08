@@ -1,14 +1,14 @@
 ---
 type: memory
 tags: [memory, index]
-updated: [2026-08-07]
+updated: [2026-08-08]
 ---
 
 # My Road - L'Ascesa — Next.js
 > Contesto persistente. Aggiornato da /remember. Vault Obsidian: vedi workflows/obsidian-vault.md.
 > Progetto rinominato da "Carriera" a "My Road - L'Ascesa" il 2026-08-07 — vedi [[decisions]] per il dettaglio del rename (repo GitHub, launcher/exe, UI). La cartella locale del repo resta fisicamente `C:\Dev\Carriera` (non rinominata, solo il nome logico del progetto/repo GitHub).
 
-**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso  **Aggiornamento:** 2026-08-07
+**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso  **Aggiornamento:** 2026-08-08
 
 ## Contesto
 Clone testuale di "Copero — Simulador de carrera" (https://copero.com.ar/juegos/simulador-carrera):
@@ -29,7 +29,12 @@ CAF/AFC) con una nuova meccanica "Giant Killer" (sorpresa di coppa), e (2026-08-
 successiva ancora) un sistema di **Traits/archetipo di carriera + Shadow (debito morale)** —
 vettori di personalità nascosti che derivano uno stile ("Bandiera"/"Mercenario"/"Showman"/
 "Professionista"/"Leader"/"Problema"), un meter privato che accumula scelte rischiose fino a
-scatenare uno scandalo forzato — vedi [[sprint]].
+scatenare uno scandalo forzato. Rinominato "Carriera" → "My Road - L'Ascesa" il 2026-08-07. Il
+2026-08-08: persistenza dell'ultima identità giocatore tra una carriera e l'altra (prefill del
+form di creazione), e immagini reali dei trofei di club/nazionale (accanto al badge, solo
+nell'overlay celebrativo) + premi individuali con immagine differenziata per tipo (invertendo la
+scelta di icona generica unica del 2026-08-05) + storico spostato in colonna a destra durante la
+partita — vedi [[sprint]] e [[decisions]].
 
 ## File memoria (carica su richiesta)
 > `@file.md` = import Claude · `[[file]]` = wikilink Obsidian (graph). Tieni entrambi.
@@ -46,7 +51,7 @@ scatenare uno scandalo forzato — vedi [[sprint]].
 - **Repo pubblica dal 2026-08-05** (era privata) — da qui in poi ogni nuovo asset/scelta (immagini, exe in `dist/`, licenze) va valutato assumendo visibilità pubblica, non più "solo io la vedo".
 - Il piano di implementazione dettagliato vive FUORI dal repo, in `C:\Users\Gioix\.claude\plans\piped-bouncing-cocke.md` — leggerlo prima di riprendere lo sviluppo, contiene le meccaniche osservate su 10+ carriere giocate sul sito originale.
 - Nell'originale gli award individuali (Pallone d'Oro) e le probabilità di nazionale/coppa continentale sono praticamente irraggiungibili anche in carriere-record — il clone li implementa con soglie deliberatamente più generose (vedi [[decisions]]).
-- Stemmi club/competizioni: hotlink TheSportsDB (mai download), integrati nella UI (`Club.crestUrl`, `COMPETITION_BADGES`) — vedi [[decisions]]. Premi individuali (Pallone d'Oro ecc.): icona generica Twemoji, deliberatamente NON una foto del trofeo reale (rischio trademark diverso dagli stemmi club, vedi [[decisions]]).
+- Stemmi club/competizioni: hotlink TheSportsDB (mai download), integrati nella UI (`Club.crestUrl`, `COMPETITION_BADGES`) — vedi [[decisions]]. Dal 2026-08-08 anche `COMPETITION_TROPHIES` (campo `strTrophy`, il trofeo fisico reale) mostrato accanto al badge **solo** nell'overlay celebrativo `MomentOverlay.tsx` — vedi [[decisions]]. Premi individuali (Pallone d'Oro/Player of the Season/capocannoniere): dal 2026-08-08 ciascuno ha un'immagine propria (`src/data/award-images.ts`), non più l'unica icona Twemoji generica identica per tutti e tre del 2026-08-05 — l'utente ha scelto esplicitamente immagini reali accettando il rischio di trademark non mitigato da una fonte "as is" come TheSportsDB; **due candidati scartati in corsa** per problemi scoperti solo visivamente (foto Golden Boot con logo sponsor "Barclays", icona "player of the season" che riproduceva la sagoma della Coppa del Mondo) — vedi [[decisions]] per il dettaglio, principio utile per qualunque futura ricerca immagini: verificare sempre visivamente il contenuto reale di un asset "reale" trovato, non solo la licenza testuale.
 - Eseguibile Windows: `dist/MyRoad.exe` (rinominato da `Carriera.exe` il 2026-08-07), **non più committato nel repo** dal 2026-08-05 (solo `.gitignore`d, distribuito via GitHub Release) — vedi [[decisions]] per la scelta tecnica (.NET/WebView2) e per la decisione di rimuoverlo dal tracking git, e `launcher/README.md` per come rigenerarlo.
 - Momenti celebrativi (trofeo/premio/convocazione nazionale) mostrati come overlay modale animato (`MomentOverlay.tsx`) con confetti, rispettando sempre `prefers-reduced-motion` — vedi [[decisions]].
 - Il launcher desktop ha un auto-updater (`UpdateChecker.cs`/`UpdateInstaller.cs`): controlla GitHub Releases all'avvio e si autosostituisce su conferma. **Chi taglia una release deve far combaciare il tag git (`vX.Y.Z`) con `package.json.version`**, altrimenti il check non funziona — vedi [[decisions]] e `launcher/README.md`.
@@ -59,3 +64,5 @@ scatenare uno scandalo forzato — vedi [[sprint]].
 - Traits/archetipo + Shadow (`lib/career/traits.ts`/`shadow.ts`, 2026-08-06): `Player.traits` (5 vettori 0-100) deriva un `ArchetypeId | null` a runtime (`deriveArchetype`, mai salvato), `Player.shadow` (debito morale 0-100) scatena scandalo forzato (categoria `"scandal"`) sopra soglia 50 e blocca la convocazione in nazionale sopra 75 — **soglie/formule di `shadow.ts` sono valori espliciti dati dall'utente, non tarati**, a differenza delle soglie archetipo in `traits.ts` che sono state tarate con l'harness. Solo la parte "scrittura" (scelte→delta) è implementata; la parte "lettura" (offerte/eventi pesati per archetipo) è backlog — vedi [[decisions]] e [[backlog]]. **Non ancora verificato end-to-end nel browser**, vedi [[tech-debt]].
 - `data/clubs.ts` copre ora 24 paesi/220 club (2026-08-06, era 10 paesi/124 club) — `Confederation` unificato a 5 valori (import da `@/data/countries`), `League.cup` **ora opzionale** (il Messico non ha coppa nazionale attiva). Arabia Saudita e Qatar restano senza club (ricerca interrotta su richiesta esplicita — vedi [[backlog]]). Nuovo `npm run sync-rosters` (`scripts/sync-league-rosters.ts`) per diagnosticare scostamenti dai roster reali nel tempo — vedi [[decisions]] per i limiti noti dell'API gratuita TheSportsDB scoperti costruendolo.
 - Nuova categoria di decisione `"cup-upset"` ("Giant Killer", 2026-08-06): un club di prestigio ≤1 sfida una corazzata in coppa nazionale, stesso mini-gioco `PenaltyShootout` della finale continentale — vedi [[decisions]].
+- Identità dell'ultimo giocatore creato persistita in `carriera:last-identity` (`src/lib/last-identity.ts`, 2026-08-08): `IdentityForm` si precompila con cognome/numero/piede/nazionalità/ruolo dell'ultima carriera iniziata (salvata in `startCareer`, non al ritiro) — chiave localStorage dedicata, nessun bump di `STORAGE_VERSION`.
+- `CareerTable` ("Storico") è ora una terza colonna a destra durante la partita (2026-08-08, `CareerGame.tsx`), non più impilata sotto il pannello decisioni — nuovo prop `compact` forza il layout a lista (era solo mobile) anche in questa colonna stretta a schermi larghi. Corpo pagina allargato su tutti gli step nella stessa sessione — vedi [[decisions]].

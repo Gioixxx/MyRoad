@@ -1,7 +1,7 @@
 ---
 type: tech-debt
 tags: [memory, tech-debt]
-updated: [2026-08-07]
+updated: [2026-08-08]
 ---
 
 # Tech Debt
@@ -161,9 +161,18 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
 - **Impatto:** rischio basso — un eventuale refactor futuro di `targetPrestige`/`eligibleClubs` potrebbe silenziosamente rompere la soglia senza che nessun test lo segnali, richiedendo di nuovo una verifica manuale nel browser per accorgersene.
 - **Risoluzione suggerita:** aggiungere in `decisions.test.ts` un test che chiami `generateTransferWindow`/`generateEndOfCycle` (o esponga `eligibleClubs` per il test) con un player OVR 84+ e assert che nessuna opzione abbia `club.country` in `EMERGING_MARKET_COUNTRIES`, più un test simmetrico sotto soglia che confermi che restano eleggibili.
 
+### Overlay trofeo+badge (TrophyImage) non verificato dal vivo con un vero evento di vittoria
+- **Priorità:** Media
+- **Area:** `src/components/features/career/MomentOverlay.tsx`, `TrophyImage.tsx`, `AwardBadge.tsx`
+- **Data:** 2026-08-08
+- **Descrizione:** la feature "immagini reali dei trofei accanto al badge + premi individuali differenziati" (vedi [[decisions]]) è coperta da 356 test verdi e ogni singolo URL immagine è stato verificato con una richiesta HTTP diretta prima di committarlo, ma **non è stato osservato dal vivo un vero overlay di trofeo/premio vinto** durante il playtest — solo l'overlay di traguardo OVR (stesso componente `MomentOverlay`, stesse nuove dimensioni, ma un ramo `visual` diverso da quello di trofeo/premio) è stato verificato nel browser. Un tentativo di forzare l'evento scrivendo un `lastOutcome` fittizio in `localStorage` e ricaricando la pagina non ha riprodotto l'overlay in modo affidabile (la sequenza `resolvePhase`/`seenOutcome` sembra gestire diversamente un `lastOutcome` iniettato rispetto a uno prodotto da un ciclo di gioco reale) — non approfondito oltre per limiti di tempo della sessione.
+- **Perché rimandato:** ottenere un vero trofeo/premio individuale richiede diversi cicli di gioco reali (RNG-gated, specialmente per i premi individuali che richiedono OVR alto) — non praticamente forzabile nel tempo di una sessione senza un dev-shortcut dedicato che oggi non esiste.
+- **Impatto:** rischio medio — il layout `flex items-end justify-center gap-3` con `TrophyImage` (104px) + `CompetitionBadge` (44px) affiancati non è mai stato visto renderizzato insieme nel browser; un problema di allineamento/proporzioni tra le due immagini (dimensioni native molto diverse tra loro a seconda della competizione) sarebbe visibile solo vincendo un trofeo vero.
+- **Risoluzione suggerita:** giocare/simulare una carriera abbastanza a lungo da vincere almeno un trofeo di club e un premio individuale nella stessa sessione, oppure costruire un dev-shortcut che permetta di forzare la coda di `moments` di `CareerGame.tsx` per il testing (utile anche per la voce sopra sui momenti celebrativi mai verificati del tutto).
+
 ## Priorità
 - **Alta:** —
-- **Media:** momenti celebrativi/timeline non verificati end-to-end; sistema "satisfaction" (Hall of Fame/record/milestone/titoli) non verificato end-to-end; bottone "Chiudi" non verificato nell'exe; ricalibrazione OVR/soglie "grande momento" non verificata end-to-end; espansione mondo/Giant Killer non verificate end-to-end; traits/archetipo + shadow non verificati end-to-end
+- **Media:** momenti celebrativi/timeline non verificati end-to-end; sistema "satisfaction" (Hall of Fame/record/milestone/titoli) non verificato end-to-end; bottone "Chiudi" non verificato nell'exe; ricalibrazione OVR/soglie "grande momento" non verificata end-to-end; espansione mondo/Giant Killer non verificate end-to-end; traits/archetipo + shadow non verificati end-to-end; overlay trofeo+badge non verificato dal vivo con un vero evento di vittoria (vedi sopra)
 - **Bassa:** soglia di ritiro automatico; generatori club-crisis con pesi di base uniformi tra loro; trofeo di club forse troppo comune dopo la ricalibrazione OVR (vedi sopra); promozione di campionato mai osservata esplicitamente nell'originale (vedi sopra); copertura parziale di `sync-league-rosters.ts` (vedi sopra); archetipo/shadow rari sotto scelta uniforme casuale, reachability reale non misurata (vedi sopra); wordmark "My Road - L'Ascesa" non verificato visivamente (vedi sopra); installazioni esistenti di Carriera.exe che non leggono le note di rilascio v0.5.0 (mitigato, vedi sopra); esclusione campionati emergenti (OVR≥84) senza test automatico dedicato (vedi sopra)
 
 ## Archiviato
