@@ -1,5 +1,6 @@
 import { Award as AwardIcon, Trophy } from "lucide-react";
 import type { Player } from "@/types/career";
+import { cn } from "@/lib/utils";
 import { ClubCrest } from "./ClubCrest";
 import { OvrBadge } from "./OvrBadge";
 
@@ -7,6 +8,8 @@ interface CareerTableProps {
   player: Player;
   /** Testo del placeholder mostrato nell'ultima riga mentre si genera il prossimo ciclo. */
   pendingLabel?: string;
+  /** Forza sempre il layout a lista (mobile), anche su schermi larghi — per colonne strette. */
+  compact?: boolean;
 }
 
 function TrophyChip({ count }: { count: number }) {
@@ -35,7 +38,7 @@ function AwardChip({ count }: { count: number }) {
   );
 }
 
-export function CareerTable({ player, pendingLabel }: CareerTableProps) {
+export function CareerTable({ player, pendingLabel, compact = false }: CareerTableProps) {
   const isGoalkeeper = player.position === "GK";
   const trophiesByAge = new Map<number, number>();
   for (const trophy of player.trophies) {
@@ -48,8 +51,8 @@ export function CareerTable({ player, pendingLabel }: CareerTableProps) {
 
   return (
     <div className="chalk-panel min-w-0 rounded-xl">
-      {/* Mobile: card rows — no horizontal scroll */}
-      <ul className="divide-y divide-(--color-border) md:hidden">
+      {/* Mobile (o colonna stretta con compact): card rows — no horizontal scroll */}
+      <ul className={cn("divide-y divide-(--color-border)", !compact && "md:hidden")}>
         {player.clubHistory.map((stint, index) => {
           const trophyCount = trophiesByAge.get(stint.ageTo) ?? 0;
           const awardCount = awardsByAge.get(stint.ageTo) ?? 0;
@@ -89,8 +92,8 @@ export function CareerTable({ player, pendingLabel }: CareerTableProps) {
         ) : null}
       </ul>
 
-      {/* Desktop: compact full-width table */}
-      <table className="hidden w-full table-fixed text-sm md:table">
+      {/* Desktop (non compact): tabella a tutta larghezza */}
+      <table className={cn("hidden w-full table-fixed text-sm", !compact && "md:table")}>
         <thead>
           <tr className="border-b border-(--color-border) text-left text-xs text-(--color-text-muted) uppercase">
             <th className="w-12 px-2 py-2 font-medium">Età</th>

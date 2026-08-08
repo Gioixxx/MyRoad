@@ -8,6 +8,7 @@ import { usePrefersReducedMotion } from "@/hooks/useMotion";
 import { Button } from "@/components/ui/Button";
 import { AwardBadge } from "./AwardBadge";
 import { CompetitionBadge } from "./CompetitionBadge";
+import { TrophyImage } from "./TrophyImage";
 
 export type CareerMoment =
   | { kind: "trophy"; trophy: Trophy }
@@ -99,21 +100,26 @@ export function MomentOverlay({ moment, onContinue }: MomentOverlayProps) {
     detail = moment.trophy.club
       ? `${moment.trophy.club.name} · ${moment.trophy.age} anni`
       : `Nazionale · ${moment.trophy.age} anni`;
-    visual = <CompetitionBadge competition={moment.trophy.competition} size={64} />;
+    visual = (
+      <span className="flex items-end justify-center gap-3">
+        <TrophyImage competition={moment.trophy.competition} size={104} />
+        <CompetitionBadge competition={moment.trophy.competition} size={44} />
+      </span>
+    );
   } else if (moment.kind === "award") {
     eyebrow = "Premio individuale";
     title = AWARD_LABELS[moment.award.type];
     detail = moment.award.club
       ? `${moment.award.club.name} · ${moment.award.age} anni`
       : `${moment.award.age} anni`;
-    visual = <AwardBadge size={64} />;
+    visual = <AwardBadge type={moment.award.type} size={88} />;
   } else if (moment.kind === "milestone") {
     eyebrow = "Traguardo";
     title = `OVR ${moment.ovr}`;
     detail = "Sei entrato in una nuova fascia di prestigio.";
     visual = (
-      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-(--color-ovr-gold)/20 text-(--color-ovr-gold)">
-        <Star size={32} aria-hidden="true" />
+      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-(--color-ovr-gold)/20 text-(--color-ovr-gold)">
+        <Star size={40} aria-hidden="true" />
       </span>
     );
   } else {
@@ -121,8 +127,8 @@ export function MomentOverlay({ moment, onContinue }: MomentOverlayProps) {
     title = "Convocato in nazionale!";
     detail = "Hai ricevuto la chiamata del CT.";
     visual = (
-      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-(--color-accent)/20 text-(--color-accent)">
-        <Flag size={32} aria-hidden="true" />
+      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-(--color-accent)/20 text-(--color-accent)">
+        <Flag size={40} aria-hidden="true" />
       </span>
     );
   }
@@ -151,7 +157,7 @@ export function MomentOverlay({ moment, onContinue }: MomentOverlayProps) {
         />
       ))}
 
-      <div className="animate-moment-in relative z-2 chalk-panel flex w-full max-w-sm flex-col items-center gap-5 rounded-2xl border-2 border-(--color-accent)/60 p-8 text-center shadow-2xl">
+      <div className="animate-moment-in relative z-2 chalk-panel flex w-full max-w-md flex-col items-center gap-5 rounded-2xl border-2 border-(--color-accent)/60 p-8 text-center shadow-2xl sm:p-10">
         <p className="font-display text-xs tracking-[0.35em] gold-metal-text">{eyebrow}</p>
         <div className="flex items-center justify-center">{visual}</div>
         <h2 id={titleId} className="font-display text-2xl text-(--color-text) sm:text-3xl">

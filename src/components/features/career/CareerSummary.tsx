@@ -202,7 +202,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
               key={`hl-award-${i}`}
               className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-(--color-ovr-gold)/35 bg-(--color-ovr-gold)/10 px-2.5 py-1 text-xs text-(--color-text)"
             >
-              <AwardBadge size={16} />
+              <AwardBadge type={a.type} size={16} />
               <span className="truncate">
                 {AWARD_LABELS[a.type]}
                 <span className="text-(--color-text-muted)"> · {a.age}</span>
@@ -368,7 +368,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
                 ))}
                 {awards.map((a, i) => (
                   <li key={`award-${i}`} className="flex min-w-0 items-center gap-2">
-                    <AwardBadge size={16} />
+                    <AwardBadge type={a.type} size={16} />
                     <span className="min-w-0 truncate text-(--color-text)">
                       {AWARD_LABELS[a.type]}
                       <span className="text-(--color-text-muted)">

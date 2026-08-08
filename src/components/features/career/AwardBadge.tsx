@@ -2,22 +2,24 @@
 
 import { useState } from "react";
 import { Award } from "lucide-react";
+import type { AwardType } from "@/types/career";
+import { AWARD_IMAGES } from "@/data/award-images";
 import { cn } from "@/lib/utils";
 
-// Icona trofeo stilizzata generica (Twemoji, CC BY 4.0) — non una foto del trofeo reale: i premi
-// individuali del gioco (Pallone d'Oro incluso) hanno meccaniche/soglie nostre, non quelle vere
-// su licenza, quindi si evita un'immagine che suggerisca un'associazione con l'ente reale.
-// Vedi .claude/research/team-crests.md sezione 6 per la valutazione completa.
+// Icona trofeo stilizzata generica (Twemoji, CC BY 4.0) — fallback se l'immagine reale del
+// premio (AWARD_IMAGES) non carica.
 const TWEMOJI_TROPHY_URL =
   "https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/1f3c6.svg";
 
 interface AwardBadgeProps {
+  type: AwardType;
   size?: number;
   className?: string;
 }
 
-export function AwardBadge({ size = 20, className }: AwardBadgeProps) {
+export function AwardBadge({ type, size = 20, className }: AwardBadgeProps) {
   const [failed, setFailed] = useState(false);
+  const url = AWARD_IMAGES[type];
 
   if (failed) {
     return (
@@ -30,9 +32,9 @@ export function AwardBadge({ size = 20, className }: AwardBadgeProps) {
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- hotlink esterno (Twemoji via CDN), non un asset locale: next/image richiederebbe unoptimized/remotePatterns senza benefici sotto export statico.
+    // eslint-disable-next-line @next/next/no-img-element -- hotlink esterno (Wikimedia Commons), non un asset locale: next/image richiederebbe unoptimized/remotePatterns senza benefici sotto export statico.
     <img
-      src={TWEMOJI_TROPHY_URL}
+      src={url ?? TWEMOJI_TROPHY_URL}
       alt=""
       aria-hidden="true"
       width={size}

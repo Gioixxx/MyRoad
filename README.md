@@ -89,6 +89,17 @@ Documentazione completa su packaging, WebView2 e aggiornamenti automatici: [`lau
 - `npm test` — suite Vitest (dominio + componenti)
 - `npm run simulate` — harness statistico ([`scripts/simulate-careers.ts`](scripts/simulate-careers.ts)) che simula migliaia di carriere e stampa le frequenze osservate di trofei, award, convocazioni e infortuni; usa la config separata `vitest.simulate.config.mts`
 
+### Crediti immagini
+
+Tutte le immagini di stemmi/badge/bandiere/trofei sono in hotlink a fonti esterne, mai scaricate o committate nel repository:
+
+- **Stemmi club, badge campionati/coppe/coppe continentali, trofei reali di club e nazionale**: [TheSportsDB](https://www.thesportsdb.com/) (dati sportivi fattuali, uso hobbistico)
+- **Bandiere nazionali**: [flagcdn.com](https://flagcdn.com/)
+- **Icona trofeo generica** (fallback): [Twemoji](https://github.com/jdecked/twemoji) — CC BY 4.0
+- **Pallone d'Oro** (icona premio): [Icone ballon d'or.svg](https://commons.wikimedia.org/wiki/File:Icone_ballon_d%27or.svg) su Wikimedia Commons, autore PBrieux — CC BY-SA 4.0
+- **Capocannoniere** (icona premio): medaglia d'oro Twemoji — CC BY 4.0 (l'unica foto reale trovata del trofeo Golden Boot mostrava il logo dello sponsor "Barclays", scartata per rischio di marchio)
+- **Player of the Season** (icona premio): coppa Twemoji generica — CC BY 4.0 (nessun trofeo reale unico esiste per questo premio; un candidato scartato riproduceva la sagoma della Coppa del Mondo, fuorviante)
+
 ---
 
 ## English
@@ -171,3 +182,14 @@ Full documentation on packaging, WebView2, and automatic updates: [`launcher/REA
 
 - `npm test` — Vitest suite (domain + components)
 - `npm run simulate` — statistical harness ([`scripts/simulate-careers.ts`](scripts/simulate-careers.ts)) that simulates thousands of careers and prints observed frequencies for trophies, awards, call-ups, and injuries; uses separate config `vitest.simulate.config.mts`
+
+### Image credits
+
+All crest/badge/flag/trophy images are hotlinked from external sources, never downloaded or committed to the repository:
+
+- **Club crests, league/cup/continental cup badges, real club and national team trophies**: [TheSportsDB](https://www.thesportsdb.com/) (factual sports data, hobbyist use)
+- **National flags**: [flagcdn.com](https://flagcdn.com/)
+- **Generic trophy icon** (fallback): [Twemoji](https://github.com/jdecked/twemoji) — CC BY 4.0
+- **Ballon d'Or** (award icon): [Icone ballon d'or.svg](https://commons.wikimedia.org/wiki/File:Icone_ballon_d%27or.svg) on Wikimedia Commons, author PBrieux — CC BY-SA 4.0
+- **Top scorer** (award icon): Twemoji gold medal — CC BY 4.0 (the only real Golden Boot trophy photo found showed the "Barclays" sponsor logo, dropped over trademark risk)
+- **Player of the Season** (award icon): generic Twemoji trophy — CC BY 4.0 (no single real trophy exists for this award; a discarded candidate matched the World Cup trophy's silhouette, which would have been misleading)

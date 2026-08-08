@@ -229,7 +229,7 @@ function OutcomeBanner({
 
         {outcome.newAward ? (
           <p className="flex items-center gap-2 text-sm font-medium text-(--color-ovr-gold)">
-            <AwardBadge size={18} />
+            <AwardBadge type={outcome.newAward.type} size={18} />
             {AWARD_LABELS[outcome.newAward.type]}
           </p>
         ) : null}
@@ -486,12 +486,12 @@ export function CareerGame() {
       className={cn(
         "mx-auto flex w-full min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden px-4",
         showPlayShell
-          ? "max-w-6xl gap-2 overflow-hidden py-2 sm:gap-3 sm:py-3"
+          ? "max-w-[88rem] gap-2 overflow-hidden py-2 sm:gap-3 sm:py-3"
           : showSummary
-            ? "max-w-6xl gap-2 overflow-y-auto py-2 sm:gap-3 sm:py-3 lg:overflow-hidden"
+            ? "max-w-[88rem] gap-2 overflow-y-auto py-2 sm:gap-3 sm:py-3 lg:overflow-hidden"
             : isIdentity
-              ? "max-w-5xl gap-2 overflow-hidden py-2 sm:py-3"
-              : "max-w-3xl gap-3 overflow-y-auto py-4 sm:py-6",
+              ? "max-w-6xl gap-2 overflow-hidden py-2 sm:py-3"
+              : "max-w-4xl gap-3 overflow-y-auto py-4 sm:py-6",
       )}
     >
       <audio ref={audioRef} src="/audio/passaggio-di-spogliatoio.mp3" loop preload="auto" className="hidden" />
@@ -601,7 +601,7 @@ export function CareerGame() {
             <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
               <CareerTimeline player={state.player} />
 
-              <div className="grid min-h-0 min-w-0 flex-1 gap-3 lg:grid-cols-[20rem_1fr] lg:items-stretch xl:grid-cols-[23rem_1fr]">
+              <div className="grid min-h-0 min-w-0 flex-1 gap-3 lg:grid-cols-[20rem_1fr_16rem] lg:items-stretch xl:grid-cols-[23rem_1fr_18rem]">
                 <div className="min-w-0 shrink-0 lg:max-h-full lg:overflow-y-auto">
                   <PlayerCard
                     player={state.player}
@@ -655,21 +655,22 @@ export function CareerGame() {
                       </Card>
                     ) : null}
                   </div>
+                </div>
 
-                  <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 lg:min-h-[22rem]">
-                    <p className="shrink-0 font-display text-xs tracking-[0.2em] text-(--color-text-muted) uppercase">
-                      Storico
-                    </p>
-                    <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
-                      <CareerTable
-                        player={state.player}
-                        pendingLabel={
-                          (resolvePhase === "season" || decisionExiting) && !isRetired
-                            ? "Ciclo in corso…"
-                            : undefined
-                        }
-                      />
-                    </div>
+                <div className="flex min-h-0 min-w-0 flex-col gap-2 lg:max-h-full">
+                  <p className="shrink-0 font-display text-xs tracking-[0.2em] text-(--color-text-muted) uppercase">
+                    Storico
+                  </p>
+                  <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+                    <CareerTable
+                      player={state.player}
+                      compact
+                      pendingLabel={
+                        (resolvePhase === "season" || decisionExiting) && !isRetired
+                          ? "Ciclo in corso…"
+                          : undefined
+                      }
+                    />
                   </div>
                 </div>
               </div>
