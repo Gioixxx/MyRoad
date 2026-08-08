@@ -38,14 +38,42 @@ export const COMPETITION_TROPHIES: Record<string, string> = {
   "KNVB Beker": "https://r2.thesportsdb.com/images/media/league/trophy/mfvzr81611677287.png",
   "Liga Profesional": "https://r2.thesportsdb.com/images/media/league/trophy/9sj4611777273081.png",
   "Copa Argentina": "https://r2.thesportsdb.com/images/media/league/trophy/qaas1x1735693766.png",
+  "Liga MX": "https://r2.thesportsdb.com/images/media/league/trophy/rpqwss1422012934.png",
+  MLS: "https://r2.thesportsdb.com/images/media/league/trophy/k50lm81684415987.png",
+  "US Open Cup": "https://r2.thesportsdb.com/images/media/league/trophy/8qs1ya1749724650.png",
+  "Canadian Premier League": "https://www.thesportsdb.com/images/media/league/trophy/xhb8ae1784004623.png",
+  "Canadian Championship": "https://www.thesportsdb.com/images/media/league/trophy/hpmz1l1784004504.png",
+  "Botola Pro": "https://r2.thesportsdb.com/images/media/league/trophy/5fjhsc1551439097.png",
+  "Ghana Premier League": "https://r2.thesportsdb.com/images/media/league/trophy/5p82xy1758093176.png",
+  "Egyptian Premier League": "https://r2.thesportsdb.com/images/media/league/trophy/x34anj1713893913.png",
+  "J1 League": "https://r2.thesportsdb.com/images/media/league/trophy/mbbzjn1750168223.png",
+  "Emperor's Cup": "https://r2.thesportsdb.com/images/media/league/trophy/mqxhib1751166276.png",
+  "K League 1": "https://r2.thesportsdb.com/images/media/league/trophy/y5ah3s1711189638.png",
+  "Korea Cup": "https://r2.thesportsdb.com/images/media/league/trophy/p1ewzn1782063303.png",
+  "A-League Men": "https://r2.thesportsdb.com/images/media/league/trophy/uxssyx1422266419.png",
+  "Australia Cup": "https://r2.thesportsdb.com/images/media/league/trophy/du068i1782340613.png",
+  "CONCACAF Champions Cup": "https://r2.thesportsdb.com/images/media/league/trophy/upac7t1780186383.png",
+  "CAF Champions League": "https://www.thesportsdb.com/images/media/league/trophy/oimgad1782708694.png",
+  "AFC Champions League Elite": "https://r2.thesportsdb.com/images/media/league/trophy/5dzvma1747117869.png",
 };
 
 /**
- * Competizioni con badge (COMPETITION_BADGES) ma senza `strTrophy` su TheSportsDB, o senza badge
- * affatto (CUP_BADGES_KNOWN_GAP) — nessun trofeo reale disponibile per queste chiavi. Usato da
- * competition-trophies.test.ts per non trattarle come regressione.
+ * Competizioni con badge (COMPETITION_BADGES) ma senza `strTrophy` su TheSportsDB (campo
+ * esplicitamente `null` nel payload, non un errore di rete — verificato 2026-08-08), o senza
+ * badge affatto (CUP_BADGES_KNOWN_GAP, Serie C) — nessun trofeo reale disponibile per queste
+ * chiavi. Usato da competition-trophies.test.ts per non trattarle come regressione.
  */
-export const TROPHY_KNOWN_GAP: readonly string[] = [];
+export const TROPHY_KNOWN_GAP: readonly string[] = [
+  "Ligue 1 Sénégalaise",
+  "NPFL",
+  "Ligue 1 Côte d'Ivoire",
+  "Coupe du Trône",
+  "Coupe du Sénégal",
+  "Nigeria Federation Cup",
+  "Ghana FA Cup",
+  "Egypt Cup",
+  "Coupe de Côte d'Ivoire",
+];
 
 export function getCompetitionTrophy(competition: string): string | undefined {
   return COMPETITION_TROPHIES[competition];
