@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { countries } from "@/data/countries";
+import { loadLastIdentity } from "@/lib/last-identity";
 import { JerseyCard } from "./JerseyCard";
 import { NationalitySelect } from "./NationalitySelect";
 import { PositionPicker } from "./PositionPicker";
@@ -22,11 +23,12 @@ interface FormErrors {
 }
 
 export function IdentityForm({ onSubmit }: IdentityFormProps) {
-  const [lastName, setLastName] = useState("");
-  const [number, setNumber] = useState<number | null>(10);
-  const [foot, setFoot] = useState<PreferredFoot>("right");
-  const [nationality, setNationality] = useState<string | null>(null);
-  const [position, setPosition] = useState<Position | null>(null);
+  const [lastIdentity] = useState(() => loadLastIdentity());
+  const [lastName, setLastName] = useState(lastIdentity?.lastName ?? "");
+  const [number, setNumber] = useState<number | null>(lastIdentity?.number ?? 10);
+  const [foot, setFoot] = useState<PreferredFoot>(lastIdentity?.foot ?? "right");
+  const [nationality, setNationality] = useState<string | null>(lastIdentity?.nationality ?? null);
+  const [position, setPosition] = useState<Position | null>(lastIdentity?.position ?? null);
   const [errors, setErrors] = useState<FormErrors>({});
 
   const country = countries.find((c) => c.name === nationality);

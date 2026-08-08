@@ -22,6 +22,7 @@ import {
   type LoopContext,
 } from "@/lib/career/loop";
 import { appendToArchive, buildArchiveEntry, clearGame, loadGame, saveGame } from "@/lib/career/storage";
+import { saveLastIdentity } from "@/lib/last-identity";
 
 export interface CycleOutcomeSummary {
   optionLabel: string;
@@ -129,6 +130,7 @@ export function useCareerGame(): UseCareerGame {
   const startCareer = useCallback((identity: PlayerIdentity, speed: GameSpeed) => {
     clearGame();
     archivedRef.current = false;
+    saveLastIdentity(identity);
     setState(buildInitialState(identity, speed));
   }, []);
 

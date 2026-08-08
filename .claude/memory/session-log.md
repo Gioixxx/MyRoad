@@ -9,6 +9,11 @@ Snapshot automatici del lavoro in corso, salvati da `save_context.py` su PreComp
 (feature `enforcementHooks`) e ricaricati all'avvio da `session_start.py`. Gestito automaticamente:
 le entry sotto sono sovrascritte per `sessionId` (rolling, ultime ~10). Vedi [[sprint]] per i task attivi.
 
+<!-- session:3e9f0529-3797-4ca4-8934-35c33a2e412c -->
+### Sessione — 2026-08-07
+- **Branch:** main · **Quando:** 2026-08-07→2026-08-07
+- **Comandi:** git
+
 <!-- session:1da85460-b5bc-492d-bf16-83dff565a459 -->
 ### Fixare il layout della card e tabella stagioni — 2026-08-06
 - **Branch:** main · **Quando:** 2026-08-06→2026-08-06
