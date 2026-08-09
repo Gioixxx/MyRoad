@@ -463,6 +463,17 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   traguardo OVR con le nuove dimensioni, layout storico/corpo pagina su una viewport di 1568px.
   **Non verificato dal vivo un vero overlay di trofeo/premio vinto** (RNG-gated) — vedi [[tech-debt]].
 
+- [x] **Release v0.6.0 pubblicata** (2026-08-09, commit b654676 + tag v0.6.0): bump
+  `package.json`/`package-lock.json` 0.5.1→0.6.0 (minor: persistenza ultima identità + immagini
+  reali trofei/premi + layout storico/corpo pagina, feature già committate l'8/8 ma mai
+  rilasciate). Durante la rigenerazione dell'exe, scoperto e risolto un fix necessario:
+  `npm run build` falliva con un panic Turbopack causato dal symlink tracciato `.claude/libs`
+  (punta fuori dalla repo) attraversato dalla scansione automatica dei source di Tailwind v4 —
+  risolto con `@source not "../../.claude";` in `globals.css`, vedi [[decisions]] per il
+  dettaglio completo. `dist/MyRoad.exe` rigenerato (FileVersion 0.6.0.0 verificata) e allegato
+  alla [release GitHub v0.6.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.6.0). 356 test
+  verdi, `tsc` pulito prima del tag.
+
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
 - `ClubStint` ora ha un campo `ovr` (OVR del giocatore alla fine di quel ciclo) — necessario per la CareerTable, che deve mostrare l'OVR storico per riga, non quello attuale
