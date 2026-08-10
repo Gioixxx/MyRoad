@@ -283,3 +283,88 @@ Registro scelte tecniche con motivazioni.
 - **Perché:** l'export statico è già pronto (nessuna modifica al codice applicativo necessaria), e Capacitor è lo standard de facto per questo esatto caso d'uso (bundlare un'app web statica client-only, senza backend, in un contenitore nativo) — molto meno codice custom rispetto a scrivere un `WebView`/`Activity` Android a mano nello stesso modo in cui è stato scritto il launcher desktop in C#. La build `assembleDebug` (non firmata) è sufficiente per l'obiettivo immediato dell'utente (test su un proprio dispositivo via sideload), rimandando la firma per una release distribuibile.
 - **Alternative:** TWA/Bubblewrap — scartata, richiede hosting pubblico live del sito con Digital Asset Links verificati sul dominio, che il progetto non ha (distribuzione solo via GitHub Release, mai stato live su un dominio pubblico); wrapper Android nativo scritto a mano (Kotlin/Java + WebView, mirror esatto del launcher .NET) — scartato, effort sproporzionato quando Capacitor risolve lo stesso identico problema con un tool maturo e mantenuto.
 - **Impatto:** `capacitor.config.ts` (nuovo), `android/` (nuovo, progetto nativo — build artifacts `app/src/main/assets/public`/`capacitor.config.json` esclusi dal tracking dal `.gitignore` di Capacitor stesso, stesso pattern già in uso per `dist/*.exe`), `resources/icon.png` (nuovo, sorgente per rigenerare le icone con `npx capacitor-assets generate --android`), `package.json`/`package-lock.json` (+`@capacitor/core`/`cli`/`android`, +`@capacitor/assets` in dev). **Non ancora deciso**: build release firmata + canale di distribuzione (GitHub Release come l'exe?), comportamento del bottone "Chiudi" del menu su Android (probabile no-op, non ancora verificato — stesso tipo di gap già noto per il caso desktop pre-fix) — vedi [[tech-debt]] e [[backlog]].
+
+### Potenziale dinamico + attributi granulari + PlayStyles — 3 delle 6 meccaniche proposte, scouting/staff/sharpness escluse
+- **Data:** 2026-08-10
+- **Decisione:** l'utente ha proposto 6 meccaniche ispirate a un gestionale (Potenziale Dinamico,
+  Piani di Sviluppo/Cambio Ruolo, Visione Tattica/Staff Tecnico, Rete Scouting/Vivaio, PlayStyles,
+  Match Sharpness). Ricognizione del codice: 2 di queste (Staff Tecnico, Scouting) presuppongono
+  la gestione di un'intera rosa/club (altri giocatori come entità, budget societario) — inesistenti
+  nel gioco, che segue **un solo calciatore**. Interpellato esplicitamente (`AskUserQuestion`, 3
+  domande), l'utente ha scelto: (1) escludere Scouting+Staff da questo piano (backlog), (2) per
+  Piani di Sviluppo/PlayStyles la profondità "pesante" — attributi granulari separati invece di
+  bonus a formule esistenti sul solo OVR, pur sapendo che tocca più file del motore, (3) escludere
+  Match Sharpness (il gioco procede a cicli di 1-3 stagioni, non a giorni — granularità incompatibile).
+  Implementate quindi 3 macro-feature in 3 fasi indipendenti e shippabili singolarmente (ognuna col
+  proprio bump `STORAGE_VERSION`, v5→v8):
+  1. **Potenziale dinamico** (`lib/career/potential.ts`): `Player.potential` (tetto OVR
+     individuale 30-99, sostituisce il fisso 99 uguale per tutti) rollato a fasce pesate alla
+     creazione, cresce nei cicli "breakout" (≥2 segnali su 3: obiettivo raggiunto, titolo di
+     stagione alto, record infranto — tutti dati già calcolati in `resolveCycle`, nessun nuovo
+     dato introdotto) e solo sotto i 27 anni.
+  2. **Attributi granulari + focus di allenamento + cambio ruolo funzionale**
+     (`lib/career/attributes.ts`): 5 attributi outfield (velocità/tiro/passaggio/difesa/fisico) o
+     4 da portiere (riflessi/presa/rinvio/piazzamento), pesati per ruolo (`OUTFIELD_ROLE_ATTRIBUTE_WEIGHTS`,
+     stesso stile di `ROLE_WEIGHTS` in `progression.ts`). Nuova categoria `"training-focus"`
+     (6/5 opzioni: un attributo a scelta o "bilanciato"). Cambio ruolo funzionale estende
+     `"position-change"` (prima puramente cosmetica, solo -2 OVR testuale, mai toccava
+     `player.position`): mappa di adiacenza hand-authored (`POSITION_CHANGE_ADJACENCY`, mai
+     GK↔outfield), gli attributi **non vengono rimappati** — restano gli stessi numeri e si
+     ripesano da soli sul nuovo ruolo.
+  3. **PlayStyles** (`lib/career/playstyles.ts`): 6 tratti sbloccabili per soglia attributo
+     (curler/playmaker/sprinter/brickwall/targetman/catlike), bonus concreti su formule esistenti
+     (proiezione gol/assist, infortuni, trofeo di club, callup) — **nome deliberatamente diverso
+     da `Traits`** (il tipo esistente per personalità/archetipo — Bandiera/Mercenario/ecc. —,
+     concetto completamente diverso, collisione da evitare).
+- **Vincolo di design trasversale rispettato**: `player.ovr` resta l'unico campo su cui agiscono
+  direttamente le decine di outcome narrativi esistenti (`ovrDelta` in `decisions.ts`) — mai
+  riscritti. Gli attributi influenzano l'OVR solo in `advanceSeasons`, con un termine di "pull"
+  bounded per ciclo verso la media pesata degli attributi (mai abbastanza da sovrastare la curva
+  età-based già calibrata o cancellare un `ovrDelta` narrativo appena applicato).
+- **Bug trovato e corretto con `npm run simulate`** (stesso principio già consolidato nel
+  progetto — mai fissare formule "a tavolino"): la prima versione di `distributeAttributeGrowth`
+  distribuiva il budget di crescita proporzionalmente ai pesi di ruolo (`share_i = weight_i`), ma
+  la riaggregazione pesata in `deriveOvrFromAttributes` (che usa **gli stessi pesi**) non
+  preserva la crescita totale — `sum(weight_i · share_i) = sum(weight_i²) < 1` (i pesi sono
+  frazioni). L'OVR derivato dagli attributi cresceva quindi molto più lento dell'OVR age-based,
+  il termine di pull diventava negativo e saturato ad ogni ciclo, e l'OVR di picco medio è
+  crollato da ~82 a 64 (97% delle carriere sotto 70) nel primo giro di `npm run simulate`.
+  Corretto normalizzando le quote in modo che la riaggregazione pesata dia per costruzione
+  esattamente il budget atteso: `share_i = boosted_i / Σ(weight_j · boosted_j)` — proprietà
+  garantita algebricamente indipendentemente dal focus di allenamento applicato, coperta da test
+  dedicato in `attributes.test.ts` (invariante anti-regressione). Dopo il fix, le frequenze sono
+  tornate in linea con la baseline pre-esistente (OVR di picco medio 82.8, trofeo club ~94-96%,
+  convocazione ~25-28%, trofeo nazionale ~4-5%).
+- **Effetto collaterale scoperto durante la diagnosi**: `simulation.ts::simulateCareer` non
+  passava il proprio `rng` a `createPlayer`, quindi il test smoke seedato (`simulation.test.ts`,
+  mulberry32 seed 42) non era in realtà completamente deterministico — il `potential` iniziale
+  veniva rollato con `Math.random()` reale anche dentro il test "a seed fisso". Corretto passando
+  `rng` esplicitamente; bug pre-esistente scoperto per caso durante la Fase 2, non introdotto da
+  questa sessione.
+- **Verificato**: 384 test (era 356), `tsc`/`npm run build`/lint puliti (solo i 4 warning
+  `react-hooks/set-state-in-effect` pre-esistenti, invariati). Playtest completo nel browser
+  (dopo un riavvio del dev server necessario — la sessione precedente aveva una CSS bundle
+  incompleta/stale con classi `sm:*` mancanti, causa ignota, risolta da un semplice restart):
+  badge potenziale, pannello attributi con barre, decisione "Piano di allenamento" (focus
+  specifico + bilanciato), chip "Focus: X", sblocco PlayStyle "Regista" con overlay dedicato e
+  chip sul cartellino, declino età-based degli attributi da veterano (37 anni) — tutti osservati
+  funzionanti in una singola carriera reale. **Non osservato dal vivo in questo giro**: la
+  decisione di cambio ruolo funzionale (categoria `"position-change"`, peso base 8 su ~13
+  categorie, non innescata nella carriera di playtest) — vedi [[tech-debt]].
+- **Alternative**: vedi le 3 domande poste all'utente sopra — profondità "leggera" per Piani di
+  Sviluppo/PlayStyles (bonus diretti a formule esistenti, niente nuovi attributi) scartata
+  esplicitamente dall'utente a favore della profondità pesante.
+- **Impatto**: `src/types/career.ts` (+`Attributes`/`AttributeKey`/`PlayStyleId`, +campi
+  `Player.potential`/`attributes`/`trainingFocus`/`playStyles`, +`DecisionCategory` `"training-focus"`,
+  +`DecisionOption.trainingFocus`/`newPosition`), 3 nuovi moduli dominio (`potential.ts`,
+  `attributes.ts`, `playstyles.ts`) + test dedicati, `engine.ts` (`createPlayer`/`applyDelta`/
+  `advanceSeasons` + nuovo `changePosition`), `loop.ts` (`processInjuries`, `resolveCycle`, nuovi
+  case categoria), `decisions.ts` (2 nuovi generatori, rimossa l'entry statica cosmetica
+  `position-change`), `progression.ts` (`projectOvr`+`potential`, nuova `sumOvrDeltaForAge`,
+  parametro `playStyles` sulle funzioni di proiezione stats), `injuries.ts`/`trophies.ts`
+  (parametri opzionali per i bonus PlayStyle), `storage.ts` (3 nuovi migratori a cascata,
+  `STORAGE_VERSION` 5→8), UI (`AttributesPanel.tsx` nuovo, `PlayerCard.tsx`/`CareerSummary.tsx`/
+  `MomentOverlay.tsx` per i nuovi chip/overlay), `scripts/simulate-careers.ts` (nuove sezioni di
+  report per potenziale e distribuzione PlayStyle). `eslint.config.mjs` (+`android/**` negli
+  ignore — gap pre-esistente scoperto ed esteso durante questa sessione, non correlato alle 3
+  feature ma corretto perché notato lungo il percorso).

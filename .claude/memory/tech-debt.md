@@ -170,10 +170,29 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
 - **Impatto:** rischio basso — un eventuale refactor futuro di `targetPrestige`/`eligibleClubs` potrebbe silenziosamente rompere la soglia senza che nessun test lo segnali, richiedendo di nuovo una verifica manuale nel browser per accorgersene.
 - **Risoluzione suggerita:** aggiungere in `decisions.test.ts` un test che chiami `generateTransferWindow`/`generateEndOfCycle` (o esponga `eligibleClubs` per il test) con un player OVR 84+ e assert che nessuna opzione abbia `club.country` in `EMERGING_MARKET_COUNTRIES`, più un test simmetrico sotto soglia che confermi che restano eleggibili.
 
+### Cambio ruolo funzionale (position-change) non osservato dal vivo nel browser
+- **Priorità:** Bassa
+- **Area:** `src/lib/career/decisions.ts` (`generatePositionChangeDecision`), `src/lib/career/engine.ts` (`changePosition`)
+- **Data:** 2026-08-10
+- **Descrizione:** durante il playtest della sessione "Potenziale + Attributi + PlayStyles" (vedi
+  [[decisions]]) sono state osservate dal vivo tutte le altre meccaniche nuove (potenziale, focus
+  di allenamento, sblocco PlayStyle, declino attributi da veterano), ma non la decisione di
+  cambio ruolo (categoria `"position-change"`, peso base 8 su ~13 categorie — non innescata nella
+  singola carriera giocata). Coperta da test unitari (`decisions.test.ts`/`loop.test.ts`) ma mai
+  vista renderizzata in UI con un vero cambio di `player.position` osservato in game.
+- **Perché rimandato:** RNG-gated come altri eventi minori; la sessione si è chiusa dopo una
+  copertura già ampia delle altre meccaniche.
+- **Impatto:** rischio basso — la logica è semplice (mappa di adiacenza statica + un campo
+  assegnato), ma un bug di rendering (es. le opzioni con `newPosition` che non mostrano il
+  ruolo target in modo leggibile) sarebbe visibile solo giocando abbastanza a lungo.
+- **Risoluzione suggerita:** in un futuro giro di playtest, giocare finché non compare "Cambio di
+  ruolo" e verificare che `player.position` cambi davvero e che il cartellino/pannello attributi
+  si aggiornino di conseguenza (nuovi pesi di ruolo, nuova posizione mostrata).
+
 ## Priorità
 - **Alta:** —
 - **Media:** momenti celebrativi/timeline non verificati end-to-end; sistema "satisfaction" (Hall of Fame/record/milestone/titoli) non verificato end-to-end; bottone "Chiudi" non verificato nell'exe; ricalibrazione OVR/soglie "grande momento" non verificata end-to-end; espansione mondo/Giant Killer non verificate end-to-end; traits/archetipo + shadow non verificati end-to-end
-- **Bassa:** soglia di ritiro automatico; generatori club-crisis con pesi di base uniformi tra loro; trofeo di club forse troppo comune dopo la ricalibrazione OVR (vedi sopra); promozione di campionato mai osservata esplicitamente nell'originale (vedi sopra); copertura parziale di `sync-league-rosters.ts` (vedi sopra); archetipo/shadow rari sotto scelta uniforme casuale, reachability reale non misurata (vedi sopra); wordmark "My Road - L'Ascesa" non verificato visivamente (vedi sopra); installazioni esistenti di Carriera.exe che non leggono le note di rilascio v0.5.0 (mitigato, vedi sopra); esclusione campionati emergenti (OVR≥84) senza test automatico dedicato (vedi sopra); bottone "Chiudi" non verificato sull'APK Android (vedi sopra)
+- **Bassa:** soglia di ritiro automatico; generatori club-crisis con pesi di base uniformi tra loro; trofeo di club forse troppo comune dopo la ricalibrazione OVR (vedi sopra); promozione di campionato mai osservata esplicitamente nell'originale (vedi sopra); copertura parziale di `sync-league-rosters.ts` (vedi sopra); archetipo/shadow rari sotto scelta uniforme casuale, reachability reale non misurata (vedi sopra); wordmark "My Road - L'Ascesa" non verificato visivamente (vedi sopra); installazioni esistenti di Carriera.exe che non leggono le note di rilascio v0.5.0 (mitigato, vedi sopra); esclusione campionati emergenti (OVR≥84) senza test automatico dedicato (vedi sopra); bottone "Chiudi" non verificato sull'APK Android (vedi sopra); cambio ruolo funzionale non osservato dal vivo (vedi sopra)
 
 ## Archiviato
 - **Overlay trofeo+badge (TrophyImage) non verificato dal vivo con un vero evento di vittoria** — risolto 2026-08-10: 2 agenti browser paralleli hanno giocato carriere reali fino a vincere un vero trofeo di club (Copa del Rey e La Liga con il Valencia/Málaga, 3 vittorie osservate in totale su 2 carriere indipendenti). Layout `flex items-end justify-center gap-3` (trofeo 104px + badge 44px) confermato pulito in tutte e 3 le istanze: nessuna immagine rotta, bottom-alignment corretto, proporzioni naturali (trofeo elemento dominante, badge companion), nessuna distorsione nonostante dimensioni native diverse tra competizioni (256×256 vs 512×512, entrambe quadrate). URL reali verificati via DOM: tutte le immagini `complete: true`. Non ancora osservato in questo giro: overlay premio individuale o convocazione in nazionale (entrambi RNG-gated più rari) — se emerge un problema specifico a quelle varianti andrà riaperta una voce dedicata, ma il rischio principale (layout badge+trofeo mai visto) è chiuso.

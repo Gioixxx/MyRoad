@@ -28,6 +28,37 @@ Funzionalità e idee a lungo termine. Prioritizzato pre-sprint → confluisce in
 
 ---
 
+### Rete Scouting/Vivaio e Visione Tattica/Staff Tecnico (gestione rosa/club)
+- **Priorità:** Bassa
+- **Tipo:** Feature
+- **Area:** nuovo dominio "club management" (rosa, budget societario) — inesistente oggi
+- **Descrizione:** 2 delle 6 meccaniche proposte dall'utente il 2026-08-10 (vedi [[decisions]]),
+  esplicitamente escluse dal piano "Potenziale + Attributi + PlayStyles" perché presuppongono la
+  gestione di un'intera rosa (altri giocatori come entità, budget di club separato dal
+  patrimonio personale, staff assumibile) — un sottosistema completamente estraneo al gioco
+  attuale (segui un solo calciatore). Se mai ripresa, l'utente ha indicato una possibile
+  reinterpretazione "leggera" single-player: osservatori come evento narrativo che ti nota/ti
+  procura offerte migliori, staff come mentore personale che accelera la TUA crescita — non
+  gestione di altri giocatori.
+- **Criteri accettazione:** da definire — richiede prima una decisione esplicita con l'utente su
+  quale delle due letture perseguire (leggera single-player vs vera gestione rosa/club, quest'ultima
+  un progetto enorme multi-sessione con nuovo modello dati).
+- **Stima:** Grande (gestione rosa vera) o Media (reinterpretazione leggera) — dipende dalla scelta.
+
+### Match Sharpness / gestione della forma (esclusa, granularità incompatibile)
+- **Priorità:** Bassa
+- **Tipo:** Feature
+- **Area:** `lib/career/loop.ts` (il gioco procede a cicli di 1-3 stagioni, non a giorni)
+- **Descrizione:** meccanica "bilanciamento quotidiano allenamento/riposo" proposta dall'utente
+  il 2026-08-10, esclusa esplicitamente (vedi [[decisions]]) perché la granularità richiesta
+  (giornaliera) non si adatta alla struttura attuale del gioco. Se mai ripresa, andrebbe adattata
+  al ciclo esistente: una scelta "allenamento intenso vs gestione carichi" per ciclo, con
+  bonus/rischio temporaneo — stesso pattern già usato per gli infortuni (`turnsRemaining` + tick).
+- **Criteri accettazione:** da definire in una sessione dedicata, se l'utente decide di riprenderla.
+- **Stima:** Piccola-media, riusando il pattern `Injury` esistente.
+
+---
+
 ### Promozione/retrocessione estesa oltre i 4 paesi multi-tier attuali
 - **Priorità:** Bassa
 - **Tipo:** Feature
@@ -95,7 +126,7 @@ Funzionalità e idee a lungo termine. Prioritizzato pre-sprint → confluisce in
 ## Priorità
 - **Alta:** —
 - **Media:** pool offerte/eventi filtrati per archetipo/shadow; relazioni NPC persistenti (§2, vedi sopra)
-- **Bassa:** promozione/retrocessione estesa oltre i 4 paesi attuali; trofeo continentale di club assegnabile offscreen; nuovo evento "Sostanza misteriosa" (doping); nuovo evento "Fan backlash" (da ricercare); club per Arabia Saudita e Qatar (completare l'espansione mondo); ritiro forzato/squalifica multi-ciclo a shadow≥90 (vedi sopra)
+- **Bassa:** promozione/retrocessione estesa oltre i 4 paesi attuali; trofeo continentale di club assegnabile offscreen; nuovo evento "Sostanza misteriosa" (doping); nuovo evento "Fan backlash" (da ricercare); club per Arabia Saudita e Qatar (completare l'espansione mondo); ritiro forzato/squalifica multi-ciclo a shadow≥90 (vedi sopra); Rete Scouting/Vivaio + Staff Tecnico (gestione rosa/club, vedi sopra); Match Sharpness (esclusa per granularità, vedi sopra)
 
 ## Archiviato
 - **Icone trofeo/premio inline sulla riga della tabella carriera** — già implementata (non un nuovo item): osservata nell'originale durante un playtest dal vivo il 2026-08-06 e inizialmente registrata per errore come backlog aperto, senza verificare lo stato attuale del codice. `CareerTable.tsx` (`TrophyChip`/`AwardChip`, righe 12-36) mostra già icone trofeo/premio per riga, aggregate per `stint.ageTo` — introdotto nel commit `28d5b6f` (2026-08-06) ma non documentato esplicitamente all'epoca (stesso pattern già visto con "Momenti di carriera celebrativi", vedi [[decisions]]). Corretto durante la verifica pre-implementazione di questo stesso item.

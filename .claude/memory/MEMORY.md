@@ -38,7 +38,13 @@ partita. Il 2026-08-10: correzione leggibilità delle label "kicker" in tutta l'
 (font troppo piccoli) e primo **packaging Android** via Capacitor — l'export statico Next.js
 (già usato per l'exe desktop) wrappato in un progetto nativo Android con icona coerente
 all'exe, verificato end-to-end su un tablet reale via ADB (menu, creazione identità, offerte
-club, overlay traguardi) — vedi [[sprint]] e [[decisions]].
+club, overlay traguardi). Nella stessa giornata (sessione successiva): 3 nuove meccaniche di
+motore — **Potenziale dinamico** (tetto OVR individuale che cresce nei cicli "breakout"),
+**Attributi granulari** (velocità/tiro/passaggio/difesa/fisico o riflessi/presa/rinvio/piazzamento
+per i portieri, con focus di allenamento mirato e cambio ruolo funzionale) e **PlayStyles**
+(6 tratti sbloccabili con bonus concreti) — 3 delle 6 meccaniche gestionali proposte dall'utente,
+le altre (Scouting/Staff/Match Sharpness) escluse perché richiederebbero gestire un'intera
+rosa/club, estranea al gioco single-player — vedi [[sprint]] e [[decisions]].
 
 ## File memoria (carica su richiesta)
 > `@file.md` = import Claude · `[[file]]` = wikilink Obsidian (graph). Tieni entrambi.

@@ -16,7 +16,12 @@ updated: [2026-08-10]
 > — vedi [[decisions]] per il dettaglio completo di entrambe. **Sessione 2026-08-10:** leggibilità
 > label "kicker" corrette in tutta l'app (commit 1b718f3) + packaging Android via Capacitor con
 > icona coerente all'exe, verificato end-to-end su tablet reale via ADB (commit 4fbb899) — vedi
-> [[decisions]] per il dettaglio completo di entrambe.
+> [[decisions]] per il dettaglio completo di entrambe. **Sessione 2026-08-10 (stesso giorno,
+> sessione successiva):** 3 delle 6 meccaniche gestionali proposte dall'utente — Potenziale
+> dinamico, Attributi granulari + Focus allenamento + Cambio ruolo funzionale, PlayStyles —
+> committate come f45c6cf (Scouting/Staff/Match Sharpness escluse, vedi [[backlog]]). Bug di
+> bilanciamento trovato e corretto con `npm run simulate` (OVR di picco medio crollato 82→64,
+> causa matematica identificata e risolta) — vedi [[decisions]] per il dettaglio completo.
 
 # Sprint Corrente
 Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in [[tech-debt]].
