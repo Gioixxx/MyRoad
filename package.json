@@ -13,6 +13,9 @@
     "sync-rosters": "vitest run --config vitest.sync-rosters.config.mts --reporter=verbose"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.28.0",
     "next": "16.3.0",
@@ -22,6 +25,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
