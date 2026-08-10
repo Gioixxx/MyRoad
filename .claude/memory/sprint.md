@@ -504,6 +504,16 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   Android reale**: build rigenerata (`npm run build` → `cap sync` → `gradle assembleDebug`) e
   installata via ADB, app avviata senza crash.
 
+- [x] **Release v0.7.0 pubblicata** (2026-08-10, commit 99fbcf8+6e8b531 + tag v0.7.0): bump
+  `package.json`/`package-lock.json` 0.6.0→0.7.0 (minor, coerente col criterio già usato per
+  bundle di feature/rebalancing ad ampio raggio — qui un bug reale + 5 meccaniche ricalibrate).
+  `dist/MyRoad.exe` rigenerato via `scripts/build-launcher.ps1` e allegato alla [release GitHub
+  v0.7.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.7.0). 386 test verdi, `tsc` pulito
+  prima del tag. APK Android rigenerato nella stessa sessione (`npm run build` → `cap sync
+  android` → `gradle assembleDebug`) e installato via ADB sul tablet di test dell'utente per il
+  playtest — **non allegato alla release** (nessuna decisione ancora presa su firma/canale di
+  distribuzione pubblica dell'APK, vedi [[backlog]]), solo consegnato localmente.
+
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
 - `ClubStint` ora ha un campo `ovr` (OVR del giocatore alla fine di quel ciclo) — necessario per la CareerTable, che deve mostrare l'OVR storico per riga, non quello attuale
