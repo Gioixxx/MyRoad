@@ -1,7 +1,7 @@
 ---
 type: sprint
 tags: [memory, sprint]
-updated: [2026-08-08]
+updated: [2026-08-10]
 ---
 > Aggiornato da /sprint — sessione 2026-08-06: espansione mondo (12 nuovi paesi, 96 club reali su
 > CONCACAF/CAF/AFC) + nuova meccanica "Giant Killer" (sorpresa di coppa) + strumento diagnostico
@@ -13,7 +13,10 @@ updated: [2026-08-08]
 > [[decisions]] per il dettaglio completo. **Sessione 2026-08-08:** persistenza dell'ultima identità
 > giocatore tra una carriera e l'altra (commit 43d892a); immagini reali dei trofei club/nazionale +
 > premi individuali differenziati per tipo + layout storico/corpo pagina (commit 3ab2020, 1c865ab)
-> — vedi [[decisions]] per il dettaglio completo di entrambe.
+> — vedi [[decisions]] per il dettaglio completo di entrambe. **Sessione 2026-08-10:** leggibilità
+> label "kicker" corrette in tutta l'app (commit 1b718f3) + packaging Android via Capacitor con
+> icona coerente all'exe, verificato end-to-end su tablet reale via ADB (commit 4fbb899) — vedi
+> [[decisions]] per il dettaglio completo di entrambe.
 
 # Sprint Corrente
 Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in [[tech-debt]].

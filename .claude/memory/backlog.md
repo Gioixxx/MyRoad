@@ -1,7 +1,7 @@
 ---
 type: backlog
 tags: [memory, backlog]
-updated: [2026-08-06]
+updated: [2026-08-10]
 ---
 
 # Backlog
@@ -15,6 +15,16 @@ Funzionalità e idee a lungo termine. Prioritizzato pre-sprint → confluisce in
 - **Descrizione:** [valore atteso]
 - **Criteri accettazione:** [come capire che è fatto]
 - **Stima:** Piccola / Media / Grande
+
+---
+
+### Build Android release firmata + canale di distribuzione
+- **Priorità:** Media
+- **Tipo:** Feature
+- **Area:** `android/`, packaging
+- **Descrizione:** oggi esiste solo l'APK di debug (non firmato, generato con `assembleDebug`) usato per il primo test su tablet — vedi [[decisions]]. Serve decidere: generare un keystore per una build `assembleRelease` firmata (necessario per aggiornare l'app nel tempo senza disinstallare — Android rifiuta un update con firma diversa), e se distribuirla via GitHub Release come `dist/MyRoad.exe` (nessun auto-updater equivalente pronto, l'utente dovrebbe reinstallare a mano ad ogni versione) oppure valutare altro canale.
+- **Criteri accettazione:** keystore generato e conservato in modo sicuro (mai committato), build `assembleRelease` firmata funzionante, un APK allegato a una GitHub Release come per l'exe.
+- **Stima:** Piccola-media — la parte tecnica (gradle signing config) è breve, il grosso è decidere e documentare il processo di conservazione del keystore.
 
 ---
 

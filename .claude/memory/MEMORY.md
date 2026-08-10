@@ -8,7 +8,7 @@ updated: [2026-08-08]
 > Contesto persistente. Aggiornato da /remember. Vault Obsidian: vedi workflows/obsidian-vault.md.
 > Progetto rinominato da "Carriera" a "My Road - L'Ascesa" il 2026-08-07 — vedi [[decisions]] per il dettaglio del rename (repo GitHub, launcher/exe, UI). La cartella locale del repo resta fisicamente `C:\Dev\Carriera` (non rinominata, solo il nome logico del progetto/repo GitHub).
 
-**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso  **Aggiornamento:** 2026-08-08
+**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso  **Aggiornamento:** 2026-08-10
 
 ## Contesto
 Clone testuale di "Copero — Simulador de carrera" (https://copero.com.ar/juegos/simulador-carrera):
@@ -34,7 +34,11 @@ scatenare uno scandalo forzato. Rinominato "Carriera" → "My Road - L'Ascesa" i
 form di creazione), e immagini reali dei trofei di club/nazionale (accanto al badge, solo
 nell'overlay celebrativo) + premi individuali con immagine differenziata per tipo (invertendo la
 scelta di icona generica unica del 2026-08-05) + storico spostato in colonna a destra durante la
-partita — vedi [[sprint]] e [[decisions]].
+partita. Il 2026-08-10: correzione leggibilità delle label "kicker" in tutta l'interfaccia
+(font troppo piccoli) e primo **packaging Android** via Capacitor — l'export statico Next.js
+(già usato per l'exe desktop) wrappato in un progetto nativo Android con icona coerente
+all'exe, verificato end-to-end su un tablet reale via ADB (menu, creazione identità, offerte
+club, overlay traguardi) — vedi [[sprint]] e [[decisions]].
 
 ## File memoria (carica su richiesta)
 > `@file.md` = import Claude · `[[file]]` = wikilink Obsidian (graph). Tieni entrambi.
