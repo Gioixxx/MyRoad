@@ -158,7 +158,7 @@ export function MomentOverlay({ moment, onContinue }: MomentOverlayProps) {
       ))}
 
       <div className="animate-moment-in relative z-2 chalk-panel flex w-full max-w-md flex-col items-center gap-5 rounded-2xl border-2 border-(--color-accent)/60 p-8 text-center shadow-2xl sm:p-10">
-        <p className="font-display text-xs tracking-[0.35em] gold-metal-text">{eyebrow}</p>
+        <p className="font-display text-sm tracking-[0.25em] gold-metal-text">{eyebrow}</p>
         <div className="flex items-center justify-center">{visual}</div>
         <h2 id={titleId} className="font-display text-2xl text-(--color-text) sm:text-3xl">
           {title}

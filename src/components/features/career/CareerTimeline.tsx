@@ -42,7 +42,7 @@ export function CareerTimeline({ player }: CareerTimelineProps) {
 
   return (
     <div className="animate-step-in chalk-panel shrink-0 rounded-xl px-4 py-3 sm:px-5">
-      <p className="mb-3 text-[11px] font-semibold tracking-[0.15em] text-(--color-text-muted) uppercase">
+      <p className="mb-3 text-xs font-semibold tracking-[0.12em] text-(--color-text-muted) uppercase">
         Percorso di carriera · {STARTING_AGE}–{CAREER_MAX_AGE} anni
       </p>
       <div className="relative mt-3 h-7">

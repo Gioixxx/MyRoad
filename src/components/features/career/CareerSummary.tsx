@@ -86,7 +86,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
       {/* Hero — compact, no wasted space */}
       <Card className="flex shrink-0 flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5">
         <div className="min-w-0 flex-1 text-center sm:text-left">
-          <p className="font-display text-[10px] tracking-[0.35em] gold-metal-text">
+          <p className="font-display text-xs tracking-[0.25em] gold-metal-text">
             Carriera conclusa
           </p>
           <h2 className="font-display text-2xl leading-tight text-(--color-text) sm:text-3xl">
@@ -103,19 +103,19 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
         <div className="grid grid-cols-4 gap-1.5 sm:w-[22rem] sm:shrink-0">
           <div className="flex flex-col items-center gap-0.5 rounded-lg bg-(--color-surface-raised) py-2">
             <OvrBadge ovr={peakOvr(player)} size="sm" />
-            <p className="text-[9px] tracking-wide text-(--color-text-muted) uppercase">Ovr</p>
+            <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">Ovr</p>
           </div>
           <div className="flex flex-col items-center justify-center rounded-lg bg-(--color-surface-raised) py-2">
             <p className="font-display text-lg leading-none text-(--color-text)">
               {player.career.apps}
             </p>
-            <p className="text-[9px] tracking-wide text-(--color-text-muted) uppercase">Pres.</p>
+            <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">Pres.</p>
           </div>
           <div className="flex flex-col items-center justify-center rounded-lg bg-(--color-surface-raised) py-2">
             <p className="font-display text-lg leading-none text-(--color-text)">
               {isGoalkeeper ? (player.career.goalsAgainst ?? 0) : player.career.goals}
             </p>
-            <p className="text-[9px] tracking-wide text-(--color-text-muted) uppercase">
+            <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">
               {isGoalkeeper ? "Gol subiti" : "Gol"}
             </p>
           </div>
@@ -123,7 +123,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
             <p className="font-display text-lg leading-none text-(--color-text)">
               {isGoalkeeper ? (player.career.cleanSheets ?? 0) : player.career.assists}
             </p>
-            <p className="text-[9px] tracking-wide text-(--color-text-muted) uppercase">
+            <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">
               {isGoalkeeper ? "Clean sheet" : "Ast."}
             </p>
           </div>
@@ -149,7 +149,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
 
       {hofWins.length > 0 ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <span className="font-display text-[10px] tracking-[0.2em] gold-metal-text uppercase">
+          <span className="font-display text-sm tracking-[0.15em] gold-metal-text uppercase">
             Hall of Fame
           </span>
           {hofWins.map((win) => (
@@ -165,7 +165,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
 
       {recentTitles.length > 0 ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <span className="font-display text-[10px] tracking-[0.2em] text-(--color-ovr-gold) uppercase">
+          <span className="font-display text-sm tracking-[0.15em] text-(--color-ovr-gold) uppercase">
             Titoli di stagione
           </span>
           {recentTitles.map((t, i) => (
@@ -182,7 +182,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
 
       {hasHighlights ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <span className="font-display text-[10px] tracking-[0.2em] text-(--color-ovr-gold) uppercase">
+          <span className="font-display text-sm tracking-[0.15em] text-(--color-ovr-gold) uppercase">
             Momenti
           </span>
           {highlightTrophies.map((t, i) => (
@@ -221,7 +221,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
       {/* Detail panels — fill remaining viewport, scroll inside */}
       <div className="grid min-h-0 min-w-0 gap-3 lg:flex-1 lg:grid-cols-2 lg:overflow-hidden">
         <Card className="flex min-h-0 min-w-0 flex-col p-3 sm:p-4 lg:overflow-hidden">
-          <h3 className="font-display mb-2 shrink-0 text-xs tracking-[0.2em] text-(--color-text-muted) uppercase">
+          <h3 className="font-display mb-2 shrink-0 text-sm tracking-[0.15em] text-(--color-text-muted) uppercase">
             Club
           </h3>
           {clubs.length > 0 ? (
@@ -311,7 +311,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
 
         <div className="flex min-h-0 min-w-0 flex-col gap-3 lg:overflow-hidden">
           <Card className="shrink-0 p-3 sm:p-4">
-            <h3 className="font-display mb-2 text-xs tracking-[0.2em] text-(--color-text-muted) uppercase">
+            <h3 className="font-display mb-2 text-sm tracking-[0.15em] text-(--color-text-muted) uppercase">
               Nazionale
             </h3>
             {player.nationalTeam.called ? (
@@ -320,7 +320,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
                   <p className="font-display text-base text-(--color-text)">
                     {player.nationalTeam.apps}
                   </p>
-                  <p className="text-[9px] tracking-wide text-(--color-text-muted) uppercase">
+                  <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">
                     Pres.
                   </p>
                 </div>
@@ -328,7 +328,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
                   <p className="font-display text-base text-(--color-text)">
                     {isGoalkeeper ? (player.nationalTeam.goalsAgainst ?? 0) : player.nationalTeam.goals}
                   </p>
-                  <p className="text-[9px] tracking-wide text-(--color-text-muted) uppercase">
+                  <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">
                     {isGoalkeeper ? "Gol subiti" : "Gol"}
                   </p>
                 </div>
@@ -336,7 +336,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
                   <p className="font-display text-base text-(--color-text)">
                     {isGoalkeeper ? (player.nationalTeam.cleanSheets ?? 0) : player.nationalTeam.assists}
                   </p>
-                  <p className="text-[9px] tracking-wide text-(--color-text-muted) uppercase">
+                  <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">
                     {isGoalkeeper ? "Clean sheet" : "Assist"}
                   </p>
                 </div>
@@ -347,7 +347,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
           </Card>
 
           <Card className="flex min-h-0 min-w-0 flex-1 flex-col p-3 sm:p-4">
-            <h3 className="font-display mb-2 shrink-0 text-xs tracking-[0.2em] text-(--color-text-muted) uppercase">
+            <h3 className="font-display mb-2 shrink-0 text-sm tracking-[0.15em] text-(--color-text-muted) uppercase">
               Trofei e premi
             </h3>
             {trophies.length === 0 && awards.length === 0 ? (

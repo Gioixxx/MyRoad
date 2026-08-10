@@ -58,7 +58,7 @@ function SeasonBeat({
 }) {
   return (
     <Card className="animate-step-in flex flex-col items-center gap-3 border-(--color-accent)/30 p-6 text-center sm:p-8">
-      <p className="font-display text-xs tracking-[0.35em] gold-metal-text">Ciclo in corso</p>
+      <p className="font-display text-sm tracking-[0.25em] gold-metal-text">Ciclo in corso</p>
       <div className="flex items-center gap-2 text-(--color-text-muted)">
         {crestUrl && clubName ? (
           <ClubCrest crestUrl={crestUrl} clubName={clubName} size={22} />
@@ -122,11 +122,11 @@ function OutcomeBanner({
     <Card className="animate-step-in flex flex-col gap-3 border-(--color-accent)/40 p-4 sm:p-5">
       <div>
         {outcome.seasonTitle ? (
-          <p className="font-display text-xs tracking-[0.3em] text-(--color-ovr-gold)">
+          <p className="font-display text-sm tracking-[0.2em] text-(--color-ovr-gold)">
             {outcome.seasonTitle.label}
           </p>
         ) : (
-          <p className="font-display text-xs tracking-[0.3em] gold-metal-text">Esito</p>
+          <p className="font-display text-sm tracking-[0.2em] gold-metal-text">Esito</p>
         )}
         <p
           className={cn(
@@ -519,7 +519,7 @@ export function CareerGame() {
             <ThemeToggle />
           </div>
           <div className="text-center">
-            <p className="font-display text-[10px] tracking-[0.35em] gold-metal-text">
+            <p className="font-display text-xs tracking-[0.25em] gold-metal-text">
               My Road - L&apos;Ascesa
             </p>
             <h1 className="font-display text-2xl text-(--color-text) sm:text-3xl">
@@ -532,7 +532,7 @@ export function CareerGame() {
                     : "Costruisci la tua carriera da calciatore"}
             </h1>
             {isIdentity ? (
-              <p className="mt-0.5 font-display text-xs tracking-[0.3em] gold-metal-text">
+              <p className="mt-0.5 font-display text-sm tracking-[0.2em] gold-metal-text">
                 Passo 2 di 2
               </p>
             ) : isMenu ? (
@@ -658,7 +658,7 @@ export function CareerGame() {
                 </div>
 
                 <div className="flex min-h-0 min-w-0 flex-col gap-2 lg:max-h-full">
-                  <p className="shrink-0 font-display text-xs tracking-[0.2em] text-(--color-text-muted) uppercase">
+                  <p className="shrink-0 font-display text-sm tracking-[0.15em] text-(--color-text-muted) uppercase">
                     Storico
                   </p>
                   <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">

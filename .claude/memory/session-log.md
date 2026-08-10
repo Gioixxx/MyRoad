@@ -9,6 +9,13 @@ Snapshot automatici del lavoro in corso, salvati da `save_context.py` su PreComp
 (feature `enforcementHooks`) e ricaricati all'avvio da `session_start.py`. Gestito automaticamente:
 le entry sotto sono sovrascritte per `sessionId` (rolling, ultime ~10). Vedi [[sprint]] per i task attivi.
 
+<!-- session:045900aa-3d21-4c5c-a757-2301517f4a3f -->
+### Rilasciare nuova versione — 2026-08-09
+- **Branch:** main · **Quando:** 2026-08-09→2026-08-09
+- **Ultima richiesta:** rilascvia nuova versione
+- **File toccati:** Carriera/package.json, app/globals.css, memory/decisions.md, memory/sprint.md
+- **Comandi:** git; cat; npm; npx; grep; sed; find; head; node; gh
+
 <!-- session:3e9f0529-3797-4ca4-8934-35c33a2e412c -->
 ### Sessione — 2026-08-07
 - **Branch:** main · **Quando:** 2026-08-07→2026-08-07

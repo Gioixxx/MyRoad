@@ -22,7 +22,7 @@ export function SettingsPanel({
   return (
     <div className="flex w-full flex-col gap-6">
       <div>
-        <p className="font-display text-xs tracking-[0.3em] gold-metal-text">Audio</p>
+        <p className="font-display text-sm tracking-[0.2em] gold-metal-text">Audio</p>
         <h2 className="font-display text-xl text-(--color-text)">Musica di sottofondo</h2>
       </div>
 

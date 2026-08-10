@@ -30,7 +30,7 @@ export function SpeedSelect({ onSelect }: SpeedSelectProps) {
   return (
     <div className="flex min-w-0 flex-col items-center gap-5 text-center">
       <div>
-        <p className="font-display text-xs tracking-[0.3em] gold-metal-text">Passo 1 di 2</p>
+        <p className="font-display text-sm tracking-[0.2em] gold-metal-text">Passo 1 di 2</p>
         <h2 className="font-display text-2xl text-(--color-text)">Scegli il ritmo di carriera</h2>
       </div>
 

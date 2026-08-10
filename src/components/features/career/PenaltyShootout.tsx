@@ -22,7 +22,7 @@ export function PenaltyShootout({ decision, onChoose }: PenaltyShootoutProps) {
   return (
     <div className="animate-step-in flex flex-col items-center gap-5 text-center">
       <div>
-        <p className="font-display text-xs tracking-[0.3em] gold-metal-text">
+        <p className="font-display text-sm tracking-[0.2em] gold-metal-text">
           {decision.title}
         </p>
         <h3 className="font-display text-2xl text-(--color-text)">{decision.description}</h3>

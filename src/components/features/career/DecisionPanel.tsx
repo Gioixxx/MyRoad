@@ -13,7 +13,7 @@ export function DecisionPanel({ decision, onChoose }: DecisionPanelProps) {
   return (
     <div className="animate-step-in flex flex-col gap-4">
       <div>
-        <p className="font-display text-xs tracking-[0.3em] gold-metal-text">
+        <p className="font-display text-sm tracking-[0.2em] gold-metal-text">
           {decision.title}
         </p>
         <p className="text-sm text-(--color-text-muted)">{decision.description}</p>

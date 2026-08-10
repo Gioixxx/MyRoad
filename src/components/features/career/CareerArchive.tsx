@@ -25,13 +25,13 @@ export function CareerArchive({ entries, onBack }: CareerArchiveProps) {
   return (
     <div className="flex min-w-0 flex-col items-center gap-5 text-center">
       <div>
-        <p className="font-display text-xs tracking-[0.3em] gold-metal-text">Archivio</p>
+        <p className="font-display text-sm tracking-[0.2em] gold-metal-text">Archivio</p>
         <h2 className="font-display text-2xl text-(--color-text)">Le mie carriere</h2>
       </div>
 
       {entries.length > 0 ? (
         <div className="w-full min-w-0 chalk-panel rounded-xl p-4 text-left">
-          <p className="font-display mb-3 text-[10px] tracking-[0.25em] gold-metal-text uppercase">
+          <p className="font-display mb-3 text-xs tracking-[0.18em] gold-metal-text uppercase">
             Hall of Fame
           </p>
           <ul className="grid gap-2 sm:grid-cols-2">

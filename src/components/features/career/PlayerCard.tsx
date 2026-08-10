@@ -85,12 +85,12 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
           size="sm"
         />
         <div className="min-w-0 flex-1">
-          <span className="rounded bg-(--color-surface) px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-text-muted) uppercase">
+          <span className="rounded bg-(--color-surface) px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-text-muted) uppercase">
             {player.position}
           </span>
           {player.injury ? (
             <span
-              className="ml-1.5 inline-flex items-center gap-1 rounded bg-(--color-error)/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-error) uppercase"
+              className="ml-1.5 inline-flex items-center gap-1 rounded bg-(--color-error)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-error) uppercase"
               title={`${player.injury.label} — fuori per ${player.injury.turnsRemaining} ${player.injury.turnsRemaining === 1 ? "ciclo" : "cicli"}`}
             >
               <HeartCrack size={10} aria-hidden="true" />
@@ -98,13 +98,13 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
             </span>
           ) : null}
           {showArchetypeChip ? (
-            <span className="ml-1.5 rounded bg-(--color-accent)/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-accent) uppercase">
+            <span className="ml-1.5 rounded bg-(--color-accent)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-accent) uppercase">
               Stile: {ARCHETYPE_LABELS[archetype.primary!]}
             </span>
           ) : null}
           {showRumorsChip ? (
             <span
-              className="ml-1.5 rounded bg-(--color-warning)/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-warning) uppercase"
+              className="ml-1.5 rounded bg-(--color-warning)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-warning) uppercase"
               title="Girano voci poco lusinghiere sul tuo conto"
             >
               Rumors
@@ -132,7 +132,7 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
         <div className="flex items-start gap-2 rounded-lg border border-(--color-accent)/25 bg-(--color-surface) px-3 py-2">
           <Target size={14} className="mt-0.5 shrink-0 text-(--color-accent)" aria-hidden="true" />
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold tracking-wide text-(--color-accent) uppercase">
+            <p className="text-[11px] font-semibold tracking-wide text-(--color-accent) uppercase">
               Obiettivo
             </p>
             <p className="truncate text-xs text-(--color-text)">{player.currentObjective.label}</p>
@@ -171,7 +171,7 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
           >
             {isGoalkeeper ? (player.records.bestSeasonCleanSheets ?? 0) : player.records.bestSeasonGoals}
           </p>
-          <p className="text-[10px] tracking-wide text-(--color-text-muted) uppercase">
+          <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">
             {isGoalkeeper ? "Best CS" : "Best gol"}
           </p>
         </div>
@@ -184,7 +184,7 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
           >
             {player.records.bestSeasonAssists}
           </p>
-          <p className="text-[10px] tracking-wide text-(--color-text-muted) uppercase">Best ast</p>
+          <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">Best ast</p>
         </div>
         <div className="rounded-lg bg-(--color-surface) py-2">
           <p
@@ -195,20 +195,20 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
           >
             {player.records.bestSeasonApps}
           </p>
-          <p className="text-[10px] tracking-wide text-(--color-text-muted) uppercase">Best pr</p>
+          <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">Best pr</p>
         </div>
       </div>
 
       <div className={cn("grid grid-cols-3 gap-2 text-center", compact && "hidden sm:grid")}>
         <div className="rounded-lg bg-(--color-surface) py-2">
           <p className="font-display text-lg text-(--color-text)">{displayApps}</p>
-          <p className="text-[10px] tracking-wide text-(--color-text-muted) uppercase">Pres.</p>
+          <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">Pres.</p>
         </div>
         <div className="rounded-lg bg-(--color-surface) py-2">
           <p className="font-display text-lg text-(--color-text)">
             {isGoalkeeper ? displayGoalsAgainst : displayGoals}
           </p>
-          <p className="text-[10px] tracking-wide text-(--color-text-muted) uppercase">
+          <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">
             {isGoalkeeper ? "Gol subiti" : "Gol"}
           </p>
         </div>
@@ -216,7 +216,7 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
           <p className="font-display text-lg text-(--color-text)">
             {isGoalkeeper ? displayCleanSheets : displayAssists}
           </p>
-          <p className="text-[10px] tracking-wide text-(--color-text-muted) uppercase">
+          <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">
             {isGoalkeeper ? "Clean sheet" : "Assist"}
           </p>
         </div>
