@@ -1,6 +1,7 @@
 import { it } from "vitest";
-import type { ArchetypeId, AwardType, DecisionCategory, PlayerIdentity, Position } from "@/types/career";
+import type { ArchetypeId, AwardType, DecisionCategory, PlayerIdentity, PlayStyleId, Position } from "@/types/career";
 import { simulateCareer } from "@/lib/career/simulation";
+import { PLAY_STYLE_DEFS } from "@/lib/career/playstyles";
 
 /**
  * Strumento di taratura manuale (non un test): gira N carriere con Math.random reale e stampa
@@ -73,6 +74,20 @@ it("simula molte carriere e stampa le frequenze osservate", () => {
   };
   let scandalCount = 0;
   let redeemedCount = 0;
+  const playStyleCounts: Record<PlayStyleId, number> = Object.fromEntries(
+    PLAY_STYLE_DEFS.map((def) => [def.id, 0]),
+  ) as Record<PlayStyleId, number>;
+  let noPlayStyleCount = 0;
+  let totalPotential = 0;
+  let totalPotentialGap = 0;
+  let nearPotentialCount = 0;
+  const potentialBuckets: Record<string, number> = {
+    "<70": 0,
+    "70-79": 0,
+    "80-84": 0,
+    "85-89": 0,
+    "90+": 0,
+  };
 
   for (const {
     player,
@@ -109,6 +124,17 @@ it("simula molte carriere e stampa le frequenze osservate", () => {
     else shadowBuckets["90+"] += 1;
     if (hadScandal) scandalCount += 1;
     if (redeemed) redeemedCount += 1;
+    if (player.playStyles.length === 0) noPlayStyleCount += 1;
+    for (const id of player.playStyles) playStyleCounts[id] += 1;
+    totalPotential += player.potential;
+    const gap = player.potential - peakOvr;
+    totalPotentialGap += gap;
+    if (gap <= 3) nearPotentialCount += 1;
+    if (player.potential < 70) potentialBuckets["<70"] += 1;
+    else if (player.potential < 80) potentialBuckets["70-79"] += 1;
+    else if (player.potential < 85) potentialBuckets["80-84"] += 1;
+    else if (player.potential < 90) potentialBuckets["85-89"] += 1;
+    else potentialBuckets["90+"] += 1;
   }
 
   console.log(`\n=== Simulazione di ${CAREER_COUNT} carriere ===\n`);
@@ -147,6 +173,20 @@ it("simula molte carriere e stampa le frequenze osservate", () => {
 
   console.log(`\n--- Archetipo finale ---`);
   for (const [id, count] of Object.entries(archetypeCounts)) {
+    console.log(`  ${id}: ${pct(count, CAREER_COUNT)}`);
+  }
+
+  console.log(`\n--- Potenziale (tetto individuale, Fase 1) ---`);
+  console.log(`  Potenziale finale medio:       ${(totalPotential / CAREER_COUNT).toFixed(1)}`);
+  console.log(`  Gap medio potenziale-picco:    ${(totalPotentialGap / CAREER_COUNT).toFixed(1)}`);
+  console.log(`  Carriere vicine al potenziale (gap<=3): ${pct(nearPotentialCount, CAREER_COUNT)}`);
+  for (const [bucket, count] of Object.entries(potentialBuckets)) {
+    console.log(`  ${bucket}: ${pct(count, CAREER_COUNT)}`);
+  }
+
+  console.log(`\n--- PlayStyles sbloccati (Fase 3) ---`);
+  console.log(`  Nessuno sbloccato: ${pct(noPlayStyleCount, CAREER_COUNT)}`);
+  for (const [id, count] of Object.entries(playStyleCounts)) {
     console.log(`  ${id}: ${pct(count, CAREER_COUNT)}`);
   }
 

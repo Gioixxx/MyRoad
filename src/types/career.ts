@@ -12,6 +12,30 @@ export type Position =
   | "RW"
   | "ST";
 
+export type OutfieldAttributeKey = "pace" | "shooting" | "passing" | "defending" | "physical";
+export type GoalkeeperAttributeKey = "reflexes" | "handling" | "kicking" | "positioning";
+export type AttributeKey = OutfieldAttributeKey | GoalkeeperAttributeKey;
+
+export interface OutfieldAttributes {
+  kind: "outfield";
+  pace: number;
+  shooting: number;
+  passing: number;
+  defending: number;
+  physical: number;
+}
+
+export interface GoalkeeperAttributes {
+  kind: "goalkeeper";
+  reflexes: number;
+  handling: number;
+  kicking: number;
+  positioning: number;
+}
+
+/** Attributi granulari (1-99), set diverso per portiere vs giocatore di movimento. */
+export type Attributes = OutfieldAttributes | GoalkeeperAttributes;
+
 export type PreferredFoot = "left" | "right";
 
 export type GameSpeed = "intense" | "normal" | "express";
@@ -196,7 +220,20 @@ export interface Player extends PlayerIdentity {
   /** Debito morale privato e cumulativo, 0-100, default 0. */
   shadow: number;
   shadowFlags?: ShadowFlags;
+  /** Tetto OVR individuale (30-99) — sostituisce il vecchio tetto fisso 99 uguale per tutti. */
+  potential: number;
+  /** Attributi granulari, coerenti col ruolo corrente — si ripesano da soli su cambio ruolo. */
+  attributes: Attributes;
+  /** Attributo su cui si concentra la crescita del prossimo ciclo, o null per allenamento bilanciato. */
+  trainingFocus: AttributeKey | null;
+  /** Stili di gioco sbloccati (soglia su un attributo) — vedi lib/career/playstyles.ts. Nome
+   * deliberatamente diverso da `traits` (personalità/archetipo), concetto non correlato. */
+  playStyles: PlayStyleId[];
 }
+
+/** Tratto distintivo sbloccabile quando un attributo supera una soglia — dà un bonus concreto
+ * a una formula esistente (proiezione gol/assist, chance trofeo/callup, infortuni). */
+export type PlayStyleId = "curler" | "playmaker" | "sprinter" | "brickwall" | "targetman" | "catlike";
 
 /** Effetto applicabile al giocatore da un outcome di decisione. */
 export interface PlayerDelta {
@@ -208,6 +245,9 @@ export interface PlayerDelta {
   traitsDelta?: Partial<Traits>;
   shadowDelta?: number;
   shadowFlags?: Partial<ShadowFlags>;
+  /** Raro, per eventi narrativi futuri — non ancora prodotto da nessun generatore. */
+  potentialDelta?: number;
+  attributesDelta?: Partial<Record<AttributeKey, number>>;
 }
 
 export type DecisionCategory =
@@ -224,7 +264,8 @@ export type DecisionCategory =
   | "narrative"
   | "sponsor"
   /** Categoria forzata (mai nel pool normale) quando `shadow` supera la soglia di scandalo. */
-  | "scandal";
+  | "scandal"
+  | "training-focus";
 
 export interface DecisionOutcome {
   /** Peso relativo tra gli outcome della stessa opzione — i pesi di un'opzione sommano a 100. */
@@ -248,6 +289,10 @@ export interface DecisionOption {
   retire?: boolean;
   /** Se presente, selezionare questa opzione cambia la nazionalità del giocatore. */
   newNationality?: string;
+  /** Se presente (anche null per "allenamento bilanciato"), imposta il focus di allenamento. */
+  trainingFocus?: AttributeKey | null;
+  /** Se presente, selezionare questa opzione cambia il ruolo in campo del giocatore. */
+  newPosition?: Position;
   /** Un solo outcome (peso 100) = esito deterministico. Più outcome = esito probabilistico. */
   outcomes: DecisionOutcome[];
 }

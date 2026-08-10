@@ -9,6 +9,7 @@ import type {
   Injury,
   Player,
   PlayerIdentity,
+  PlayStyleId,
   SeasonTitleEntry,
   Trophy,
 } from "@/types/career";
@@ -42,6 +43,7 @@ export interface CycleOutcomeSummary {
   objectiveResult: { label: string; met: boolean } | null;
   brokenRecords: string[];
   highlights: string[];
+  newPlayStyles: PlayStyleId[];
 }
 
 interface CareerGameState {
@@ -168,6 +170,7 @@ export function useCareerGame(): UseCareerGame {
         objectiveResult: result.objectiveResult,
         brokenRecords: result.brokenRecords,
         highlights: result.highlights,
+        newPlayStyles: result.newPlayStyles,
       };
 
       if (result.retired) {

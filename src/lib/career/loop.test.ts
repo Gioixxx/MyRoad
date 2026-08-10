@@ -28,7 +28,10 @@ const SAMPDORIA = getClub("sampdoria")!; // Serie B, prestige 1
 const FIXED_RNG = () => 0.5;
 
 function playerAt(club = JUVENTUS): Player {
-  return signWithClub(createPlayer(IDENTITY), club);
+  // Potenziale fissato a 99: molti test qui impostano un OVR alto ad hoc, e un potenziale
+  // rollato a caso (createPlayer usa Math.random di default) potrebbe capitare sotto quel
+  // valore, facendolo scendere silenziosamente in advanceSeasons/applyDelta.
+  return { ...signWithClub(createPlayer(IDENTITY), club), potential: 99 };
 }
 
 describe("availableCategories", () => {

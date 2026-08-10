@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, type ReactNode } from "react";
-import { Flag, Star } from "lucide-react";
-import type { Award, Trophy } from "@/types/career";
+import { Flag, Sparkles, Star } from "lucide-react";
+import type { Award, PlayStyleId, Trophy } from "@/types/career";
 import { AWARD_LABELS } from "@/lib/career/award-labels";
+import { PLAY_STYLE_LABELS } from "@/lib/career/playstyles";
 import { usePrefersReducedMotion } from "@/hooks/useMotion";
 import { Button } from "@/components/ui/Button";
 import { AwardBadge } from "./AwardBadge";
@@ -14,7 +15,8 @@ export type CareerMoment =
   | { kind: "trophy"; trophy: Trophy }
   | { kind: "award"; award: Award }
   | { kind: "callup" }
-  | { kind: "milestone"; ovr: number };
+  | { kind: "milestone"; ovr: number }
+  | { kind: "playstyle"; playStyleId: PlayStyleId };
 
 interface MomentOverlayProps {
   moment: CareerMoment;
@@ -122,6 +124,15 @@ export function MomentOverlay({ moment, onContinue }: MomentOverlayProps) {
         <Star size={40} aria-hidden="true" />
       </span>
     );
+  } else if (moment.kind === "playstyle") {
+    eyebrow = "Stile di gioco";
+    title = PLAY_STYLE_LABELS[moment.playStyleId];
+    detail = "Hai sviluppato un tratto distintivo che ti rende unico in campo.";
+    visual = (
+      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-(--color-ovr-gold)/20 text-(--color-ovr-gold)">
+        <Sparkles size={40} aria-hidden="true" />
+      </span>
+    );
   } else {
     eyebrow = "Nazionale";
     title = "Convocato in nazionale!";
@@ -177,6 +188,7 @@ export function buildCareerMoments(input: {
   newAward: Award | null;
   nationalCallup: boolean;
   newMilestones?: number[];
+  newPlayStyles?: PlayStyleId[];
 }): CareerMoment[] {
   const moments: CareerMoment[] = [];
   for (const trophy of input.newTrophies) {
@@ -190,6 +202,9 @@ export function buildCareerMoments(input: {
   }
   for (const ovr of input.newMilestones ?? []) {
     moments.push({ kind: "milestone", ovr });
+  }
+  for (const playStyleId of input.newPlayStyles ?? []) {
+    moments.push({ kind: "playstyle", playStyleId });
   }
   return moments;
 }

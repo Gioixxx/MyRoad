@@ -1,4 +1,5 @@
 import type {
+  AttributeKey,
   Club,
   Decision,
   DecisionCategory,
@@ -7,11 +8,14 @@ import type {
   Injury,
   Player,
   PlayerDelta,
+  Position,
 } from "@/types/career";
 import { clubs, clubsByCountry } from "@/data/clubs";
 import { countries } from "@/data/countries";
 import { clamp, type Rng } from "./progression";
 import { isNationalTeamBanned, shadowMultiplier } from "./shadow";
+import { ATTRIBUTE_LABELS, attributeKeysForPosition } from "./attributes";
+import { playStyleCallupBonus } from "./playstyles";
 
 // ---------- Helper di selezione club ----------
 
@@ -366,32 +370,6 @@ export const LIFESTYLE_DECISIONS: Decision[] = [
             shadowFlags: { leakedTactics: true },
           }),
         ],
-      },
-    ],
-  },
-  {
-    id: "position-change",
-    category: "position-change",
-    title: "Cambio di ruolo",
-    description: "Il mister ha bisogno che tu copra un'altra posizione.",
-    options: [
-      {
-        id: "accept-position",
-        label: "Accetta",
-        hint: "Più minutaggio · adattamento costoso in OVR",
-        outcomes: [
-          outcome(
-            100,
-            "Diventi titolare al prossimo ciclo, ma serve tempo per adattarti.",
-            -2,
-          ),
-        ],
-      },
-      {
-        id: "reject-position",
-        label: "Rifiuta",
-        hint: "Meno minutaggio · mantieni il ruolo",
-        outcomes: [outcome(100, "Giochi con meno minutaggio.")],
       },
     ],
   },
@@ -867,7 +845,12 @@ export function nationalCallupChance(ovr: number): number {
 export function rollNationalCallup(player: Player, rng: Rng = Math.random): boolean {
   if (player.nationalTeam.called) return false;
   if (isNationalTeamBanned(player.shadow)) return false;
-  return rng() < nationalCallupChance(player.ovr) * shadowMultiplier(player.shadow);
+  const chance = clamp(
+    nationalCallupChance(player.ovr) * shadowMultiplier(player.shadow) + playStyleCallupBonus(player.playStyles),
+    0,
+    1,
+  );
+  return rng() < chance;
 }
 
 // ---------- Coppa continentale — rigore decisivo ----------
@@ -1210,6 +1193,78 @@ export function generateRedemptionDecision(player: Player): Decision {
   };
 }
 
+// ---------- Cambio di ruolo (funzionale, non più cosmetico) ----------
+
+/** Ruoli "vicini" raggiungibili in un cambio — mai GK↔outfield, cambio troppo drastico e
+ * fuori scope. Gli attributi non vengono rimappati: restano gli stessi numeri, ma da quel
+ * momento si ripesano da soli per il nuovo ruolo (vedi deriveOvrFromAttributes/ROLE_WEIGHTS). */
+const POSITION_CHANGE_ADJACENCY: Partial<Record<Position, Position[]>> = {
+  LB: ["LM", "CB"],
+  RB: ["RM", "CB"],
+  CB: ["CDM"],
+  CDM: ["CM", "CB"],
+  CM: ["CDM", "CAM"],
+  CAM: ["CM"],
+  LM: ["LW", "LB"],
+  RM: ["RW", "RB"],
+  LW: ["LM"],
+  RW: ["RM"],
+  ST: ["CAM"],
+};
+
+export function generatePositionChangeDecision(player: Player, rng: Rng = Math.random): Decision {
+  const targets = POSITION_CHANGE_ADJACENCY[player.position] ?? [];
+  const options: DecisionOption[] = targets.map((newPosition) => ({
+    id: `switch-to-${newPosition}`,
+    label: `Diventa ${newPosition}`,
+    hint: "Più minutaggio nel nuovo ruolo · adattamento costoso in OVR",
+    newPosition,
+    outcomes: [outcome(100, `Ti riadatti al ruolo di ${newPosition}: serve tempo per l'ambientamento.`, -2)],
+  }));
+  options.push({
+    id: "reject-position",
+    label: "Rifiuta",
+    hint: "Meno minutaggio · mantieni il ruolo",
+    outcomes: [outcome(100, "Giochi con meno minutaggio.")],
+  });
+  return {
+    id: `position-change-${player.age}-${Math.round(rng() * 1000)}`,
+    category: "position-change",
+    title: "Cambio di ruolo",
+    description: "Il mister ha bisogno che tu copra un'altra posizione.",
+    options,
+  };
+}
+
+// ---------- Focus di allenamento (crescita mirata degli attributi) ----------
+
+export function generateTrainingFocusDecision(player: Player): Decision {
+  const keys = attributeKeysForPosition(player.position);
+  const options: DecisionOption[] = keys.map((key: AttributeKey) => ({
+    id: `focus-${key}`,
+    label: `Concentrati su: ${ATTRIBUTE_LABELS[key]}`,
+    hint: "Crescita più rapida su questo attributo nel prossimo ciclo",
+    trainingFocus: key,
+    outcomes: [outcome(100, `Ti alleni con priorità su ${ATTRIBUTE_LABELS[key]}.`, 0, {
+      traitsDelta: { discipline: 1 },
+    })],
+  }));
+  options.push({
+    id: "focus-balanced",
+    label: "Allenamento bilanciato",
+    hint: "Crescita uniforme su tutti gli attributi",
+    trainingFocus: null,
+    outcomes: [outcome(100, "Ti alleni in modo equilibrato su tutti gli aspetti del gioco.")],
+  });
+  return {
+    id: `training-focus-${player.age}`,
+    category: "training-focus",
+    title: "Piano di allenamento",
+    description: "Il preparatore ti chiede su cosa vuoi concentrarti nel prossimo ciclo.",
+    options,
+  };
+}
+
 // ---------- Selezione pesata della categoria, con penalità anti-ripetizione ----------
 
 const BASE_CATEGORY_WEIGHTS: Partial<Record<DecisionCategory, number>> = {
@@ -1226,6 +1281,8 @@ const BASE_CATEGORY_WEIGHTS: Partial<Record<DecisionCategory, number>> = {
   // simulate) osservando la frequenza per categoria.
   narrative: 12,
   sponsor: 10,
+  // Provvisorio, da confermare con npm run simulate (Fase 2).
+  "training-focus": 14,
 };
 
 const DEFAULT_CATEGORY_WEIGHT = 5;

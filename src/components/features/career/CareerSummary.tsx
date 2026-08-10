@@ -5,6 +5,7 @@ import { hallOfFameWinsFor, pickBestCareerTitle } from "@/lib/career/satisfactio
 import { deriveShadowTitle } from "@/lib/career/shadow";
 import { peakOvr, summarizeClubHistory } from "@/lib/career/summary";
 import { ARCHETYPE_LABELS, deriveArchetype } from "@/lib/career/traits";
+import { PLAY_STYLE_LABELS } from "@/lib/career/playstyles";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { AwardBadge } from "./AwardBadge";
@@ -175,6 +176,22 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
             >
               {t.label}
               <span className="text-(--color-text-muted)"> · {t.age}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {player.playStyles.length > 0 ? (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <span className="font-display text-sm tracking-[0.15em] text-(--color-ovr-gold) uppercase">
+            Stili di gioco
+          </span>
+          {player.playStyles.map((id) => (
+            <span
+              key={id}
+              className="rounded-full border border-(--color-ovr-gold)/35 bg-(--color-ovr-gold)/10 px-2.5 py-1 text-xs text-(--color-text)"
+            >
+              {PLAY_STYLE_LABELS[id]}
             </span>
           ))}
         </div>

@@ -58,7 +58,7 @@ export function simulateCareer(
   rng: Rng = Math.random,
   pickOption: (decision: Decision, rng: Rng) => DecisionOption = pickUniformOption,
 ): SimulatedCareerResult {
-  let player = createPlayer(identity);
+  let player = createPlayer(identity, rng);
   let decision: Decision | null = generateAcademyOffer(identity, rng);
   let category: DecisionCategory = decision.category;
   let context: LoopContext = INITIAL_LOOP_CONTEXT;

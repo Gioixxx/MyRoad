@@ -7,12 +7,14 @@ import type {
   GameSpeed,
   Injury,
   Player,
+  PlayStyleId,
   SeasonTitleEntry,
   Trophy,
 } from "@/types/career";
 import {
   applyDelta,
   advanceSeasons,
+  changePosition,
   checkRetirement,
   resolveOutcome,
   retire,
@@ -47,11 +49,13 @@ import {
   generateLoanOffer,
   generateLoanReturn,
   generateNationalitySwitch,
+  generatePositionChangeDecision,
   generateRedemptionDecision,
   generateReturnHome,
   generateScandalDecision,
   generateSponsorDeal,
   generateTaxTrouble,
+  generateTrainingFocusDecision,
   generateTransferWindow,
   generateTriumphantReturn,
   generateUnexpectedProspect,
@@ -71,6 +75,8 @@ import { rollAward, rollClubTrophies, rollNationalTrophies } from "./trophies";
 import { applyClubTierMovement } from "./club-progression";
 import { isRedemptionEligible, shouldTriggerScandal } from "./shadow";
 import { applyTraitsDelta } from "./traits";
+import { applyPotentialDelta, evaluatePotentialGrowth } from "./potential";
+import { detectNewPlayStyles, playStyleInjuryMultiplier, playStyleTrophyBonus } from "./playstyles";
 import { getCountry } from "@/data/countries";
 
 /** Convocazione in nazionale come fonte di leadership (vedi §1: "capitano, difesa compagni, nazionale"). */
@@ -138,10 +144,14 @@ export function availableCategories(player: Player, context: LoopContext): Decis
     "transfer",
     "loan",
     "lifestyle",
-    "position-change",
     "club-crisis",
     "end-of-cycle",
+    "training-focus",
   ];
+  // Il cambio di ruolo funzionale non ha senso per i portieri (nessuna adiacenza GK↔outfield).
+  if (player.position !== "GK") {
+    categories.push("position-change");
+  }
   if (
     isTaxTroubleEligible(player) ||
     isReturnHomeEligible(player) ||
@@ -294,8 +304,7 @@ export function pickNextDecision(
     }
     case "end-of-cycle":
       return { decision: generateEndOfCycle(player, rng), category, context };
-    case "lifestyle":
-    case "position-change": {
+    case "lifestyle": {
       const picked = pickStaticDecision(category, player, recentDecisionIds, rng);
       return {
         decision: picked.decision,
@@ -303,6 +312,10 @@ export function pickNextDecision(
         context: { ...context, recentDecisionIds: pushRecentDecisionId(recentDecisionIds, picked.kind) },
       };
     }
+    case "position-change":
+      return { decision: generatePositionChangeDecision(player, rng), category, context };
+    case "training-focus":
+      return { decision: generateTrainingFocusDecision(player), category, context };
     case "narrative": {
       const picked = pickNarrativeDecision(player, recentDecisionIds, rng);
       return {
@@ -357,6 +370,7 @@ export interface CycleResult {
   brokenRecords: string[];
   highlights: string[];
   clubTierChange: "promoted" | "relegated" | null;
+  newPlayStyles: PlayStyleId[];
 }
 
 function emptySatisfactionFields(): Pick<
@@ -381,7 +395,7 @@ function processInjuries(
   if (player.injury) {
     const ticked = tickInjury(player.injury);
     if (ticked === null) {
-      const restoredOvr = clamp(player.ovr + player.injury.ovrPenalty, 30, 99);
+      const restoredOvr = clamp(player.ovr + player.injury.ovrPenalty, 30, player.potential);
       return {
         player: {
           ...player,
@@ -396,11 +410,11 @@ function processInjuries(
     return { player: { ...player, injury: ticked }, newInjury: null, injuryHealed: false };
   }
 
-  const rolled = rollInjury(player.age, player.position, seasons, rng);
+  const rolled = rollInjury(player.age, player.position, seasons, rng, playStyleInjuryMultiplier(player.playStyles));
   if (!rolled) {
     return { player, newInjury: null, injuryHealed: false };
   }
-  const penalizedOvr = clamp(player.ovr - rolled.ovrPenalty, 30, 99);
+  const penalizedOvr = clamp(player.ovr - rolled.ovrPenalty, 30, player.potential);
   return {
     player: {
       ...player,
@@ -443,6 +457,7 @@ export function resolveCycle(
       newInjury: null,
       injuryHealed: false,
       clubTierChange: null,
+      newPlayStyles: [],
       ...emptySatisfactionFields(),
     };
   }
@@ -455,17 +470,32 @@ export function resolveCycle(
     nextPlayer = switchNationality(nextPlayer, option.newNationality);
   }
 
+  if (option.newPosition) {
+    nextPlayer = changePosition(nextPlayer, option.newPosition);
+  }
+
+  if (option.trainingFocus !== undefined) {
+    nextPlayer = { ...nextPlayer, trainingFocus: option.trainingFocus };
+  }
+
   const nextContext = nextLoopContext(category, option, player, context);
   const stintType = nextContext.loanParentClub ? "loan" : "permanent";
   const seasons = SEASONS_PER_CYCLE[speed];
   nextPlayer = advanceSeasons(nextPlayer, seasons, rng, stintType);
+
+  // Rilevato subito dopo la crescita degli attributi del ciclo, così un playstyle appena
+  // sbloccato si applica già ai roll (infortunio/trofeo/callup) dello stesso ciclo.
+  const newPlayStyles = detectNewPlayStyles(nextPlayer);
+  if (newPlayStyles.length > 0) {
+    nextPlayer = { ...nextPlayer, playStyles: [...nextPlayer.playStyles, ...newPlayStyles] };
+  }
 
   const injuryResult = processInjuries(nextPlayer, seasons, rng);
   nextPlayer = injuryResult.player;
   nextPlayer = { ...nextPlayer, wallet: accrueSalary(nextPlayer.wallet, seasons) };
 
   const newTrophies: Trophy[] = nextPlayer.club
-    ? rollClubTrophies(nextPlayer.club, nextPlayer.ovr, nextPlayer.age, rng)
+    ? rollClubTrophies(nextPlayer.club, nextPlayer.ovr, nextPlayer.age, rng, playStyleTrophyBonus(nextPlayer.playStyles))
     : [];
 
   if (category === "continental-final" && nextPlayer.club?.competitions.continental) {
@@ -512,7 +542,7 @@ export function resolveCycle(
   }
 
   if (nextPlayer.nationalTeam.called) {
-    const natStats = projectNationalStats(nextPlayer.ovr, nextPlayer.position, seasons, rng);
+    const natStats = projectNationalStats(nextPlayer.ovr, nextPlayer.position, seasons, rng, nextPlayer.playStyles);
     nationalGoalsThisCycle = natStats.goals;
     nextPlayer = {
       ...nextPlayer,
@@ -618,6 +648,19 @@ export function resolveCycle(
   nextPlayer = { ...nextPlayer, records: recordsUpdate.records };
   const brokenRecords = brokenRecordLabels(recordsUpdate.broken);
 
+  const potentialGrowth = evaluatePotentialGrowth(
+    {
+      age: nextPlayer.age,
+      objectiveMet: objectiveResult?.met ?? false,
+      seasonTitleId: seasonTitle.id,
+      brokeRecord: recordsUpdate.broken.length > 0,
+    },
+    rng,
+  );
+  if (potentialGrowth > 0) {
+    nextPlayer = { ...nextPlayer, potential: applyPotentialDelta(nextPlayer.potential, potentialGrowth) };
+  }
+
   const highlights = buildHighlightReel(satCtx, rng);
 
   if (checkRetirement(nextPlayer, rng)) {
@@ -647,6 +690,7 @@ export function resolveCycle(
     brokenRecords,
     highlights,
     clubTierChange,
+    newPlayStyles,
   };
 }
 

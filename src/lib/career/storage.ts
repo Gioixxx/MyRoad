@@ -4,9 +4,10 @@ import { emptyPersonalRecords, pickBestCareerTitle } from "./satisfaction";
 import { peakOvr } from "./summary";
 import { NEUTRAL_TRAITS, deriveArchetype } from "./traits";
 import { deriveShadowTitle } from "./shadow";
+import { createAttributesFromOvr } from "./attributes";
 
 const STORAGE_KEY = "carriera:save";
-const STORAGE_VERSION = 5;
+const STORAGE_VERSION = 8;
 
 export interface SavedGame {
   version: number;
@@ -47,11 +48,38 @@ function migratePlayerV3(raw: Player): Player {
 
 /** Arricchisce un save v4 (privo di traits/shadow) con i default neutri. */
 function migratePlayerV4(raw: Player): Player {
-  return {
+  return migratePlayerV5({
     ...raw,
     traits: raw.traits ?? NEUTRAL_TRAITS,
     shadow: raw.shadow ?? 0,
     shadowFlags: raw.shadowFlags ?? {},
+  });
+}
+
+/** Arricchisce un save v5 (privo di potential) con un tetto generoso, mai contraddittorio con
+ * un OVR già alto in un save esistente. */
+function migratePlayerV5(raw: Player): Player {
+  return migratePlayerV6({
+    ...raw,
+    potential: raw.potential ?? Math.max(raw.ovr, 90),
+  });
+}
+
+/** Arricchisce un save v6 (privo di attributi granulari) con attributi ricostruiti attorno
+ * all'OVR già raggiunto (non al neutro di partenza) — vedi createAttributesFromOvr. */
+function migratePlayerV6(raw: Player): Player {
+  return migratePlayerV7({
+    ...raw,
+    attributes: raw.attributes ?? createAttributesFromOvr(raw.position, raw.ovr, Math.random),
+    trainingFocus: raw.trainingFocus ?? null,
+  });
+}
+
+/** Arricchisce un save v7 (privo di playstyle) con la lista vuota di default. */
+function migratePlayerV7(raw: Player): Player {
+  return {
+    ...raw,
+    playStyles: raw.playStyles ?? [],
   };
 }
 
@@ -79,6 +107,15 @@ export function loadGame(): SavedGame | null {
     }
     if (parsed.version === 4) {
       return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV4(parsed.player) };
+    }
+    if (parsed.version === 5) {
+      return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV5(parsed.player) };
+    }
+    if (parsed.version === 6) {
+      return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV6(parsed.player) };
+    }
+    if (parsed.version === 7) {
+      return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV7(parsed.player) };
     }
     if (parsed.version !== STORAGE_VERSION) return null;
     return parsed;

@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Launcher desktop (.NET) e artefatti impacchettati — non è codice JS/TS del progetto.
     "launcher/**",
     "dist/**",
+    // Progetto nativo Android (Capacitor) — include i bundle JS copiati dall'export Next.js.
+    "android/**",
   ]),
 ]);
 

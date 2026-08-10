@@ -69,7 +69,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(5);
+    expect(loaded?.version).toBe(8);
     expect(loaded?.player.injury).toBeNull();
     expect(loaded?.player.wallet).toEqual({ salaryEurPerCycle: 0, savingsEur: 0 });
     expect(loaded?.player.popularity).toBe(15);
@@ -106,7 +106,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(5);
+    expect(loaded?.version).toBe(8);
     expect(loaded?.player.milestonesReached).toEqual([]);
     expect(loaded?.player.currentObjective).toBeNull();
     expect(loaded?.player.records.peakMarketValueEur).toBe(samplePlayer().marketValueEur);
@@ -129,7 +129,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(5);
+    expect(loaded?.version).toBe(8);
     expect(loaded?.player.hasSwitchedNationality).toBe(false);
     expect(loaded?.player.shadow).toBe(0);
   });
@@ -151,7 +151,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(5);
+    expect(loaded?.version).toBe(8);
     expect(loaded?.player.traits).toEqual({
       loyalty: 50,
       ambition: 50,
@@ -161,6 +161,66 @@ describe("saveGame / loadGame", () => {
     });
     expect(loaded?.player.shadow).toBe(0);
     expect(loaded?.player.shadowFlags).toEqual({});
+  });
+
+  it("dovrebbe migrare un save v5 privo di potential con un tetto generoso non contraddittorio con l'OVR", () => {
+    const legacyPlayer = { ...samplePlayer(), ovr: 92 } as unknown as Record<string, unknown>;
+    delete legacyPlayer.potential;
+    window.localStorage.setItem(
+      "carriera:save",
+      JSON.stringify({
+        version: 5,
+        player: legacyPlayer,
+        speed: "normal",
+        context: INITIAL_LOOP_CONTEXT,
+        recentCategories: [],
+      }),
+    );
+
+    const loaded = loadGame();
+    expect(loaded?.version).toBe(8);
+    expect(loaded?.player.potential).toBe(92);
+  });
+
+  it("dovrebbe migrare un save v6 privo di attributi granulari ricostruendoli attorno all'OVR", () => {
+    const legacyPlayer = { ...samplePlayer(), ovr: 70 } as unknown as Record<string, unknown>;
+    delete legacyPlayer.attributes;
+    delete legacyPlayer.trainingFocus;
+    window.localStorage.setItem(
+      "carriera:save",
+      JSON.stringify({
+        version: 6,
+        player: legacyPlayer,
+        speed: "normal",
+        context: INITIAL_LOOP_CONTEXT,
+        recentCategories: [],
+      }),
+    );
+
+    const loaded = loadGame();
+    expect(loaded?.version).toBe(8);
+    expect(loaded?.player.attributes).toBeDefined();
+    expect(loaded?.player.attributes.kind).toBe("outfield");
+    expect(loaded?.player.trainingFocus).toBeNull();
+  });
+
+  it("dovrebbe migrare un save v7 privo di playStyles con la lista vuota di default", () => {
+    const legacyPlayer = samplePlayer() as unknown as Record<string, unknown>;
+    delete legacyPlayer.playStyles;
+    window.localStorage.setItem(
+      "carriera:save",
+      JSON.stringify({
+        version: 7,
+        player: legacyPlayer,
+        speed: "normal",
+        context: INITIAL_LOOP_CONTEXT,
+        recentCategories: [],
+      }),
+    );
+
+    const loaded = loadGame();
+    expect(loaded?.version).toBe(8);
+    expect(loaded?.player.playStyles).toEqual([]);
   });
 });
 

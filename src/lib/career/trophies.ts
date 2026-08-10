@@ -32,15 +32,18 @@ export function clubTrophyChance(prestige: number, ovr: number): number {
 /** Probabilità della coppa nazionale relativa a quella del campionato — meno prestigiosa, quindi più rara. */
 const CUP_TROPHY_RELATIVE_CHANCE = 0.7;
 
-/** Estrae i trofei di campionato/coppa nazionale vinti in un ciclo al club corrente. */
+/** Estrae i trofei di campionato/coppa nazionale vinti in un ciclo al club corrente.
+ * `trophyChanceBonus` (default 0, punti percentuali additivi) è pensato per il playstyle
+ * "Muro difensivo". */
 export function rollClubTrophies(
   club: Club,
   ovr: number,
   age: number,
   rng: Rng = Math.random,
+  trophyChanceBonus = 0,
 ): Trophy[] {
   const trophies: Trophy[] = [];
-  const chance = clubTrophyChance(club.prestige, ovr);
+  const chance = clamp(clubTrophyChance(club.prestige, ovr) + trophyChanceBonus, 0, 1);
 
   if (rng() < chance) {
     trophies.push({ competition: club.competitions.league, club, age });

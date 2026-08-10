@@ -1,4 +1,10 @@
-import type { Position, StatLine } from "@/types/career";
+import type { Position, PlayStyleId, StatLine } from "@/types/career";
+import {
+  playStyleAssistsMultiplier,
+  playStyleCleanSheetMultiplier,
+  playStyleConcededMultiplier,
+  playStyleGoalsMultiplier,
+} from "./playstyles";
 
 export type Rng = () => number;
 
@@ -23,11 +29,23 @@ export function ovrDeltaForAge(age: number): number {
   return stage.deltaPerSeason;
 }
 
+/** Somma il delta di crescita atteso per età su N stagioni — usato come "budget" di crescita
+ * da distribuire sugli attributi granulari (vedi attributes.ts), riusa la stessa tabella di
+ * `projectOvr` senza duplicarla. */
+export function sumOvrDeltaForAge(ageFrom: number, seasons: number): number {
+  let total = 0;
+  for (let i = 0; i < seasons; i++) {
+    total += ovrDeltaForAge(ageFrom + i);
+  }
+  return total;
+}
+
 /** Proietta l'OVR dopo N stagioni, con un piccolo rumore casuale ad ogni stagione. */
 export function projectOvr(
   ovr: number,
   age: number,
   seasons: number,
+  potential: number,
   rng: Rng = Math.random,
 ): number {
   let nextOvr = ovr;
@@ -35,7 +53,7 @@ export function projectOvr(
     const noise = (rng() - 0.5) * 2; // -1..+1
     nextOvr += ovrDeltaForAge(age + i) + noise;
   }
-  return clamp(Math.round(nextOvr), 35, 99);
+  return clamp(Math.round(nextOvr), 35, potential);
 }
 
 interface RoleWeights {
@@ -69,12 +87,19 @@ function projectGoalkeeperExtras(
   ovrFactor: number,
   levelFactor: number,
   rng: Rng,
+  playStyles: PlayStyleId[] = [],
 ): { goalsAgainst: number; cleanSheets: number } {
   const variance = () => 0.7 + rng() * 0.6;
   const concededPerApp = clamp(1.6 * levelFactor - ovrFactor * 1.3, 0.2, 2.2);
-  const goalsAgainst = Math.max(0, Math.round(apps * concededPerApp * variance()));
+  const goalsAgainst = Math.max(
+    0,
+    Math.round(apps * concededPerApp * variance() * playStyleConcededMultiplier(playStyles)),
+  );
   const cleanSheetChance = clamp(0.15 + ovrFactor * 0.35 - (levelFactor - 1) * 0.15, 0.05, 0.6);
-  const cleanSheets = Math.max(0, Math.min(apps, Math.round(apps * cleanSheetChance * variance())));
+  const cleanSheets = Math.max(
+    0,
+    Math.min(apps, Math.round(apps * cleanSheetChance * variance() * playStyleCleanSheetMultiplier(playStyles))),
+  );
   return { goalsAgainst, cleanSheets };
 }
 
@@ -84,6 +109,7 @@ export function projectSeasonStats(
   position: Position,
   clubTier: number,
   rng: Rng = Math.random,
+  playStyles: PlayStyleId[] = [],
 ): StatLine {
   const appsBase = 24 + Math.round((ovr - 50) / 4);
   const apps = clamp(appsBase + Math.round((rng() - 0.5) * 8), 5, 38);
@@ -92,8 +118,9 @@ export function projectSeasonStats(
   const ovrFactor = Math.max(0, (ovr - 45) / 55);
   const weights = ROLE_WEIGHTS[position];
 
-  const goalsExpected = apps * weights.goals * ovrFactor * tierFactor;
-  const assistsExpected = apps * weights.assists * ovrFactor * tierFactor;
+  const goalsExpected = apps * weights.goals * ovrFactor * tierFactor * playStyleGoalsMultiplier(playStyles);
+  const assistsExpected =
+    apps * weights.assists * ovrFactor * tierFactor * playStyleAssistsMultiplier(playStyles);
 
   const variance = () => 0.7 + rng() * 0.6;
   const goals = Math.max(0, Math.round(goalsExpected * variance()));
@@ -101,7 +128,7 @@ export function projectSeasonStats(
 
   const base: StatLine = { apps, goals, assists };
   if (position !== "GK") return base;
-  return { ...base, ...projectGoalkeeperExtras(apps, ovrFactor, tierFactor, rng) };
+  return { ...base, ...projectGoalkeeperExtras(apps, ovrFactor, tierFactor, rng, playStyles) };
 }
 
 /** Somma le statistiche generate su più stagioni consecutive nello stesso club. */
@@ -111,10 +138,11 @@ export function projectStats(
   clubTier: number,
   seasons: number,
   rng: Rng = Math.random,
+  playStyles: PlayStyleId[] = [],
 ): StatLine {
   let total: StatLine = { apps: 0, goals: 0, assists: 0 };
   for (let i = 0; i < seasons; i++) {
-    const season = projectSeasonStats(ovr, position, clubTier, rng);
+    const season = projectSeasonStats(ovr, position, clubTier, rng, playStyles);
     total = {
       apps: total.apps + season.apps,
       goals: total.goals + season.goals,
@@ -138,18 +166,22 @@ export function projectNationalSeasonStats(
   ovr: number,
   position: Position,
   rng: Rng = Math.random,
+  playStyles: PlayStyleId[] = [],
 ): StatLine {
   const apps = clamp(Math.round(2 + (ovr - 75) / 8 + (rng() - 0.5) * 3), 0, 12);
   const weights = ROLE_WEIGHTS[position];
   const ovrFactor = Math.max(0, (ovr - 70) / 30);
   const variance = () => 0.6 + rng() * 0.6;
 
-  const goals = Math.max(0, Math.round(apps * weights.goals * ovrFactor * variance()));
-  const assists = Math.max(0, Math.round(apps * weights.assists * ovrFactor * variance()));
+  const goals = Math.max(0, Math.round(apps * weights.goals * ovrFactor * variance() * playStyleGoalsMultiplier(playStyles)));
+  const assists = Math.max(
+    0,
+    Math.round(apps * weights.assists * ovrFactor * variance() * playStyleAssistsMultiplier(playStyles)),
+  );
 
   const base: StatLine = { apps, goals, assists };
   if (position !== "GK") return base;
-  return { ...base, ...projectGoalkeeperExtras(apps, ovrFactor, 1, rng) };
+  return { ...base, ...projectGoalkeeperExtras(apps, ovrFactor, 1, rng, playStyles) };
 }
 
 /** Somma le statistiche con la nazionale su più stagioni consecutive. */
@@ -158,10 +190,11 @@ export function projectNationalStats(
   position: Position,
   seasons: number,
   rng: Rng = Math.random,
+  playStyles: PlayStyleId[] = [],
 ): StatLine {
   let total: StatLine = { apps: 0, goals: 0, assists: 0 };
   for (let i = 0; i < seasons; i++) {
-    const season = projectNationalSeasonStats(ovr, position, rng);
+    const season = projectNationalSeasonStats(ovr, position, rng, playStyles);
     total = {
       apps: total.apps + season.apps,
       goals: total.goals + season.goals,

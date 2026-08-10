@@ -44,20 +44,26 @@ describe("ovrDeltaForAge", () => {
 
 describe("projectOvr", () => {
   it("dovrebbe crescere se il giocatore è giovane e non c'è rumore casuale", () => {
-    const result = projectOvr(50, YOUNG_AGE, 1, NO_NOISE_RNG);
+    const result = projectOvr(50, YOUNG_AGE, 1, 99, NO_NOISE_RNG);
     expect(result).toBe(54); // 50 + 3.5 arrotondato per eccesso
   });
 
   it("non dovrebbe mai superare il tetto massimo di 99", () => {
     const maxNoiseRng: Rng = () => 1; // noise = +1
-    const result = projectOvr(98, YOUNG_AGE, 1, maxNoiseRng);
+    const result = projectOvr(98, YOUNG_AGE, 1, 99, maxNoiseRng);
     expect(result).toBe(99);
   });
 
   it("non dovrebbe mai scendere sotto il minimo di 35", () => {
     const minNoiseRng: Rng = () => 0; // noise = -1
-    const result = projectOvr(36, OLD_AGE, 1, minNoiseRng);
+    const result = projectOvr(36, OLD_AGE, 1, 99, minNoiseRng);
     expect(result).toBe(35);
+  });
+
+  it("dovrebbe rispettare un tetto individuale più basso di 99 (potenziale)", () => {
+    const maxNoiseRng: Rng = () => 1; // noise = +1
+    const result = projectOvr(78, YOUNG_AGE, 1, 80, maxNoiseRng);
+    expect(result).toBe(80);
   });
 });
 

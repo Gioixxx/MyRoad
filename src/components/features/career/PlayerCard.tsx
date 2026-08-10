@@ -7,7 +7,10 @@ import { countries } from "@/data/countries";
 import { useCountUp } from "@/hooks/useMotion";
 import { ARCHETYPE_LABELS, deriveArchetype } from "@/lib/career/traits";
 import { SHADOW_RUMOR_THRESHOLD } from "@/lib/career/shadow";
+import { ATTRIBUTE_LABELS } from "@/lib/career/attributes";
+import { PLAY_STYLE_LABELS } from "@/lib/career/playstyles";
 import { cn } from "@/lib/utils";
+import { AttributesPanel } from "./AttributesPanel";
 import { ClubCrest } from "./ClubCrest";
 import { JerseyBadge } from "./JerseyBadge";
 import { OvrBadge } from "./OvrBadge";
@@ -110,6 +113,24 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
               Rumors
             </span>
           ) : null}
+          {player.trainingFocus ? (
+            <span
+              className="ml-1.5 rounded bg-(--color-accent)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-accent) uppercase"
+              title="Attributo su cui ti stai concentrando in allenamento"
+            >
+              Focus: {ATTRIBUTE_LABELS[player.trainingFocus]}
+            </span>
+          ) : null}
+          {player.playStyles.length > 0 ? (
+            <span
+              className="ml-1.5 rounded bg-(--color-ovr-gold)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-ovr-gold) uppercase"
+              title={player.playStyles.map((id) => PLAY_STYLE_LABELS[id]).join(", ")}
+            >
+              {player.playStyles.length === 1
+                ? PLAY_STYLE_LABELS[player.playStyles[0]]
+                : `${player.playStyles.length} stili di gioco`}
+            </span>
+          ) : null}
           <p
             className={cn(
               "font-display truncate leading-tight text-(--color-text)",
@@ -125,7 +146,17 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
             {player.club ? player.club.name : "Svincolato"} · {player.age} anni
           </p>
         </div>
-        <OvrBadge ovr={displayOvr} />
+        <div className="flex flex-col items-center gap-0.5">
+          <OvrBadge ovr={displayOvr} />
+          {player.potential > player.ovr ? (
+            <span
+              className="text-[10px] font-semibold tracking-wide text-(--color-text-muted)"
+              title="Potenziale massimo raggiungibile"
+            >
+              pot. {player.potential}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {player.currentObjective ? (
@@ -155,6 +186,8 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
         </div>
         <PopularityMeter value={player.popularity} />
       </div>
+
+      <AttributesPanel attributes={player.attributes} className={cn(compact && "hidden sm:flex")} />
 
       <div
         key={recordsFlashKey || "records"}

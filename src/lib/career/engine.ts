@@ -6,16 +6,28 @@ import type {
   Player,
   PlayerDelta,
   PlayerIdentity,
+  Position,
   StatLine,
 } from "@/types/career";
-import { clamp, projectOvr, projectStats, type Rng } from "./progression";
+import { clamp, projectOvr, projectStats, sumOvrDeltaForAge, type Rng } from "./progression";
 import { computeMarketValue } from "./market";
 import { resignSalary } from "./wallet";
 import { applyTraitsDelta, NEUTRAL_TRAITS } from "./traits";
 import { applyShadowDelta } from "./shadow";
+import { applyPotentialDelta, rollInitialPotential } from "./potential";
+import {
+  applyAttributesDelta,
+  createAttributesForPosition,
+  deriveOvrFromAttributes,
+  distributeAttributeGrowth,
+} from "./attributes";
 
 export const STARTING_AGE = 16;
 export const STARTING_OVR = 50;
+
+/** Margine massimo (per stagione nel ciclo) con cui gli attributi possono "tirare" l'OVR verso
+ * il proprio valore derivato — provvisorio, da tarare con `npm run simulate` (vedi Fase 2). */
+const ATTRIBUTE_PULL_PER_CYCLE = 1.5;
 
 /** Stagioni tra una decisione e l'altra per modalità — osservato sul gioco originale:
  * Normal esplicitamente "every 2 seasons"; Express osservato a passi di 3 (16→19→22...);
@@ -37,11 +49,12 @@ const RETIREMENT_RISK_START_AGE = 31;
  * gioco originale (vedi piano, esplorazione aggiuntiva 3). */
 const RETIREMENT_AUTOMATIC_AGE = 40;
 
-export function createPlayer(identity: PlayerIdentity): Player {
+export function createPlayer(identity: PlayerIdentity, rng: Rng = Math.random): Player {
   return {
     ...identity,
     age: STARTING_AGE,
     ovr: STARTING_OVR,
+    potential: rollInitialPotential(rng),
     marketValueEur: computeMarketValue(STARTING_OVR, STARTING_AGE),
     career: { apps: 0, goals: 0, assists: 0 },
     club: null,
@@ -66,7 +79,17 @@ export function createPlayer(identity: PlayerIdentity): Player {
     traits: NEUTRAL_TRAITS,
     shadow: 0,
     shadowFlags: {},
+    attributes: createAttributesForPosition(identity.position, rng),
+    trainingFocus: null,
+    playStyles: [],
   };
+}
+
+/** Cambia il ruolo in campo del giocatore — gli attributi restano invariati, ma da questo
+ * momento vengono ripesati automaticamente per il nuovo ruolo (deriveOvrFromAttributes/
+ * ROLE_WEIGHTS sono già chiavati per Position). Nessun rimappaggio manuale necessario. */
+export function changePosition(player: Player, newPosition: Position): Player {
+  return { ...player, position: newPosition };
 }
 
 /** Firma per un nuovo club (academy offer, transfer window, prestito): aggiorna anche lo stipendio. */
@@ -114,13 +137,35 @@ export function advanceSeasons(
 
   const ageFrom = player.age;
   const ageTo = ageFrom + seasons;
-  const nextOvr = projectOvr(player.ovr, ageFrom, seasons, rng);
+  const ageBasedOvr = projectOvr(player.ovr, ageFrom, seasons, player.potential, rng);
+
+  // Gli attributi crescono in parallelo (budget derivato dalla stessa curva età-based) e
+  // "tirano" l'OVR verso il proprio valore derivato, ma solo entro un margine bounded per
+  // ciclo — mai abbastanza da sovrastare la curva già calibrata o cancellare un ovrDelta
+  // narrativo appena applicato (vedi piano, Fase 2).
+  const growthBudget = sumOvrDeltaForAge(ageFrom, seasons);
+  const nextAttributes = distributeAttributeGrowth({
+    attributes: player.attributes,
+    position: player.position,
+    totalGrowthBudget: growthBudget,
+    focusAttribute: player.trainingFocus,
+    rng,
+  });
+  const derivedOvr = deriveOvrFromAttributes(nextAttributes, player.position);
+  const pull = clamp(
+    derivedOvr - ageBasedOvr,
+    -ATTRIBUTE_PULL_PER_CYCLE * seasons,
+    ATTRIBUTE_PULL_PER_CYCLE * seasons,
+  );
+  const nextOvr = clamp(Math.round(ageBasedOvr + pull), 35, player.potential);
+
   const seasonStats = projectStats(
     player.ovr,
     player.position,
     player.club.tier,
     seasons,
     rng,
+    player.playStyles,
   );
 
   const stint: ClubStint = {
@@ -136,6 +181,7 @@ export function advanceSeasons(
     ...player,
     age: ageTo,
     ovr: nextOvr,
+    attributes: nextAttributes,
     marketValueEur: computeMarketValue(nextOvr, ageTo),
     career: sumStats(player.career, seasonStats),
     clubHistory: [...player.clubHistory, stint],
@@ -144,12 +190,17 @@ export function advanceSeasons(
 
 /** Applica l'effetto di un outcome di decisione (es. +3 OVR, -2 OVR, infortunio, popolarità). */
 export function applyDelta(player: Player, delta: PlayerDelta): Player {
-  const nextOvr = clamp(player.ovr + (delta.ovrDelta ?? 0), 30, 99);
+  const nextPotential =
+    delta.potentialDelta !== undefined
+      ? applyPotentialDelta(player.potential, delta.potentialDelta)
+      : player.potential;
+  const nextOvr = clamp(player.ovr + (delta.ovrDelta ?? 0), 30, nextPotential);
   const nextPopularity = clamp(player.popularity + (delta.popularityDelta ?? 0), 0, 100);
   const nextInjury = delta.injury !== undefined ? delta.injury : player.injury;
   return {
     ...player,
     ovr: nextOvr,
+    potential: nextPotential,
     marketValueEur: computeMarketValue(nextOvr, player.age),
     popularity: nextPopularity,
     injury: nextInjury,
@@ -160,6 +211,9 @@ export function applyDelta(player: Player, delta: PlayerDelta): Player {
     traits: delta.traitsDelta ? applyTraitsDelta(player.traits, delta.traitsDelta) : player.traits,
     shadow: delta.shadowDelta !== undefined ? applyShadowDelta(player.shadow, delta.shadowDelta) : player.shadow,
     shadowFlags: delta.shadowFlags ? { ...player.shadowFlags, ...delta.shadowFlags } : player.shadowFlags,
+    attributes: delta.attributesDelta
+      ? applyAttributesDelta(player.attributes, delta.attributesDelta)
+      : player.attributes,
   };
 }
 

@@ -38,14 +38,16 @@ const INJURY_SEVERITY_MEDIUM_THRESHOLD = 0.9;
 const INJURY_OVR_PENALTY_BASE = 2;
 const INJURY_OVR_PENALTY_SCALAR = 6;
 
-/** Estrae un infortunio per il ciclo, o null se il giocatore resta integro. */
+/** Estrae un infortunio per il ciclo, o null se il giocatore resta integro. `injuryMultiplier`
+ * (default 1, <1 riduce il rischio) è pensato per il playstyle "Scatto fulmineo". */
 export function rollInjury(
   age: number,
   position: Position,
   seasons: number,
   rng: Rng = Math.random,
+  injuryMultiplier = 1,
 ): Injury | null {
-  if (rng() >= injuryChance(age, position, seasons)) return null;
+  if (rng() >= injuryChance(age, position, seasons) * injuryMultiplier) return null;
 
   const severity = rng();
   const turnsRemaining =
