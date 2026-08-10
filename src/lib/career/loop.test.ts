@@ -147,7 +147,7 @@ describe("pickNextDecision — scandalo forzato", () => {
   });
 
   it("non dovrebbe scattare sotto la soglia di shadow", () => {
-    const player = { ...playerAt(JUVENTUS), ovr: 70, shadow: 40 };
+    const player = { ...playerAt(JUVENTUS), ovr: 70, shadow: 20 };
     const { category } = pickNextDecision(player, INITIAL_LOOP_CONTEXT, [], () => 0);
     expect(category).not.toBe("scandal");
   });
@@ -245,6 +245,27 @@ describe("nextLoopContext", () => {
     const option = { id: "loan-other", label: "Altro prestito", club: getClub("las-palmas")!, outcomes: [] };
     const context = nextLoopContext("loan-return", option, player, { loanParentClub: JUVENTUS });
     expect(context.loanParentClub).toEqual(JUVENTUS);
+    expect(context.loanReturnBounces).toBe(1);
+  });
+
+  it("dovrebbe risolvere forzatamente il prestito oltre il tetto di rimbalzi, anche scegliendo un altro prestito", () => {
+    const player = signWithClub(playerAt(SEVILLA), SEVILLA);
+    const option = { id: "loan-other", label: "Altro prestito", club: getClub("las-palmas")!, outcomes: [] };
+    const context = nextLoopContext("loan-return", option, player, {
+      loanParentClub: JUVENTUS,
+      loanReturnBounces: 1,
+    });
+    expect(context.loanParentClub).toBeNull();
+  });
+
+  it("dovrebbe azzerare il club di appartenenza firmando a titolo definitivo a qualunque numero di rimbalzi", () => {
+    const player = signWithClub(playerAt(SEVILLA), SEVILLA);
+    const option = { id: "sign-permanent", label: "Firma a titolo definitivo", club: SEVILLA, outcomes: [] };
+    const context = nextLoopContext("loan-return", option, player, {
+      loanParentClub: JUVENTUS,
+      loanReturnBounces: 0,
+    });
+    expect(context.loanParentClub).toBeNull();
   });
 
   it("dovrebbe azzerare il club di appartenenza per un trasferimento permanente ordinario", () => {

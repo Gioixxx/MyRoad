@@ -368,3 +368,144 @@ Registro scelte tecniche con motivazioni.
   report per potenziale e distribuzione PlayStyle). `eslint.config.mjs` (+`android/**` negli
   ignore — gap pre-esistente scoperto ed esteso durante questa sessione, non correlato alle 3
   feature ma corretto perché notato lungo il percorso).
+
+### Bilanciamento su 7 fasi per rigiocabilità/divertimento: bug del loop prestiti, Shadow/scandalo, trofeo di club, PlayStyle, archetipo
+- **Data:** 2026-08-10
+- **Decisione:** su richiesta esplicita dell'utente ("bilanciare tutte le meccaniche... se reputi
+  che convenga fare cambiamenti fammi sapere"), audit completo (3 agenti Explore paralleli sulle
+  costanti numeriche attuali + un run fresco di `npm run simulate`, dato che Potenziale/Attributi/
+  PlayStyles erano stati aggiunti la stessa giornata e il loro effetto sulle altre frequenze non
+  era ancora stato misurato). L'audit ha trovato un **bug strutturale**, non solo uno
+  sbilanciamento: nel flusso di prestito, `nextLoopContext` (loop.ts) azzerava `loanParentClub`
+  solo scegliendo `sign-permanent` durante un evento `loan-return` — qualunque altra opzione ("vai
+  in prestito altrove", 3 offerte su 4 opzioni tipiche) lasciava il contesto invariato, e
+  `availableCategories` forza `loan-return` su ogni ciclo finché `loanParentClub` è valorizzato:
+  un giocatore restava quindi intrappolato a scegliere destinazioni di prestito per una media
+  geometrica di ~4 cicli consecutivi (25% di probabilità per ciclo di uscirne sotto scelta
+  uniforme). Da solo, `loan`+`loan-return` consumavano **~29% di tutti i cicli simulati**. Piano
+  approvato dall'utente (3 domande mirate: sì a rendere Shadow/scandalo raggiungibile per chi
+  rischia, sì a ridurre il trofeo di club — già notato in passato e lasciato fuori scope — sì a
+  un unico piano coordinato per tutto), eseguito in 8 fasi (0-7), ognuna verificata con
+  `npm test`/`tsc --noEmit`/`npm run simulate` prima di passare alla successiva:
+  1. **Fase 0 — infrastruttura harness**: `simulation.ts` già esponeva `pickOption` iniettabile
+     (mai usato oltre `pickUniformOption` di default) — aggiunti `pickExtremeOption`/
+     `pickRiskSeekingOption`/`makeTrainingFocusPicker`/`makeTraitDirectedPicker`, tutti opzionali
+     e non usati dal test a seed fisso esistente (`simulation.test.ts` resta invariato).
+     `scripts/simulate-careers.ts` esteso con blocchi diretti (batch più piccoli, 400-800
+     carriere) per misurare la raggiungibilità REALE per un giocatore che persegue deliberatamente
+     una direzione, non solo il pavimento pessimistico della scelta uniforme casuale.
+  2. **Fase 1 — fix del loop prestiti**: nuovo `LoopContext.loanReturnBounces` +
+     `MAX_LOAN_RETURN_BOUNCES=1` — dopo un primo rimbalzo, il prossimo `loan-return` si risolve
+     comunque (il club che ospita il prestito lo trattiene), indipendentemente dall'opzione
+     scelta. `loan-return` sceso da 21.4% a ~12.6% dei cicli totali, `loan`+`loan-return`
+     complessivo da ~29% a ~21%. **Trade-off noto, non corretto in questo giro**: al secondo
+     rimbalzo consecutivo la narrazione dice ancora "vai in prestito altrove" ma la registrazione
+     diventa di fatto definitiva — rifinitura opzionale futura (far sapere a `generateLoanReturn`
+     quanti rimbalzi sono già avvenuti e togliere le opzioni "vai altrove" al tetto).
+  2b. **Fase 4 — trofeo di club**: `CLUB_TROPHY_PRESTIGE_WEIGHT` 0.08→0.03, `CLUB_TROPHY_OVR_DIVISOR`
+     200→350, `CLUB_TROPHY_OVR_BONUS_CAP` 0.15→0.08, `CLUB_TROPHY_CHANCE_CAP` 0.5→0.3 —
+     "almeno 1 trofeo di club" da 94.8% a 84.4% (target utente 75-85%). Un primo taglio moderato
+     (solo `PRESTIGE_WEIGHT` 0.08→0.06) aveva mosso il tasso di appena un punto (94.8%→93.7%):
+     dato che il trofeo si estrae **due volte per ciclo** (campionato + coppa nazionale al 70%
+     della chance del campionato) su ~11 cicli/carriera, serviva un taglio molto più aggressivo di
+     quanto l'intuizione suggerisse — altro promemoria diretto del principio "mai tarare a
+     tavolino" già consolidato nel progetto. **Effetto collaterale documentato, non corretto**: la
+     promozione di campionato (`club-progression.ts`) scatta solo vincendo il titolo, quindi cala
+     proporzionalmente — nuova metrica `promotionCount`/`relegationCount` aggiunta a
+     `SimulatedCareerResult`/`scripts/simulate-careers.ts` (0.17/0.25 per carriera osservato, non
+     collassata a zero).
+  3. **Fase 3 — Shadow/scandalo raggiungibile**: 6+ giri di iterazione con l'harness (non riusciti
+     al primo/secondo/terzo tentativo) hanno rivelato un vincolo strutturale analogo a quello del
+     trofeo: sotto scelta uniforme un giocatore incontra solo ~1 scelta "shadow-rilevante" per
+     carriera (club-crisis/lifestyle/narrative sono categorie già rare, e solo una minoranza dei
+     loro sotto-generatori tocca lo shadow), quindi alzare le magnitudini o abbassare
+     `SHADOW_SCANDAL_THRESHOLD` sposta **entrambe** le popolazioni (scelta pulita vs rischiosa)
+     quasi proporzionalmente — il rapporto di separazione osservato satura empiricamente attorno a
+     ~2.5-3x, non l'obiettivo indicativo iniziale di "raggiungibile ≥60% per chi rischia". Scoperta
+     rilevante durante l'iterazione: `controversial-statement`/`controversial-post` alzano lo
+     shadow su **entrambe** le opzioni (nessuna scelta "sicura") — un contributo di base uguale per
+     scelta uniforme e diretta che comprime il rapporto di separazione invece di allargarlo;
+     riportato a un valore modesto (6, era stato temporaneamente alzato a 8/12 durante
+     l'iterazione) mentre gli eventi con una vera alternativa sicura (`mysterious-substance`,
+     `tax-trouble`, `honesty-test use-it`, `club-crisis leave`) hanno assorbito l'aumento
+     principale. Configurazione finale: `SHADOW_SCANDAL_THRESHOLD` 50→28, `SHADOW_REDEMPTION_THRESHOLD`
+     30→18, magnitudini rischiose circa raddoppiate (es. `mysterious-substance` take 15/25→26/40,
+     `tax-trouble` stay 12→21). Risultato: scandalo "almeno 1" da 0% a ~7-8% sotto scelta uniforme
+     (dentro la fascia 5-15% concordata), ~20% sotto un picker che massimizza sempre lo shadow —
+     un miglioramento reale (da meccanica completamente morta a chiaramente più raggiungibile per
+     chi rischia) ma sotto l'obiettivo indicativo iniziale, per lo stesso vincolo strutturale di
+     frequenza di tocco — vedi [[tech-debt]].
+  4. **Fase 5 — soglie PlayStyle per stile**: `PLAY_STYLE_THRESHOLD` piatta (82, tutti e 6 gli
+     stili) sostituita da soglie nominate per stile (`playstyles.ts`) — causa dello sbilanciamento
+     (sprinter 1.1% vs playmaker 46.7% sotto scelta uniforme) è che la quota di crescita per
+     attributo in `distributeAttributeGrowth` dipende dal peso di ruolo, quindi un attributo con
+     peso basso nella maggior parte dei ruoli (velocità, alta solo su ali/terzini) cresce molto più
+     lentamente anche col focus di allenamento — **non toccata** la formula di crescita
+     (invariante di conservazione del budget già testato in una sessione precedente). Soglie:
+     `SPRINTER_THRESHOLD=68`, `TARGETMAN_THRESHOLD=74` (erano 82), `PLAYMAKER_THRESHOLD=86` (era
+     82, il più facile da raggiungere), `CURLER`/`BRICKWALL`/`CATLIKE_THRESHOLD` invariati a 82.
+     Risultato sotto scelta uniforme: sprinter 1.1%→43.8%, targetman 7-8%→39.9%; sotto focus di
+     allenamento diretto (nuovo blocco harness, un ruolo plausibile per stile: ala per velocità,
+     ST per tiro/fisico, CAM per passaggio, CB per difesa, GK per riflessi) tutti e 6 gli stili
+     ≥73% (la maggior parte vicino al 100%) — unica fase del piano che ha superato l'obiettivo
+     indicativo (≥50-60%) al primo giro di taratura.
+  5. **Fase 6 — archetipo raggiungibile**: stesso vincolo strutturale di frequenza-di-tocco della
+     Fase 3. Alzate le magnitudini che alimentano `leader` (club-crisis stay-and-fight leadership
+     5→9, honesty-test report-it leadership 3→7/discipline 4→5) e `pro` (discipline sulle opzioni
+     "rifiuta" 4/6→5/7, training-focus 1→2 discipline piatto). **Errore scoperto e corretto in
+     corsa**: un primo tentativo aveva alzato anche `NATIONAL_CALLUP_LEADERSHIP_BONUS` da 6 a 8 —
+     dato che la convocazione in nazionale è un evento automatico (non una scelta, quindi
+     identico sotto qualunque picker) e parte da un `leadership` neutro di 50, +8 portava
+     ESATTAMENTE a 58 (`ARCHETYPE_DOMINANT_THRESHOLD`), rendendo "leader" quasi garantito per
+     chiunque venisse convocato (~25-27% delle carriere) — misurato con l'harness: "leader" era
+     schizzato al 29.4% sotto scelta uniforme (da ~3-4%) e "nessuno" crollato da 81% a 42.9%, uno
+     sbilanciamento molto più ampio di quanto inteso. Riportato a 6 (invariato). Risultato finale:
+     "nessuno" 81.2%→63.6% (resta la maggioranza relativa netta, come da obiettivo), tutti e 6 gli
+     archetipi non nulli (era `problem` 0.0%), nessuno dominante; sotto scelte dirette per tratto
+     (nuovo blocco harness, `pickExtremeOption` per vettore, combo ambition-max/loyalty-min per
+     mercenary) separazione reale ma modesta (13-22% diretto contro 1-9% uniforme, ~2-20x a
+     seconda dell'archetipo) — sotto l'obiettivo indicativo iniziale (≥60-70%) per lo stesso
+     vincolo di frequenza di tocco della Fase 3, vedi [[tech-debt]].
+  6. **Fase 7 — pesi categoria + pulizia**: rimisurate tutte le frequenze di categoria dopo il fix
+     del prestito — nessuno scarto attuale-vs-nominale è risultato ingiustificabile (lifestyle/
+     narrative/sponsor/training-focus/club-crisis sotto il nominale per eleggibilità dei
+     sotto-generatori, già atteso; loan-return sopra per il rimbalzo della Fase 1, già accettato)
+     — **nessun peso di `BASE_CATEGORY_WEIGHTS` modificato**, solo risolti i commenti "provvisorio,
+     da confermare" nel codice con i dati osservati. Rimossa `"callup"` dall'union
+     `DecisionCategory` (`types/career.ts`) — confermato morto (non in `availableCategories`, non
+     gestito nello switch di `pickNextDecision`, non nei pesi); le altre occorrenze della stringa
+     `"callup"` nel codebase (`CycleObjectiveKind`, `MomentOverlay.tsx`) sono union type non
+     correlate, verificato via grep prima e dopo la rimozione.
+- **Perché:** stesso principio già consolidato nel progetto ("harness prima, poi ritara", vedi le
+  precedenti sessioni di ricalibrazione OVR/traits/shadow) applicato qui su scala più ampia (7
+  meccaniche in un'unica sessione coordinata) — ogni fase verificata con `npm run simulate`
+  prima/dopo, mai un numero scelto "a tavolino". La scoperta più importante non era prevista
+  all'inizio della sessione: un vincolo strutturale di **frequenza di tocco** (quante volte per
+  carriera un giocatore incontra davvero una scelta rilevante per una data meccanica) limita il
+  rapporto di separazione raggiungibile tra "scelta pulita" e "scelta diretta/rischiosa" a circa
+  2.5-3x per Shadow/scandalo e archetipi, indipendentemente da quanto si alzino le magnitudini o
+  si abbassino le soglie — alzarle ulteriormente sposta entrambe le popolazioni insieme invece di
+  allargare il divario. Rompere questo vincolo richiederebbe alzare la *frequenza* con cui le
+  categorie/sotto-generatori rilevanti compaiono (dominio della Fase 7, esplicitamente
+  posticipata a dopo tutte le altre misure per non confondere le cause) — non affrontato in questa
+  sessione, registrato come tech-debt per una sessione futura mirata.
+- **Alternative:** alzare i pesi di categoria (`club-crisis`/`lifestyle`/`narrative`) già in questa
+  sessione per rompere il vincolo di frequenza-di-tocco — scartato: la Fase 7 doveva restare
+  l'ultima e informata da tutte le altre misure per non confondere gli effetti, e il piano
+  approvato dall'utente non prevedeva di alzare la frequenza complessiva di questi eventi (solo di
+  ritararne peso relativo se necessario, cosa che i dati finali non hanno richiesto).
+- **Impatto:** `src/lib/career/loop.ts` (`loanReturnBounces`, `NATIONAL_CALLUP_LEADERSHIP_BONUS`),
+  `src/lib/career/decisions.ts` (magnitudini shadow/traits, commenti pesi categoria),
+  `src/lib/career/shadow.ts` (soglie), `src/lib/career/trophies.ts` (costanti trofeo club),
+  `src/lib/career/playstyles.ts` (soglie per stile), `src/lib/career/simulation.ts` (picker
+  diretti, `promotionCount`/`relegationCount`), `scripts/simulate-careers.ts` (4 nuovi blocchi di
+  misura diretta), `src/types/career.ts` (rimozione `"callup"`), `src/lib/career/loop.test.ts`/
+  `decisions.test.ts`/`shadow.test.ts` (asserzioni aggiornate ai nuovi valori). 386 test (era 384),
+  `tsc --noEmit`/`npm run lint` puliti (solo i 4 warning `react-hooks/set-state-in-effect`
+  pre-esistenti, invariati). **Non verificato manualmente nel browser** in questa sessione
+  (bilanciamento numerico puro, stesso standard già usato per le sessioni di ricalibrazione
+  precedenti — verificato via test + harness) — vedi [[tech-debt]]. **Effetto collaterale
+  osservato, non nel piano originale**: la convocazione in nazionale è salita da ~25% a ~37% —
+  causa probabile è che `targetman` (bonus additivo +0.08 alla chance di convocazione) è ora
+  sbloccato dal ~40% dei giocatori invece dell'8% grazie alla Fase 5, un effetto a cascata
+  legittimo ma non esplicitamente richiesto — vedi [[tech-debt]] per la decisione se ritararlo.

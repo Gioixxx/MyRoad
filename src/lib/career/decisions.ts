@@ -175,7 +175,7 @@ export const LIFESTYLE_DECISIONS: Decision[] = [
         id: "keep-diet",
         label: "Mantieni la tua dieta",
         hint: "Nessun rischio",
-        outcomes: [outcome(100, "Nessun cambiamento.", 0, { traitsDelta: { discipline: 4 } })],
+        outcomes: [outcome(100, "Nessun cambiamento.", 0, { traitsDelta: { discipline: 5 } })],
       },
     ],
   },
@@ -200,7 +200,7 @@ export const LIFESTYLE_DECISIONS: Decision[] = [
         id: "reject-tattoo",
         label: "Rifiuta",
         hint: "Nessun rischio",
-        outcomes: [outcome(100, "Nulla succede.", 0, { traitsDelta: { discipline: 4 } })],
+        outcomes: [outcome(100, "Nulla succede.", 0, { traitsDelta: { discipline: 5 } })],
       },
     ],
   },
@@ -217,14 +217,14 @@ export const LIFESTYLE_DECISIONS: Decision[] = [
         outcomes: [
           outcome(75, "L'integratore funziona, ti senti molto più forte.", 5, {
             traitsDelta: { discipline: -4 },
-            shadowDelta: 15,
+            shadowDelta: 26,
             shadowFlags: { doped: true },
           }),
           injuryOutcome(
             25,
             "Risulti positivo ai controlli antidoping e vieni squalificato.",
             { label: "Squalifica per doping", turnsRemaining: 2, ovrPenalty: 4 },
-            { traitsDelta: { discipline: -4 }, shadowDelta: 25, shadowFlags: { doped: true } },
+            { traitsDelta: { discipline: -4 }, shadowDelta: 40, shadowFlags: { doped: true } },
           ),
         ],
       },
@@ -234,7 +234,7 @@ export const LIFESTYLE_DECISIONS: Decision[] = [
         hint: "Nessun rischio",
         outcomes: [
           outcome(100, "Nessun cambiamento.", 0, {
-            traitsDelta: { discipline: 6 },
+            traitsDelta: { discipline: 7 },
             shadowDelta: -5,
           }),
         ],
@@ -351,7 +351,7 @@ export const LIFESTYLE_DECISIONS: Decision[] = [
         hint: "Rispetto dello spogliatoio · nessun vantaggio",
         outcomes: [
           outcome(100, "Il tuo gesto viene apprezzato dallo spogliatoio.", 1, {
-            traitsDelta: { discipline: 4, leadership: 3 },
+            traitsDelta: { discipline: 5, leadership: 7 },
             shadowDelta: -5,
           }),
         ],
@@ -362,11 +362,11 @@ export const LIFESTYLE_DECISIONS: Decision[] = [
         hint: "Vantaggio in campo · rischio se scoperto",
         outcomes: [
           outcome(50, "Sfrutti l'informazione e brilli in campo.", 3, {
-            shadowDelta: 8,
+            shadowDelta: 14,
             shadowFlags: { leakedTactics: true },
           }),
           outcome(50, "Vieni scoperto e la tua reputazione ne risente.", -3, {
-            shadowDelta: 8,
+            shadowDelta: 14,
             shadowFlags: { leakedTactics: true },
           }),
         ],
@@ -475,14 +475,14 @@ export function generateClubCrisis(player: Player, rng: Rng = Math.random): Deci
         hint: "Lealtà · calo OVR",
         outcomes: [
           outcome(100, "Meno possibilità di vincere qualcosa quest'anno.", -2, {
-            traitsDelta: { leadership: 5, loyalty: 4 },
+            traitsDelta: { leadership: 9, loyalty: 4 },
           }),
         ],
       },
       withHint(
         signOption("leave", `Vai al ${alternative.name}`, alternative, `Ti trasferisci al ${alternative.name}.`, {
           traitsDelta: { ambition: 3, loyalty: -3 },
-          shadowDelta: 10,
+          shadowDelta: 19,
           shadowFlags: { fanBetrayed: true },
         }),
         "Cambio di ambiente",
@@ -542,13 +542,13 @@ export function generateControversialStatement(player: Player, rng: Rng = Math.r
         outcomes: [
           outcome(100, "Ti scusi ma il minutaggio cala.", -1, {
             traitsDelta: { showmanship: 5 },
-            shadowDelta: 5,
+            shadowDelta: 6,
           }),
         ],
       },
       signOption("leave", `Firma per ${alternative.name}`, alternative, `Lasci per il ${alternative.name}.`, {
         traitsDelta: { showmanship: 5, ambition: 2, loyalty: -2 },
-        shadowDelta: 5,
+        shadowDelta: 6,
       }),
     ],
   };
@@ -577,13 +577,13 @@ export function generateControversialPost(player: Player, rng: Rng = Math.random
         outcomes: [
           outcome(100, "Cancelli il post, ma il caso mediatico ti pesa addosso.", -1, {
             traitsDelta: { showmanship: 5 },
-            shadowDelta: 5,
+            shadowDelta: 6,
           }),
         ],
       },
       signOption("leave", `Firma per ${alternative.name}`, alternative, `Lasci per il ${alternative.name}.`, {
         traitsDelta: { showmanship: 5, ambition: 2, loyalty: -2 },
-        shadowDelta: 5,
+        shadowDelta: 6,
       }),
     ],
   };
@@ -673,7 +673,7 @@ export function generateTaxTrouble(player: Player, rng: Rng = Math.random): Deci
         label: `Resta al ${player.club.name}`,
         club: player.club,
         outcomes: [
-          outcome(100, "La distrazione ti pesa addosso.", -3, { shadowDelta: 12, shadowFlags: { taxEvaded: true } }),
+          outcome(100, "La distrazione ti pesa addosso.", -3, { shadowDelta: 21, shadowFlags: { taxEvaded: true } }),
         ],
       },
       signOption("leave", `Vai al ${alternative.name}`, alternative, `Lasci per il ${alternative.name}.`),
@@ -1246,7 +1246,7 @@ export function generateTrainingFocusDecision(player: Player): Decision {
     hint: "Crescita più rapida su questo attributo nel prossimo ciclo",
     trainingFocus: key,
     outcomes: [outcome(100, `Ti alleni con priorità su ${ATTRIBUTE_LABELS[key]}.`, 0, {
-      traitsDelta: { discipline: 1 },
+      traitsDelta: { discipline: 2 },
     })],
   }));
   options.push({
@@ -1275,13 +1275,16 @@ const BASE_CATEGORY_WEIGHTS: Partial<Record<DecisionCategory, number>> = {
   "club-crisis": 12,
   "end-of-cycle": 10,
   lifestyle: 18,
-  // Nonostante 5 generatori (4 + cambio nazionalità), ognuno resta filtrato individualmente per
-  // eleggibilità: un peso più alto qui non li fa scattare troppo spesso, solo li rende visibili
-  // quando sono davvero disponibili — valore provvisorio, da confermare con l'harness (npm run
-  // simulate) osservando la frequenza per categoria.
+  // Nonostante 6 generatori (5 + cambio nazionalità/redenzione), ognuno resta filtrato
+  // individualmente per eleggibilità: un peso più alto qui non li fa scattare troppo spesso,
+  // solo li rende visibili quando sono davvero disponibili — confermato con l'harness (npm run
+  // simulate, sessione di bilanciamento 2026-08-10): frequenza osservata ~7% dei cicli totali,
+  // in linea con l'eleggibilità gating atteso, nessun aggiustamento di peso necessario.
   narrative: 12,
   sponsor: 10,
-  // Provvisorio, da confermare con npm run simulate (Fase 2).
+  // Confermato con l'harness (npm run simulate, sessione di bilanciamento 2026-08-10): ~8% dei
+  // cicli totali, in linea col peso nominale una volta scontata l'alternanza con le altre
+  // categorie — nessun aggiustamento necessario.
   "training-focus": 14,
 };
 

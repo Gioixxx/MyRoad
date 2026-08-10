@@ -37,19 +37,19 @@ describe("isNationalTeamBanned", () => {
 
 describe("shouldTriggerScandal", () => {
   it("dovrebbe scattare solo sopra soglia e se non già capitato di recente", () => {
-    expect(shouldTriggerScandal({ shadow: 49 }, [])).toBe(false);
-    expect(shouldTriggerScandal({ shadow: 50 }, [])).toBe(true);
+    expect(shouldTriggerScandal({ shadow: 27 }, [])).toBe(false);
+    expect(shouldTriggerScandal({ shadow: 28 }, [])).toBe(true);
     expect(shouldTriggerScandal({ shadow: 80 }, ["scandal"])).toBe(false);
   });
 });
 
 describe("isRedemptionEligible", () => {
   it("richiede uno scandalo già affrontato, shadow basso e nessuna redenzione già ottenuta", () => {
-    expect(isRedemptionEligible({ shadow: 20, shadowFlags: {} })).toBe(false);
+    expect(isRedemptionEligible({ shadow: 10, shadowFlags: {} })).toBe(false);
     expect(isRedemptionEligible({ shadow: 50, shadowFlags: { scandalOccurred: true } })).toBe(false);
-    expect(isRedemptionEligible({ shadow: 20, shadowFlags: { scandalOccurred: true } })).toBe(true);
+    expect(isRedemptionEligible({ shadow: 10, shadowFlags: { scandalOccurred: true } })).toBe(true);
     expect(
-      isRedemptionEligible({ shadow: 20, shadowFlags: { scandalOccurred: true, redeemed: true } }),
+      isRedemptionEligible({ shadow: 10, shadowFlags: { scandalOccurred: true, redeemed: true } }),
     ).toBe(false);
   });
 });

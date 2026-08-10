@@ -28,15 +28,6 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
 - **Impatto:** basso — se la soglia reale fosse leggermente diversa, l'effetto sarebbe solo qualche carriera che finisce 1 anno prima/dopo il previsto, nessun rischio funzionale.
 - **Risoluzione suggerita:** se emergono altre osservazioni (nuove sessioni di ricerca o playtest), verificare che 40 resti coerente; altrimenti considerare la questione chiusa.
 
-### Trofeo di club forse troppo comune dopo la ricalibrazione OVR (~91%)
-- **Priorità:** Bassa
-- **Area:** `lib/career/trophies.ts` (`clubTrophyChance`)
-- **Data:** 2026-08-06
-- **Descrizione:** la ricalibrazione della curva OVR (vedi [[decisions]], "Ricalibrata la curva OVR e le soglie...") ha alzato il tetto OVR medio raggiungibile, e come effetto collaterale non richiesto `clubTrophyChance` (formula invariata) ora produce "almeno un trofeo di club" nel ~91% delle carriere simulate (era ~78-80%). L'utente non ha segnalato i trofei di club come un problema (li vinceva già) e la formula è stata esplicitamente lasciata fuori scope in questa sessione.
-- **Perché rimandato:** non è il problema che l'utente ha chiesto di risolvere; 91% non è ancora ~100% (letteralmente garantito), quindi non blocca nulla nell'immediato.
-- **Impatto:** rischio basso — se il trofeo di club diventa quasi scontato, perde parzialmente la sensazione di "traguardo", ma resta comunque il trofeo "minore" nella gerarchia (club < nazionale < award), quindi meno critico se comune.
-- **Risoluzione suggerita:** se in futuro emerge che vincere il campionato/coppa ogni carriera risulta poco soddisfacente, ridurre leggermente `CLUB_TROPHY_PRESTIGE_WEIGHT`/`CLUB_TROPHY_OVR_DIVISOR` e riverificare con `npm run simulate`.
-
 ### Ricalibrazione OVR/soglie "grande momento" non verificata end-to-end nel browser
 - **Priorità:** Media
 - **Area:** `lib/career/progression.ts`, `lib/career/decisions.ts`, `lib/career/trophies.ts`
@@ -189,12 +180,60 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
   ruolo" e verificare che `player.position` cambi davvero e che il cartellino/pannello attributi
   si aggiornino di conseguenza (nuovi pesi di ruolo, nuova posizione mostrata).
 
+### Raggiungibilità diretta di Shadow/scandalo e archetipi sotto l'obiettivo indicativo (vincolo di frequenza di tocco)
+- **Priorità:** Bassa
+- **Area:** `lib/career/shadow.ts`, `lib/career/traits.ts`, `lib/career/decisions.ts`, `lib/career/loop.ts`
+- **Data:** 2026-08-10
+- **Descrizione:** durante il bilanciamento generale (vedi [[decisions]]), un giocatore che sceglie
+  sempre le opzioni rischiose raggiunge lo scandalo solo nel ~20% delle carriere (uniforme ~7-8%),
+  e un giocatore che persegue sempre un singolo tratto di personalità raggiunge il relativo
+  archetipo nel 13-22% delle carriere (uniforme 1-9%) — entrambi sotto l'obiettivo indicativo
+  iniziale (≥60-70%). Causa diagnosticata con l'harness: sotto ~11 cicli/carriera, un giocatore
+  incontra in media solo ~1 scelta "rilevante" per queste meccaniche (le categorie club-crisis/
+  lifestyle/narrative sono già rare di per sé, e solo una minoranza dei loro sotto-generatori le
+  tocca) — alzare le magnitudini o abbassare le soglie sposta la popolazione "pulita" e quella
+  "diretta" quasi proporzionalmente insieme, il rapporto di separazione satura empiricamente
+  attorno a ~2.5-3x indipendentemente da quanto si spinga sui numeri.
+- **Perché rimandato:** rompere il vincolo richiederebbe alzare la *frequenza* con cui le
+  categorie/sotto-generatori rilevanti compaiono — deliberatamente fuori scope nella sessione di
+  bilanciamento 2026-08-10, che ha già toccato i pesi di categoria in Fase 7 concludendo che
+  nessuno scarto attuale-vs-nominale era ingiustificabile con i dati raccolti.
+- **Impatto:** basso — entrambe le meccaniche sono comunque passate da "sostanzialmente morte"
+  (0% scandali, `problem` 0.0%) a "chiaramente più raggiungibili per chi gioca in quella
+  direzione", un miglioramento reale anche se non al livello dell'obiettivo indicativo iniziale.
+- **Risoluzione suggerita:** se in futuro si vuole una separazione più netta, alzare la frequenza
+  con cui club-crisis/lifestyle/narrative (o i loro sotto-generatori shadow/tratto-rilevanti)
+  compaiono, misurando con `npm run simulate` prima/dopo (i picker diretti già esistono in
+  `simulation.ts`: `pickRiskSeekingOption`/`makeTraitDirectedPicker`, e i blocchi harness dedicati
+  in `scripts/simulate-careers.ts`).
+
+### Convocazione in nazionale salita da ~25% a ~37% come effetto collaterale della Fase 5 (soglie PlayStyle)
+- **Priorità:** Bassa
+- **Area:** `lib/career/decisions.ts` (`nationalCallupChance`), `lib/career/playstyles.ts` (`TARGETMAN_CALLUP_BONUS`)
+- **Data:** 2026-08-10
+- **Descrizione:** durante il bilanciamento generale (vedi [[decisions]]), abbassare la soglia di
+  `targetman` (74, era 82) lo ha reso raggiungibile dal ~40% dei giocatori sotto scelta uniforme
+  (era ~8%) — dato che `targetman` dà un bonus additivo `+0.08` alla chance di convocazione
+  (`TARGETMAN_CALLUP_BONUS`), l'effetto a cascata ha portato "almeno 1 convocazione per carriera"
+  dal ~25% (target calibrato in una sessione precedente) al ~37%. Non era un obiettivo esplicito
+  di questa sessione, solo un effetto collaterale osservato nell'ultimo run completo dell'harness.
+- **Perché rimandato:** l'utente non ha segnalato la convocazione come un problema, e la
+  ricalibrazione del target ~25% era stata fatta in una sessione precedente per un motivo diverso
+  (vedi [[decisions]], "Ricalibrata la curva OVR...") — ritoccarla ora rischierebbe di
+  disallinearsi da quella taratura senza una richiesta esplicita.
+- **Impatto:** basso — una convocazione più facile non rompe nulla meccanicamente, ma si allontana
+  dal ~22-25% ritenuto "generoso ma non assurdo" nella sessione di ricalibrazione precedente.
+- **Risoluzione suggerita:** se si vuole riportare la convocazione vicino al ~25%, alzare
+  leggermente `NATIONAL_CALLUP_OVR_BASELINE`/`_DIVISOR` (decisions.ts) o abbassare
+  `TARGETMAN_CALLUP_BONUS` (playstyles.ts), rimisurando con `npm run simulate`.
+
 ## Priorità
 - **Alta:** —
 - **Media:** momenti celebrativi/timeline non verificati end-to-end; sistema "satisfaction" (Hall of Fame/record/milestone/titoli) non verificato end-to-end; bottone "Chiudi" non verificato nell'exe; ricalibrazione OVR/soglie "grande momento" non verificata end-to-end; espansione mondo/Giant Killer non verificate end-to-end; traits/archetipo + shadow non verificati end-to-end
 - **Bassa:** soglia di ritiro automatico; generatori club-crisis con pesi di base uniformi tra loro; trofeo di club forse troppo comune dopo la ricalibrazione OVR (vedi sopra); promozione di campionato mai osservata esplicitamente nell'originale (vedi sopra); copertura parziale di `sync-league-rosters.ts` (vedi sopra); archetipo/shadow rari sotto scelta uniforme casuale, reachability reale non misurata (vedi sopra); wordmark "My Road - L'Ascesa" non verificato visivamente (vedi sopra); installazioni esistenti di Carriera.exe che non leggono le note di rilascio v0.5.0 (mitigato, vedi sopra); esclusione campionati emergenti (OVR≥84) senza test automatico dedicato (vedi sopra); bottone "Chiudi" non verificato sull'APK Android (vedi sopra); cambio ruolo funzionale non osservato dal vivo (vedi sopra)
 
 ## Archiviato
+- **Trofeo di club forse troppo comune dopo la ricalibrazione OVR (~91%)** — risolto 2026-08-10: nella sessione di bilanciamento generale (vedi [[decisions]], "Bilanciamento su 7 fasi..."), `CLUB_TROPHY_PRESTIGE_WEIGHT` 0.08→0.03, `CLUB_TROPHY_OVR_DIVISOR` 200→350, `CLUB_TROPHY_OVR_BONUS_CAP` 0.15→0.08, `CLUB_TROPHY_CHANCE_CAP` 0.5→0.3 — "almeno 1 trofeo di club" da 94.8%/94.1% a 84.4%, dentro la fascia 75-85% richiesta esplicitamente dall'utente in questo giro (non più "fuori scope").
 - **Overlay trofeo+badge (TrophyImage) non verificato dal vivo con un vero evento di vittoria** — risolto 2026-08-10: 2 agenti browser paralleli hanno giocato carriere reali fino a vincere un vero trofeo di club (Copa del Rey e La Liga con il Valencia/Málaga, 3 vittorie osservate in totale su 2 carriere indipendenti). Layout `flex items-end justify-center gap-3` (trofeo 104px + badge 44px) confermato pulito in tutte e 3 le istanze: nessuna immagine rotta, bottom-alignment corretto, proporzioni naturali (trofeo elemento dominante, badge companion), nessuna distorsione nonostante dimensioni native diverse tra competizioni (256×256 vs 512×512, entrambe quadrate). URL reali verificati via DOM: tutte le immagini `complete: true`. Non ancora osservato in questo giro: overlay premio individuale o convocazione in nazionale (entrambi RNG-gated più rari) — se emerge un problema specifico a quelle varianti andrà riaperta una voce dedicata, ma il rischio principale (layout badge+trofeo mai visto) è chiuso.
 - **Finestra di ritiro probabilistico forse più ampia di 34-40** — risolto 2026-08-06: `RETIREMENT_RISK_START_AGE` in `engine.ts` abbassata da 34 a 31, formula passata da quadratica a cubica dopo aver verificato con `npm run simulate` che il solo allargamento con esponente invariato spostava troppo peso verso i ritiri anticipati (auto-cap a 40 anni sceso dal 49.5% al 22.2%, contro un ~50% osservato nella ricerca). Con la cubica l'auto-cap torna al 43.8%, con solo una coda minoritaria di ritiri a 32-34 anni (3.5%+0.1%). Vedi [[decisions]] per il dettaglio numerico completo.
 - **Retry automatico del download update (v0.3.4) non riverificato con un aggiornamento reale** — risolto 2026-08-06: verificato in diretta nella stessa sessione ispezionando `%TEMP%\CarrieraUpdate\update-log.txt` e campionando la crescita di `Carriera.new.exe` ogni 2s mentre l'utente eseguiva un update reale. I primi due tentativi erano stati interrotti dall'utente stesso (chiusura manuale pensando fosse bloccato, non un fallimento del retry — mancava un indicatore di caricamento, vedi sotto); il terzo è arrivato in fondo al primo giro di retry, script di sostituzione e riavvio completati con successo. Aggiunto anche un indicatore di caricamento (vedi voce sotto) per evitare che l'assenza di feedback porti a chiusure premature come queste.

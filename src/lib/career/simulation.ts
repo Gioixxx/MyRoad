@@ -1,11 +1,14 @@
 import type {
   ArchetypeId,
+  AttributeKey,
   Decision,
   DecisionCategory,
   DecisionOption,
   GameSpeed,
   Player,
+  PlayerDelta,
   PlayerIdentity,
+  Traits,
 } from "@/types/career";
 import { createPlayer } from "./engine";
 import { generateAcademyOffer } from "./decisions";
@@ -27,6 +30,10 @@ export interface SimulatedCareerResult {
   peakOvr: number;
   /** Cicli "cup-upset" vinti (titolo di stagione "giantKiller" assegnato) — per misurare il win rate reale. */
   cupUpsetWinCount: number;
+  /** Cicli in cui il club corrente è stato promosso/retrocesso — per verificare l'effetto
+   * collaterale di clubTrophyChance (la promozione scatta solo vincendo il campionato). */
+  promotionCount: number;
+  relegationCount: number;
   /** Archetipo dominante a fine carriera, se emerso — per misurarne la distribuzione. */
   finalArchetype: ArchetypeId | null;
   /** Debito morale finale, 0-100 — per bucket di distribuzione nel report. */
@@ -51,6 +58,56 @@ export function pickUniformOption(decision: Decision, rng: Rng): DecisionOption 
   return pool[index];
 }
 
+/** Valore atteso (pesato sugli esiti) di `extract(effect)` per un'opzione. */
+function expectedEffectValue(option: DecisionOption, extract: (effect: PlayerDelta) => number): number {
+  const totalWeight = option.outcomes.reduce((sum, o) => sum + o.weight, 0) || 1;
+  const weighted = option.outcomes.reduce((sum, o) => sum + o.weight * extract(o.effect), 0);
+  return weighted / totalWeight;
+}
+
+/**
+ * Sceglie l'opzione (tra quelle non di ritiro) che massimizza/minimizza il valore atteso di
+ * `extract(effect)` — usato dai picker "diretti" sotto per misurare la raggiungibilità reale di
+ * una meccanica per un giocatore che persegue deliberatamente una direzione, a differenza del
+ * pavimento pessimistico di `pickUniformOption`.
+ */
+export function pickExtremeOption(
+  decision: Decision,
+  extract: (effect: PlayerDelta) => number,
+  direction: "max" | "min" = "max",
+): DecisionOption {
+  const nonRetiring = decision.options.filter((o) => !o.retire);
+  const pool = nonRetiring.length > 0 ? nonRetiring : decision.options;
+  const sign = direction === "max" ? 1 : -1;
+  return pool.reduce((best, option) =>
+    sign * expectedEffectValue(option, extract) > sign * expectedEffectValue(best, extract) ? option : best,
+  pool[0]);
+}
+
+/** Picker "diretto": persegue sempre le scelte più rischiose (massimo shadowDelta atteso). */
+export function pickRiskSeekingOption(decision: Decision): DecisionOption {
+  return pickExtremeOption(decision, (effect) => effect.shadowDelta ?? 0, "max");
+}
+
+/** Picker "diretto": sceglie sempre il focus di allenamento su un attributo specifico quando disponibile. */
+export function makeTrainingFocusPicker(target: AttributeKey): (decision: Decision, rng: Rng) => DecisionOption {
+  return (decision, rng) => {
+    if (decision.category === "training-focus") {
+      const match = decision.options.find((o) => o.trainingFocus === target);
+      if (match) return match;
+    }
+    return pickUniformOption(decision, rng);
+  };
+}
+
+/** Picker "diretto": persegue sempre il massimo/minimo di un vettore di traitsDelta. */
+export function makeTraitDirectedPicker(
+  vector: keyof Traits,
+  direction: "max" | "min" = "max",
+): (decision: Decision, rng: Rng) => DecisionOption {
+  return (decision) => pickExtremeOption(decision, (effect) => effect.traitsDelta?.[vector] ?? 0, direction);
+}
+
 /** Simula una carriera intera dal debutto al ritiro, per raccogliere statistiche empiriche. */
 export function simulateCareer(
   identity: PlayerIdentity,
@@ -67,6 +124,8 @@ export function simulateCareer(
   let injuryCount = 0;
   let peakOvr = player.ovr;
   let cupUpsetWinCount = 0;
+  let promotionCount = 0;
+  let relegationCount = 0;
   const categoryPicks: Partial<Record<DecisionCategory, number>> = {};
 
   while (decision && !player.retired && cyclesPlayed < MAX_SIMULATED_CYCLES) {
@@ -80,6 +139,8 @@ export function simulateCareer(
     if (result.newInjury) injuryCount += 1;
     if (player.ovr > peakOvr) peakOvr = player.ovr;
     if (result.seasonTitle?.id === "giantKiller") cupUpsetWinCount += 1;
+    if (result.clubTierChange === "promoted") promotionCount += 1;
+    if (result.clubTierChange === "relegated") relegationCount += 1;
 
     if (player.retired) break;
 
@@ -97,6 +158,8 @@ export function simulateCareer(
     categoryPicks,
     peakOvr,
     cupUpsetWinCount,
+    promotionCount,
+    relegationCount,
     finalArchetype: deriveArchetype(player.traits, player.shadow).primary,
     finalShadow: player.shadow,
     hadScandal: player.shadowFlags?.scandalOccurred ?? false,

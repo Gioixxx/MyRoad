@@ -184,9 +184,9 @@ describe("generateClubCrisis", () => {
     const stay = decision.options.find((o) => o.id === "stay-and-fight")!;
     const leave = decision.options.find((o) => o.id === "leave")!;
 
-    expect(stay.outcomes[0].effect.traitsDelta).toEqual({ leadership: 5, loyalty: 4 });
+    expect(stay.outcomes[0].effect.traitsDelta).toEqual({ leadership: 9, loyalty: 4 });
     expect(leave.outcomes[0].effect.traitsDelta).toEqual({ ambition: 3, loyalty: -3 });
-    expect(leave.outcomes[0].effect.shadowDelta).toBe(10);
+    expect(leave.outcomes[0].effect.shadowDelta).toBe(19);
     expect(leave.outcomes[0].effect.shadowFlags).toEqual({ fanBetrayed: true });
   });
 });
@@ -213,9 +213,9 @@ describe("generateCompetitionForSpot e generateControversialStatement", () => {
     const leave = decision.options.find((o) => o.id === "leave")!;
 
     expect(apologize.outcomes[0].effect.traitsDelta).toEqual({ showmanship: 5 });
-    expect(apologize.outcomes[0].effect.shadowDelta).toBe(5);
+    expect(apologize.outcomes[0].effect.shadowDelta).toBe(6);
     expect(leave.outcomes[0].effect.traitsDelta).toEqual({ showmanship: 5, ambition: 2, loyalty: -2 });
-    expect(leave.outcomes[0].effect.shadowDelta).toBe(5);
+    expect(leave.outcomes[0].effect.shadowDelta).toBe(6);
   });
 });
 
@@ -236,8 +236,8 @@ describe("generateControversialPost", () => {
     const leave = decision.options.find((o) => o.id === "leave")!;
 
     expect(deletePost.outcomes[0].effect.traitsDelta).toEqual({ showmanship: 5 });
-    expect(deletePost.outcomes[0].effect.shadowDelta).toBe(5);
-    expect(leave.outcomes[0].effect.shadowDelta).toBe(5);
+    expect(deletePost.outcomes[0].effect.shadowDelta).toBe(6);
+    expect(leave.outcomes[0].effect.shadowDelta).toBe(6);
   });
 });
 
@@ -380,9 +380,9 @@ describe("LIFESTYLE_DECISIONS — nuovi eventi", () => {
     const success = takeIt.outcomes.find((o) => !o.effect.injury)!;
     const suspension = takeIt.outcomes.find((o) => o.effect.injury)!;
 
-    expect(success.effect.shadowDelta).toBe(15);
+    expect(success.effect.shadowDelta).toBe(26);
     expect(success.effect.shadowFlags).toEqual({ doped: true });
-    expect(suspension.effect.shadowDelta).toBe(25);
+    expect(suspension.effect.shadowDelta).toBe(40);
     expect(suspension.effect.shadowFlags).toEqual({ doped: true });
 
     const rejectIt = mysteriousSubstance.options.find((o) => o.id === "reject-it")!;
@@ -394,10 +394,10 @@ describe("LIFESTYLE_DECISIONS — nuovi eventi", () => {
     const useIt = honestyTest.options.find((o) => o.id === "use-it")!;
     const reportIt = honestyTest.options.find((o) => o.id === "report-it")!;
 
-    expect(useIt.outcomes.every((o) => o.effect.shadowDelta === 8)).toBe(true);
+    expect(useIt.outcomes.every((o) => o.effect.shadowDelta === 14)).toBe(true);
     expect(useIt.outcomes.every((o) => o.effect.shadowFlags?.leakedTactics === true)).toBe(true);
     expect(reportIt.outcomes[0].effect.shadowDelta).toBe(-5);
-    expect(reportIt.outcomes[0].effect.traitsDelta).toEqual({ discipline: 4, leadership: 3 });
+    expect(reportIt.outcomes[0].effect.traitsDelta).toEqual({ discipline: 5, leadership: 7 });
   });
 });
 
@@ -428,7 +428,7 @@ describe("eventi condizionati dal contesto", () => {
     const player = playerAt();
     const decision = generateTaxTrouble(player, FIXED_RNG);
     const stay = decision.options.find((o) => o.id === "stay")!;
-    expect(stay.outcomes[0].effect.shadowDelta).toBe(12);
+    expect(stay.outcomes[0].effect.shadowDelta).toBe(21);
     expect(stay.outcomes[0].effect.shadowFlags).toEqual({ taxEvaded: true });
   });
 

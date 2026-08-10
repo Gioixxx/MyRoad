@@ -258,7 +258,6 @@ export type DecisionCategory =
   | "club-crisis"
   | "end-of-cycle"
   | "lifestyle"
-  | "callup"
   | "continental-final"
   | "cup-upset"
   | "narrative"

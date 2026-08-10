@@ -9,6 +9,13 @@ Snapshot automatici del lavoro in corso, salvati da `save_context.py` su PreComp
 (feature `enforcementHooks`) e ricaricati all'avvio da `session_start.py`. Gestito automaticamente:
 le entry sotto sono sovrascritte per `sessionId` (rolling, ultime ~10). Vedi [[sprint]] per i task attivi.
 
+<!-- session:0ec43460-2e5b-4b29-8439-a695c94237f6 -->
+### player-development-attributes-playstyles — 2026-08-10
+- **Branch:** main · **Quando:** 2026-08-10→2026-08-10
+- **Ultima richiesta:** dobbiamo cercare di bilanciare tutte le meccaniche sia per avere un maggiore riggiocabilità sia a livello di divertimento. se reputi che convienga fare determinati cambiamenti fammi sapere
+- **File toccati:** career/CareerGame.tsx, career/MomentOverlay.tsx, career/CareerSummary.tsx, career/CareerArchive.tsx, career/SpeedSelect.tsx, career/DecisionPanel.tsx, career/OfferPanel.tsx, career/PenaltyShootout.tsx, career/SettingsPanel.tsx, career/CareerTimeline.tsx, career/PlayerCard.tsx, memory/tech-debt.md, Carriera/capacitor.config.ts, android/local.properties, scratchpad/resize.ps1
+- **Comandi:** git; powershell; (netstat; curl; grep; npx; npm; java; echo; export
+
 <!-- session:045900aa-3d21-4c5c-a757-2301517f4a3f -->
 ### Rilasciare nuova versione — 2026-08-09
 - **Branch:** main · **Quando:** 2026-08-09→2026-08-09

@@ -87,9 +87,20 @@ export interface LoopContext {
   loanParentClub: Club | null;
   /** Ultimi "kind" di evento scelti dentro club-crisis/lifestyle/narrative (anti-ripetizione). */
   recentDecisionIds?: string[];
+  /**
+   * Rimbalzi consecutivi ("vai in prestito altrove" scelto dentro un evento loan-return) nello
+   * stesso giro di prestito. Oltre MAX_LOAN_RETURN_BOUNCES, il prossimo loan-return si risolve
+   * comunque (il club lo trattiene), a prescindere dall'opzione scelta — evita che il giocatore
+   * resti bloccato a ripetere loan-return indefinitamente (vedi availableCategories sotto, che
+   * forza questa categoria ad ogni ciclo finché loanParentClub è valorizzato).
+   */
+  loanReturnBounces?: number;
 }
 
 export const INITIAL_LOOP_CONTEXT: LoopContext = { loanParentClub: null };
+
+/** Numero massimo di rimbalzi "vai in prestito altrove" consecutivi prima della risoluzione forzata. */
+const MAX_LOAN_RETURN_BOUNCES = 1;
 
 const MIN_CONTINENTAL_FINAL_OVR = 78;
 const CONTINENTAL_FINAL_CHANCE = 0.15;
@@ -345,7 +356,11 @@ export function nextLoopContext(
     if (option.id === "sign-permanent") {
       return { loanParentClub: null };
     }
-    return context;
+    const bounces = context.loanReturnBounces ?? 0;
+    if (bounces >= MAX_LOAN_RETURN_BOUNCES) {
+      return { loanParentClub: null };
+    }
+    return { ...context, loanReturnBounces: bounces + 1 };
   }
   if (option.club) {
     return { loanParentClub: null };

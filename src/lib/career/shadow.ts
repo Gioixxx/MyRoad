@@ -2,11 +2,11 @@ import type { DecisionCategory, Player, ShadowFlags } from "@/types/career";
 import { clamp } from "./progression";
 
 export const SHADOW_RUMOR_THRESHOLD = 25;
-export const SHADOW_SCANDAL_THRESHOLD = 50;
+export const SHADOW_SCANDAL_THRESHOLD = 28;
 export const SHADOW_BAN_THRESHOLD = 75;
 /** Formula del moltiplicatore award/callup: `1 - shadow / SHADOW_CALLUP_DIVISOR`. */
 export const SHADOW_CALLUP_DIVISOR = 200;
-export const SHADOW_REDEMPTION_THRESHOLD = 30;
+export const SHADOW_REDEMPTION_THRESHOLD = 18;
 
 export function applyShadowDelta(current: number, delta: number): number {
   return clamp(current + delta, 0, 100);

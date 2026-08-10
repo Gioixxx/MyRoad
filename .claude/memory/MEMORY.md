@@ -1,7 +1,7 @@
 ---
 type: memory
 tags: [memory, index]
-updated: [2026-08-08]
+updated: [2026-08-10]
 ---
 
 # My Road - L'Ascesa — Next.js
@@ -44,7 +44,12 @@ motore — **Potenziale dinamico** (tetto OVR individuale che cresce nei cicli "
 per i portieri, con focus di allenamento mirato e cambio ruolo funzionale) e **PlayStyles**
 (6 tratti sbloccabili con bonus concreti) — 3 delle 6 meccaniche gestionali proposte dall'utente,
 le altre (Scouting/Staff/Match Sharpness) escluse perché richiederebbero gestire un'intera
-rosa/club, estranea al gioco single-player — vedi [[sprint]] e [[decisions]].
+rosa/club, estranea al gioco single-player. Nella stessa giornata (terza sessione): un
+**bilanciamento generale su 7 fasi** per rigiocabilità/divertimento — trovato e corretto un bug
+strutturale nel loop prestiti (~29% dei cicli di gioco intrappolati), Shadow/scandalo reso
+raggiungibile (era 0%), trofeo di club ridotto (94%→84%), soglie PlayStyle riequilibrate,
+archetipi di personalità resi più raggiungibili ("nessuno" 81%→64%) — vedi [[sprint]] e
+[[decisions]].
 
 ## File memoria (carica su richiesta)
 > `@file.md` = import Claude · `[[file]]` = wikilink Obsidian (graph). Tieni entrambi.
@@ -76,3 +81,4 @@ rosa/club, estranea al gioco single-player — vedi [[sprint]] e [[decisions]].
 - Nuova categoria di decisione `"cup-upset"` ("Giant Killer", 2026-08-06): un club di prestigio ≤1 sfida una corazzata in coppa nazionale, stesso mini-gioco `PenaltyShootout` della finale continentale — vedi [[decisions]].
 - Identità dell'ultimo giocatore creato persistita in `carriera:last-identity` (`src/lib/last-identity.ts`, 2026-08-08): `IdentityForm` si precompila con cognome/numero/piede/nazionalità/ruolo dell'ultima carriera iniziata (salvata in `startCareer`, non al ritiro) — chiave localStorage dedicata, nessun bump di `STORAGE_VERSION`.
 - `CareerTable` ("Storico") è ora una terza colonna a destra durante la partita (2026-08-08, `CareerGame.tsx`), non più impilata sotto il pannello decisioni — nuovo prop `compact` forza il layout a lista (era solo mobile) anche in questa colonna stretta a schermi larghi. Corpo pagina allargato su tutti gli step nella stessa sessione — vedi [[decisions]].
+- **Bilanciamento generale su 7 fasi** (`lib/career/loop.ts`/`shadow.ts`/`traits.ts`/`trophies.ts`/`playstyles.ts`/`decisions.ts`, 2026-08-10): fix di un bug reale (loop prestiti, `LoopContext.loanReturnBounces`), `SHADOW_SCANDAL_THRESHOLD` 50→28, `CLUB_TROPHY_PRESTIGE_WEIGHT` 0.08→0.03, soglie PlayStyle non più piatte (per-stile, `playstyles.ts`), diverse magnitudini `traitsDelta`/`shadowDelta` alzate in `decisions.ts` — **scoperto un vincolo strutturale di "frequenza di tocco"**: per Shadow/scandalo e archetipi, sotto ~11 cicli/carriera un giocatore incontra troppo poche scelte rilevanti per queste meccaniche perché alzare magnitudini/abbassare soglie crei una separazione netta tra scelta pulita e scelta diretta (satura empiricamente a ~2.5-3x) — vedi [[decisions]] e [[tech-debt]] prima di provare a ritarare ulteriormente questi due sistemi, altrimenti si rischia di ripetere la stessa esplorazione. `simulation.ts` ha ora picker "diretti" riusabili (`pickRiskSeekingOption`/`makeTrainingFocusPicker`/`makeTraitDirectedPicker`) per misurare la raggiungibilità reale, non solo il pavimento di `pickUniformOption`.

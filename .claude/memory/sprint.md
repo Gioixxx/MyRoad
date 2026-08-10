@@ -22,6 +22,11 @@ updated: [2026-08-10]
 > committate come f45c6cf (Scouting/Staff/Match Sharpness escluse, vedi [[backlog]]). Bug di
 > bilanciamento trovato e corretto con `npm run simulate` (OVR di picco medio crollato 82→64,
 > causa matematica identificata e risolta) — vedi [[decisions]] per il dettaglio completo.
+> **Sessione 2026-08-10 (stesso giorno, terza sessione):** bilanciamento generale su 7 fasi per
+> rigiocabilità/divertimento — fix di un bug strutturale nel loop prestiti (~29% dei cicli di
+> gioco intrappolati), Shadow/scandalo reso raggiungibile (era 0%), trofeo di club ridotto
+> (94%→84%), soglie PlayStyle riequilibrate per stile, archetipi di personalità resi più
+> raggiungibili — vedi [[decisions]] per il dettaglio completo di tutte e 7 le fasi.
 
 # Sprint Corrente
 Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in [[tech-debt]].
@@ -481,6 +486,23 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   dettaglio completo. `dist/MyRoad.exe` rigenerato (FileVersion 0.6.0.0 verificata) e allegato
   alla [release GitHub v0.6.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.6.0). 356 test
   verdi, `tsc` pulito prima del tag.
+
+- [x] **Bilanciamento generale su 7 fasi per rigiocabilità/divertimento** (2026-08-10, non ancora
+  committato a fine di questa voce): su richiesta esplicita dell'utente, audit completo (3 agenti
+  Explore paralleli + run fresco dell'harness) ha trovato un bug strutturale nel loop prestiti
+  (loan+loan-return consumavano ~29% di tutti i cicli simulati) oltre a diversi sbilanciamenti
+  già noti (Shadow/scandalo mai raggiunto, PlayStyle molto sbilanciati, archetipo quasi mai
+  assegnato, trofeo di club quasi garantito). Eseguito in 8 fasi (0-7): infrastruttura harness con
+  picker "diretti" (rischio/focus allenamento/tratto), fix del prestito, Shadow/scandalo
+  ricalibrato, trofeo di club ridotto (94.8%→84.4%, target utente 75-85%), soglie PlayStyle per
+  stile (sprinter 1%→44%, targetman 8%→40%), archetipi più raggiungibili ("nessuno" 81%→64%),
+  pesi categoria confermati/puliti (rimossa `"callup"` morta da `DecisionCategory`). Vedi
+  [[decisions]] per il dettaglio numerico completo di ogni fase, inclusa la scoperta di un
+  vincolo strutturale di "frequenza di tocco" che limita la separazione raggiungibile tra scelta
+  pulita/rischiosa per Shadow e archetipi (~2.5-3x, sotto l'obiettivo indicativo iniziale). 386
+  test (era 384), `tsc`/lint puliti (solo i 4 warning pre-esistenti). **Verificato sul tablet
+  Android reale**: build rigenerata (`npm run build` → `cap sync` → `gradle assembleDebug`) e
+  installata via ADB, app avviata senza crash.
 
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo

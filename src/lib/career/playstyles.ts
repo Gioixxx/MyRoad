@@ -1,8 +1,5 @@
 import type { AttributeKey, Attributes, Player, PlayStyleId, Position } from "@/types/career";
 
-/** Soglia di sblocco su un attributo (1-99) — provvisoria, da tarare con `npm run simulate`. */
-export const PLAY_STYLE_THRESHOLD = 82;
-
 export interface PlayStyleDef {
   id: PlayStyleId;
   label: string;
@@ -14,23 +11,38 @@ export interface PlayStyleDef {
 
 const DEFENSIVE_POSITIONS: Position[] = ["CB", "CDM", "LB", "RB"];
 
+/**
+ * Soglie per stile (1-99), tarate con `npm run simulate` per un giocatore che si allena
+ * deliberatamente in quella direzione (focus di allenamento) — non più una soglia piatta unica:
+ * la quota di crescita di ogni attributo in `distributeAttributeGrowth` dipende dal peso di
+ * ruolo, quindi un attributo con peso basso nella maggior parte dei ruoli (es. velocità, alta
+ * solo su ali/terzini) cresce molto più lentamente anche col focus — soglie più basse compensano
+ * senza toccare la formula di crescita.
+ */
+const CURLER_THRESHOLD = 82;
+const PLAYMAKER_THRESHOLD = 86;
+const SPRINTER_THRESHOLD = 68;
+const BRICKWALL_THRESHOLD = 82;
+const TARGETMAN_THRESHOLD = 74;
+const CATLIKE_THRESHOLD = 82;
+
 export const PLAY_STYLE_DEFS: PlayStyleDef[] = [
-  { id: "curler", label: "Tiro a giro", attribute: "shooting", threshold: PLAY_STYLE_THRESHOLD },
-  { id: "playmaker", label: "Regista", attribute: "passing", threshold: PLAY_STYLE_THRESHOLD },
-  { id: "sprinter", label: "Scatto fulmineo", attribute: "pace", threshold: PLAY_STYLE_THRESHOLD },
+  { id: "curler", label: "Tiro a giro", attribute: "shooting", threshold: CURLER_THRESHOLD },
+  { id: "playmaker", label: "Regista", attribute: "passing", threshold: PLAYMAKER_THRESHOLD },
+  { id: "sprinter", label: "Scatto fulmineo", attribute: "pace", threshold: SPRINTER_THRESHOLD },
   {
     id: "brickwall",
     label: "Muro difensivo",
     attribute: "defending",
-    threshold: PLAY_STYLE_THRESHOLD,
+    threshold: BRICKWALL_THRESHOLD,
     eligiblePositions: DEFENSIVE_POSITIONS,
   },
-  { id: "targetman", label: "Colosso d'area", attribute: "physical", threshold: PLAY_STYLE_THRESHOLD },
+  { id: "targetman", label: "Colosso d'area", attribute: "physical", threshold: TARGETMAN_THRESHOLD },
   {
     id: "catlike",
     label: "Riflessi felini",
     attribute: "reflexes",
-    threshold: PLAY_STYLE_THRESHOLD,
+    threshold: CATLIKE_THRESHOLD,
     eligiblePositions: ["GK"],
   },
 ];
