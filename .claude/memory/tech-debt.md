@@ -227,10 +227,31 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
   leggermente `NATIONAL_CALLUP_OVR_BASELINE`/`_DIVISOR` (decisions.ts) o abbassare
   `TARGETMAN_CALLUP_BONUS` (playstyles.ts), rimisurando con `npm run simulate`.
 
+### Avviso "App non verificata" di Honor su ogni installazione sideload
+- **Priorità:** Bassa
+- **Area:** distribuzione APK (`dist/MyRoad.apk`, GitHub Release)
+- **Data:** 2026-08-11
+- **Descrizione:** ogni installazione (manuale o tramite `UpdateChecker`) mostra la schermata di
+  sicurezza Honor/MagicOS "Questa app non è disponibile nell'App Market e non è stata verificata
+  da Honor" con un checkbox di conferma rischio da spuntare prima di poter installare. **Non è
+  legato alla firma/certificato** (quello è già risolto, vedi [[decisions]]) — è un livello di
+  sicurezza OEM separato che compare per qualunque APK installato fuori dal proprio App Market,
+  indipendentemente da come è firmato. Non compare installando via `adb install` (solo nel flusso
+  file scaricato/aperto direttamente sul dispositivo, cioè esattamente il flusso di un tester).
+- **Perché rimandato:** l'unico modo per rimuoverlo davvero è pubblicare l'app su uno store
+  ufficiale (Honor AppGallery, Google Play, ecc.) — richiede account sviluppatore, processo di
+  revisione, mantenimento continuo della scheda store: uno scope enormemente più grande di quanto
+  fatto finora per un gioco hobbistico distribuito a pochi tester. L'utente ha scelto di lasciarlo
+  così com'è per ora (un singolo tap "sono consapevole dei rischi" alla prima installazione).
+- **Impatto:** minimo — friction una tantum per il tester alla prima installazione, standard per
+  qualunque distribuzione APK fuori da uno store ufficiale (non specifico di questo progetto).
+- **Risoluzione suggerita:** nessuna azione a meno che non si decida in futuro di pubblicare
+  l'app su uno store ufficiale.
+
 ## Priorità
 - **Alta:** —
 - **Media:** momenti celebrativi/timeline non verificati end-to-end; sistema "satisfaction" (Hall of Fame/record/milestone/titoli) non verificato end-to-end; bottone "Chiudi" non verificato nell'exe; ricalibrazione OVR/soglie "grande momento" non verificata end-to-end; espansione mondo/Giant Killer non verificate end-to-end; traits/archetipo + shadow non verificati end-to-end
-- **Bassa:** soglia di ritiro automatico; generatori club-crisis con pesi di base uniformi tra loro; trofeo di club forse troppo comune dopo la ricalibrazione OVR (vedi sopra); promozione di campionato mai osservata esplicitamente nell'originale (vedi sopra); copertura parziale di `sync-league-rosters.ts` (vedi sopra); archetipo/shadow rari sotto scelta uniforme casuale, reachability reale non misurata (vedi sopra); wordmark "My Road - L'Ascesa" non verificato visivamente (vedi sopra); installazioni esistenti di Carriera.exe che non leggono le note di rilascio v0.5.0 (mitigato, vedi sopra); esclusione campionati emergenti (OVR≥84) senza test automatico dedicato (vedi sopra); bottone "Chiudi" non verificato sull'APK Android (vedi sopra); cambio ruolo funzionale non osservato dal vivo (vedi sopra)
+- **Bassa:** soglia di ritiro automatico; generatori club-crisis con pesi di base uniformi tra loro; trofeo di club forse troppo comune dopo la ricalibrazione OVR (vedi sopra); promozione di campionato mai osservata esplicitamente nell'originale (vedi sopra); copertura parziale di `sync-league-rosters.ts` (vedi sopra); archetipo/shadow rari sotto scelta uniforme casuale, reachability reale non misurata (vedi sopra); wordmark "My Road - L'Ascesa" non verificato visivamente (vedi sopra); installazioni esistenti di Carriera.exe che non leggono le note di rilascio v0.5.0 (mitigato, vedi sopra); esclusione campionati emergenti (OVR≥84) senza test automatico dedicato (vedi sopra); bottone "Chiudi" non verificato sull'APK Android (vedi sopra); cambio ruolo funzionale non osservato dal vivo (vedi sopra); avviso "App non verificata" di Honor su ogni sideload (vedi sopra)
 
 ## Archiviato
 - **Trofeo di club forse troppo comune dopo la ricalibrazione OVR (~91%)** — risolto 2026-08-10: nella sessione di bilanciamento generale (vedi [[decisions]], "Bilanciamento su 7 fasi..."), `CLUB_TROPHY_PRESTIGE_WEIGHT` 0.08→0.03, `CLUB_TROPHY_OVR_DIVISOR` 200→350, `CLUB_TROPHY_OVR_BONUS_CAP` 0.15→0.08, `CLUB_TROPHY_CHANCE_CAP` 0.5→0.3 — "almeno 1 trofeo di club" da 94.8%/94.1% a 84.4%, dentro la fascia 75-85% richiesta esplicitamente dall'utente in questo giro (non più "fuori scope").

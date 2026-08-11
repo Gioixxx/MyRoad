@@ -635,3 +635,88 @@ Registro scelte tecniche con motivazioni.
   debug mobile invece di affidarsi solo a `adb shell screencap`. Non verificato in questa sessione:
   build APK release firmata (resta backlog aperto), comportamento esatto del bottone "Chiudi" su
   Android (tech-debt esistente, non toccato).
+
+### Build Android firmata + controllo aggiornamenti in-app per i tester senza ADB
+- **Data:** 2026-08-11
+- **Decisione:** l'utente ha chiarito che il cavo/ADB resta il suo flusso personale per il debug
+  pre-release, ma per i tester terzi (senza ADB) l'app deve aggiornarsi "in automatico". Chiariti
+  con l'utente (`AskUserQuestion`) due punti prima di implementare: dove conservare la chiave di
+  firma (scelto: locale sul PC, fuori dal repo — non su un servizio cloud/CI) e il livello di
+  automazione richiesto (scelto: controllo automatico all'avvio + avviso in-app con un tap per
+  installare, non solo un link da cercare a mano). Implementazione in 3 parti:
+  1. **Keystore di firma**: generata con `keytool` (formato PKCS12, validità 10000 giorni),
+     conservata in `C:\Users\Gioix\keystores\myroad\myroad-release.jks` — **fuori dal repo**, con
+     un file `README-PRIVATO-NON-CONDIVIDERE.txt` accanto che documenta password/alias e il
+     rischio se si perde (le installazioni già firmate non ricevono più aggiornamenti, servirebbe
+     ricominciare da capo con una nuova chiave). `android/keystore.properties` (nuovo, locale,
+     **gitignored**) punta a questo file — `android/app/build.gradle` lo legge se presente per
+     configurare `signingConfigs.release`; se assente (es. un'altra macchina senza la keystore) la
+     build `assembleRelease` risulta semplicemente non firmata invece di fallire, per non rompere
+     CI/altri sviluppatori. `android/.gitignore` aggiornato per escludere `*.jks`/`*.keystore`/
+     `keystore.properties` (le righe erano già presenti ma commentate nel template di default).
+  2. **`versionCode`/`versionName` derivati da `package.json`**: prima erano hardcoded (`1`/`"1.0"`,
+     mai aggiornati). Ora `android/app/build.gradle` legge `package.json` (stessa fonte di verità
+     già usata da `scripts/build-launcher.ps1` per l'exe) con `groovy.json.JsonSlurper`;
+     `versionCode` derivato deterministicamente dal semver (`major*10000 + minor*100 + patch`,
+     es. 0.7.2 → 702) — monotono finché il semver non regredisce, requisito Android per accettare
+     un aggiornamento. Richiesto `buildFeatures { buildConfig true }` (non abilitato di default
+     dalle versioni recenti di Android Gradle Plugin) per generare la classe `BuildConfig` usata
+     dal controllo versione a runtime.
+  3. **`UpdateChecker.java`** (nuovo, chiamato da `MainActivity.onCreate`): mirror semplificato
+     dell'auto-updater del launcher desktop (`UpdateChecker.cs`/`UpdateInstaller.cs`) ma nativo
+     Android — su un thread in background, interroga `api.github.com/repos/Gioixxx/MyRoad/
+     releases/latest`, confronta `tag_name` con `BuildConfig.VERSION_NAME` (confronto numerico
+     per componenti semver, non stringa), se trova una versione più recente mostra un
+     `AlertDialog` con un tap per scaricare l'asset `.apk` della release e installarlo. Gestisce
+     il permesso Android 8+ `REQUEST_INSTALL_PACKAGES` (necessario per installare pacchetti da
+     un'app che non è uno "store"): se non concesso, apre le impostazioni di sistema pertinenti
+     (`Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES`) invece di fallire silenziosamente. L'APK
+     scaricato viene esposto tramite il `FileProvider` **già dichiarato** da Capacitor in
+     `AndroidManifest.xml` (riusato il path `cache-path` esistente, che copre l'intera cache
+     dell'app — nessuna modifica a `file_paths.xml` necessaria). Fallimenti di rete/parsing sono
+     silenziosi by design, stesso principio del check periodico del launcher desktop. Aggiunta
+     `INTERNET`/`REQUEST_INSTALL_PACKAGES` a `AndroidManifest.xml` (`INTERNET` era già presente).
+  4. **`scripts/build-android.ps1`** (nuovo, mirror di `build-launcher.ps1`): `npm run build` →
+     `npx cap sync android` → `gradlew assembleRelease` → copia in `dist/MyRoad.apk`. Fallisce
+     esplicitamente se `android/keystore.properties` non esiste, per non produrre e distribuire
+     per errore un APK non firmato. `dist/*.apk` aggiunto a `.gitignore` radice, stesso principio
+     già usato per `dist/*.exe` — mai committato, solo allegato alle GitHub Release.
+- **Perché:** l'app Android non aveva alcun canale di aggiornamento — ogni nuova build richiedeva
+  cavo/ADB dal PC di sviluppo, impraticabile per tester esterni. Un vero self-update silenzioso
+  (zero interazione) non è possibile per un'app fuori dal Play Store — il massimo ottenibile è
+  "controllo automatico + un tap per completare", esattamente il compromesso scelto dall'utente.
+  Riuso del `FileProvider` già presente (invece di dichiararne uno nuovo) evita una duplicazione/
+  collisione di `authorities` con quello di Capacitor.
+- **Alternative:** conservare la keystore in un servizio cloud/CI (es. GitHub Secrets per una
+  futura pipeline di build automatica) — scartata dall'utente a favore del PC locale, più
+  semplice da gestire per un progetto a singolo sviluppatore senza CI Android già impostata. Solo
+  link scaricabile senza controllo automatico in-app — scartata dall'utente, voleva il check
+  automatico all'avvio.
+- **Impatto:** `android/app/build.gradle`, `android/keystore.properties` (nuovo, non committato),
+  `android/.gitignore`, `android/app/src/main/AndroidManifest.xml`,
+  `android/app/src/main/java/com/gioixxx/myroad/MainActivity.java` (+chiamata
+  `UpdateChecker.checkAsync`), `UpdateChecker.java` (nuovo), `scripts/build-android.ps1` (nuovo),
+  `.gitignore` radice (+`/dist/*.apk`). Verificato: `assembleRelease` produce un APK firmato
+  (confermato con `apksigner verify --print-certs`, **non** con `keytool -printcert -jarfile` che
+  non riconosce lo schema di firma v2/v3 usato di default e segnala falsamente "non firmato"),
+  `versionCode`/`versionName` corretti nell'output-metadata (702/"0.7.2"), installato con
+  `assembleDebug` ancora funzionante (nessuna regressione dalle modifiche a `build.gradle`),
+  installato e avviato senza crash su un tablet reale.
+- **Aggiornamento stesso giorno — verificato con un aggiornamento reale rilevato**: pubblicata
+  v0.8.0 mentre un dispositivo di test aveva ancora v0.7.2 installata (release-signed) — al
+  riavvio dell'app è comparso correttamente il dialog "Nuova versione disponibile", il tap su
+  "Aggiorna" ha scaricato l'APK e aperto la schermata di sistema del package installer. **Trovato
+  un problema reale sul dispositivo dell'utente** (diverso dal tablet di test, con ancora la
+  vecchia build **non firmata con la chiave stabile** installata, es. debug): Android rifiutava
+  l'installazione con un errore di certificato, perché richiede la stessa firma tra la versione
+  installata e quella nuova per trattarla come aggiornamento — **atteso e documentato** nelle note
+  della release v0.8.0 ("se hai già installato una versione precedente non firmata con questa
+  chiave, disinstalla e reinstalla una volta"), risolto disinstallando e reinstallando da zero;
+  gli aggiornamenti successivi non dovrebbero più incontrarlo, essendo tutte le build successive
+  firmate con la stessa chiave. **Chiarimento importante distinto da questo**: l'utente ha anche
+  segnalato un avviso di sicurezza Honor ("App non verificata") ad ogni installazione — **non è
+  un problema di certificato/firma**, è un livello di sicurezza OEM separato che compare per
+  qualunque APK installato fuori dall'App Market Honor, indipendentemente da come è firmato (non
+  compare installando via `adb install`, solo nel flusso file scaricato/aperto sul dispositivo).
+  Rimuoverlo richiederebbe pubblicare su uno store ufficiale — scope molto più grande, l'utente ha
+  scelto di lasciarlo com'è per ora (vedi [[tech-debt]]).

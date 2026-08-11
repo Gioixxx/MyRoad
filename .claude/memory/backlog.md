@@ -18,16 +18,6 @@ Funzionalità e idee a lungo termine. Prioritizzato pre-sprint → confluisce in
 
 ---
 
-### Build Android release firmata + canale di distribuzione
-- **Priorità:** Media
-- **Tipo:** Feature
-- **Area:** `android/`, packaging
-- **Descrizione:** oggi esiste solo l'APK di debug (non firmato, generato con `assembleDebug`) usato per il primo test su tablet — vedi [[decisions]]. Serve decidere: generare un keystore per una build `assembleRelease` firmata (necessario per aggiornare l'app nel tempo senza disinstallare — Android rifiuta un update con firma diversa), e se distribuirla via GitHub Release come `dist/MyRoad.exe` (nessun auto-updater equivalente pronto, l'utente dovrebbe reinstallare a mano ad ogni versione) oppure valutare altro canale.
-- **Criteri accettazione:** keystore generato e conservato in modo sicuro (mai committato), build `assembleRelease` firmata funzionante, un APK allegato a una GitHub Release come per l'exe.
-- **Stima:** Piccola-media — la parte tecnica (gradle signing config) è breve, il grosso è decidere e documentare il processo di conservazione del keystore.
-
----
-
 ### Rete Scouting/Vivaio e Visione Tattica/Staff Tecnico (gestione rosa/club)
 - **Priorità:** Bassa
 - **Tipo:** Feature
@@ -129,6 +119,18 @@ Funzionalità e idee a lungo termine. Prioritizzato pre-sprint → confluisce in
 - **Bassa:** promozione/retrocessione estesa oltre i 4 paesi attuali; trofeo continentale di club assegnabile offscreen; nuovo evento "Sostanza misteriosa" (doping); nuovo evento "Fan backlash" (da ricercare); club per Arabia Saudita e Qatar (completare l'espansione mondo); ritiro forzato/squalifica multi-ciclo a shadow≥90 (vedi sopra); Rete Scouting/Vivaio + Staff Tecnico (gestione rosa/club, vedi sopra); Match Sharpness (esclusa per granularità, vedi sopra)
 
 ## Archiviato
+- **Build Android release firmata + canale di distribuzione** — implementato 2026-08-11: keystore
+  di firma generata (`keytool`, conservata fuori dal repo in `C:\Users\Gioix\keystores\myroad\`,
+  mai committata), `android/app/build.gradle` legge `android/keystore.properties` (locale,
+  gitignored) per firmare `assembleRelease`, `versionCode`/`versionName` ora derivati da
+  `package.json` (stessa convenzione già usata per `dist/MyRoad.exe`). Nuovo
+  `scripts/build-android.ps1` (mirror di `build-launcher.ps1`) genera `dist/MyRoad.apk` firmato,
+  allegato alla GitHub Release come l'exe. In più, un vero controllo aggiornamenti in-app
+  (`UpdateChecker.java`, chiamato da `MainActivity.onCreate`): confronta la versione installata
+  con l'ultima release GitHub, propone download+installazione via il package installer di sistema
+  (richiede il permesso `REQUEST_INSTALL_PACKAGES`, concesso una tantum dall'utente) — copre il
+  caso "tester senza cavo/ADB" che ha motivato l'intero item. Vedi [[decisions]] per il dettaglio
+  completo.
 - **Icone trofeo/premio inline sulla riga della tabella carriera** — già implementata (non un nuovo item): osservata nell'originale durante un playtest dal vivo il 2026-08-06 e inizialmente registrata per errore come backlog aperto, senza verificare lo stato attuale del codice. `CareerTable.tsx` (`TrophyChip`/`AwardChip`, righe 12-36) mostra già icone trofeo/premio per riga, aggregate per `stint.ageTo` — introdotto nel commit `28d5b6f` (2026-08-06) ma non documentato esplicitamente all'epoca (stesso pattern già visto con "Momenti di carriera celebrativi", vedi [[decisions]]). Corretto durante la verifica pre-implementazione di questo stesso item.
 - **Packaging come eseguibile .exe** — implementato 2026-08-05: launcher .NET/WebView2 (`launcher/CarrieraLauncher/`), committato come `dist/Carriera.exe`. Vedi [[decisions]] per la scelta tecnica e `launcher/README.md` per come rigenerarlo.
 - **Integrazione stemmi club/competizioni e immagini premi via hotlink** — implementato 2026-08-05: `crestUrl` su ogni `Club` (84/84, TheSportsDB), `COMPETITION_BADGES` per campionati/coppe/coppe continentali/Mondiale/Europei, icona generica (Twemoji) per i 3 `AwardType` individuali — vedi [[decisions]] per il ragionamento sulla distinzione trademark club-vs-award.
