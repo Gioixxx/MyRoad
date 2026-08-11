@@ -554,3 +554,84 @@ Registro scelte tecniche con motivazioni.
   '.claude/libs'" — il symlink tracciato verso `~/.claude/claude-libs` (fuori dal repo, vedi
   `.claude/libs/CLAUDE.md`) viene scambiato per un submodule dal cleanup step; cosmetico, non
   blocca né build né deploy (entrambi verdi), non richiede fix.
+
+### Ottimizzazione layout per schermi di telefono piccoli — scoperto e risolto un bug strutturale di CSS Grid mai visto prima (release v0.7.1)
+- **Data:** 2026-08-11
+- **Decisione:** su segnalazione diretta dell'utente ("sul tablet si vede bene, su schermi più
+  piccoli non si vede bene e non si possono fare le scelte"), diagnosi e fix in più round, ognuno
+  verificato su un **dispositivo Android reale** (Honor, ~360px di larghezza CSS) via debug USB +
+  Chrome DevTools remoto (`chrome://inspect`-style, socket `webview_devtools_remote_<pid>`
+  forwardato con `adb forward`, ispezione `getBoundingClientRect()`/`getComputedStyle()` via
+  `Runtime.evaluate` su WebSocket) — non solo screenshot, per la prima volta in questo progetto
+  una verifica mobile con accesso diretto al DOM/CSSOM renderizzato. Causa iniziale ipotizzata
+  (meta-tag viewport mancante) **smentita** ispezionando l'`out/index.html` reale: Next.js 16 lo
+  inietta già di default. 5 fix distinti, tutti nello stesso commit (c8c3f88) + release v0.7.1:
+  1. **`CareerGame.tsx` — schermata di gioco non scrollabile sotto `lg:`**: il ramo `showPlayShell`
+     del contenitore radice aveva `overflow-hidden` fisso su ogni breakpoint, senza il fallback
+     `overflow-y-auto` già usato correttamente altrove nello stesso file (`showSummary`,
+     `isIdentity`) — su telefono (sempre sotto `lg:` 1024px) i bottoni di decisione finivano fuori
+     dall'area visibile/toccabile senza modo di raggiungerli. Fix: un cambio di classe.
+  2. **Tap target sotto i ~44px raccomandati**: `PositionPicker.tsx` (selezione ruolo, 32×40px→
+     40×48px base) e `SegmentedControl.tsx` (selezione piede, ~32px→44px alt. base).
+  3. **Rendering edge-to-edge Android non gestito**: `targetSdkVersion 36` + Capacitor 8 attivano
+     l'edge-to-edge di default (obbligatorio da Android 15+) — la WebView si estende dietro le
+     barre di sistema, nessun padding `safe-area-inset` da nessuna parte nel codice. Fix:
+     `viewport: { viewportFit: "cover" }` (Next.js Viewport export) + padding
+     `env(safe-area-inset-*)` su tutti e 4 i lati del `body` in `layout.tsx`.
+  4. **Scoperta principale — compressione "silenziosa" di CSS Grid con `min-h-0` incondizionato**:
+     una volta reso scrollabile il contenitore di gioco (fix 1), è emerso un bug preesistente
+     (mascherato fino a quel momento dal clipping totale) — le 3 colonne della griglia di gioco
+     (PlayerCard | contenuto-decisione | Storico) avevano tutte `min-h-0` **non condizionato da
+     `lg:`**. Sotto `lg:`, la griglia implicita a colonna singola comprime ogni riga `auto` per
+     stare nel budget di altezza disponibile (quello del `Card` esterno scrollabile), distribuendo
+     il deficit in base al "automatic minimum size" di ciascun item — che per un elemento con
+     `min-h-0` esplicito è **zero**, non il contenuto reale, quindi la riga può essere compressa
+     arbitrariamente sotto il proprio bisogno reale. Con `overflow:visible` (il caso comune) il
+     contenuto in eccesso trabocca visivamente senza danno — ma la riga successiva nella griglia
+     inizia comunque subito dopo il box **nominale** (compresso) della riga precedente, non dopo
+     il suo contenuto **reale** traboccato: risultato, la label "Storico" si sovrapponeva
+     visivamente a una card di offerta club. Stesso identico meccanismo, variante ancora più
+     insidiosa, trovato in `IdentityForm.tsx`: `PositionPicker` (che ha `overflow-hidden`, non
+     `visible`, per clippare lo sfondo decorativo del campo) veniva compresso al proprio
+     `min-h-[12rem]` (192px, un floor esplicito **inferiore** al contenuto reale di 328px per 6
+     righe di ruoli) — lì, siccome l'overflow è `hidden` non `visible`, le ultime righe (LB/CB/RB,
+     GK) sparivano del tutto, non solo si sovrapponevano. Fix: `min-h-0` spostato a `lg:min-h-0` su
+     tutte le righe della griglia di `CareerGame.tsx` (nessuna compressione sotto `lg:`, si affida
+     interamente allo scroll del `Card` esterno) — per `PositionPicker` invece (dato che i tentativi
+     di far sì che si dimensioni al contenuto reale non hanno funzionato, la causa esatta del
+     "perché esattamente 192px e non di più" resta non del tutto chiarita nonostante 3 tentativi),
+     soluzione pragmatica: box reso scrollabile internamente (`overflow-y-auto` sotto `lg:`,
+     `lg:overflow-hidden` per il comportamento originale su schermi grandi) — scroll annidato,
+     meno elegante di un unico scroll continuo ma garantito funzionante.
+  5. **Musica di sottofondo non in pausa quando l'app va in background**: nessun codice mette in
+     pausa l'`<audio>` quando l'app Android va in background (tasto home, cambio app, o il bottone
+     "Chiudi" del menu — probabile no-op su Android, vedi [[tech-debt]]) — la musica continuava a
+     suonare. Fix a due livelli: hook nativo `onPause()`/`onStop()` in `MainActivity.java`
+     (`bridge.getWebView().evaluateJavascript(...)` per mettere in pausa ogni `<audio>`, garantito
+     dal ciclo di vita Android indipendentemente da cosa fa il livello JS) + fallback lato web
+     (`useBackgroundMusic.ts`: `document.visibilitychange`/`window.pagehide`) per il caso
+     browser/exe desktop dove non esiste un ciclo di vita Android nativo.
+- **Perché:** la scoperta del meccanismo di compressione CSS Grid (`min-h-0` + `automatic minimum
+  size = 0` per item con overflow non-`visible`) è il pattern più importante da ricordare da questa
+  sessione: **qualunque** `min-h-0` non condizionato da breakpoint, applicato a un item di
+  grid/flex dentro un contenitore la cui altezza disponibile può essere inferiore al contenuto
+  reale, rischia lo stesso bug — compressione silenziosa fino al floor esplicito (o a zero se non
+  c'è un floor), invisibile finché qualcosa non lo rende "visibile" (uno scroll che prima non
+  c'era, un contenuto più lungo, ecc.). Verificare `git grep 'min-h-0'` su qualunque nuovo
+  componente di layout mobile prima di assumere che "sotto lg: si impila e basta".
+- **Alternative:** per `PositionPicker`, forzare un `min-h-[20.5rem]` (valore magico che copre
+  esattamente il contenuto a 6 righe) invece dello scroll interno — scartata, fragile (si rompe di
+  nuovo se cambia il numero di righe/l'altezza dei bottoni, esattamente il tipo di regressione già
+  causato dal fix dei tap target in questa stessa sessione).
+- **Impatto:** `src/components/features/career/CareerGame.tsx`, `PositionPicker.tsx`,
+  `IdentityForm.tsx`, `src/components/ui/SegmentedControl.tsx`, `src/app/layout.tsx`,
+  `src/hooks/useBackgroundMusic.ts`, `android/app/src/main/java/com/gioixxx/myroad/MainActivity.java`.
+  386 test invariati, `tsc`/lint puliti (solo i 4 warning pre-esistenti). Release
+  [v0.7.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.7.1), `dist/MyRoad.exe` rigenerato
+  (FileVersion 0.7.1.0 verificata). **Metodo di verifica nuovo per il progetto**: debug USB +
+  ispezione DOM/CSSOM via Chrome DevTools Protocol invece di soli screenshot — molto più efficace
+  per diagnosticare bug di layout (misura esatta di `scrollHeight`/`clientHeight`/
+  `getBoundingClientRect()` invece di dedurre dal pixel) — utile ricordarlo per future sessioni di
+  debug mobile invece di affidarsi solo a `adb shell screencap`. Non verificato in questa sessione:
+  build APK release firmata (resta backlog aperto), comportamento esatto del bottone "Chiudi" su
+  Android (tech-debt esistente, non toccato).

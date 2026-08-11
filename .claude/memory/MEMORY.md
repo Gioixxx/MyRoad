@@ -1,14 +1,14 @@
 ---
 type: memory
 tags: [memory, index]
-updated: [2026-08-10]
+updated: [2026-08-11]
 ---
 
 # My Road - L'Ascesa — Next.js
 > Contesto persistente. Aggiornato da /remember. Vault Obsidian: vedi workflows/obsidian-vault.md.
 > Progetto rinominato da "Carriera" a "My Road - L'Ascesa" il 2026-08-07 — vedi [[decisions]] per il dettaglio del rename (repo GitHub, launcher/exe, UI). La cartella locale del repo resta fisicamente `C:\Dev\Carriera` (non rinominata, solo il nome logico del progetto/repo GitHub).
 
-**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso  **Aggiornamento:** 2026-08-10
+**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso  **Aggiornamento:** 2026-08-11
 
 ## Contesto
 Clone testuale di "Copero — Simulador de carrera" (https://copero.com.ar/juegos/simulador-carrera):
@@ -49,7 +49,13 @@ rosa/club, estranea al gioco single-player. Nella stessa giornata (terza session
 strutturale nel loop prestiti (~29% dei cicli di gioco intrappolati), Shadow/scandalo reso
 raggiungibile (era 0%), trofeo di club ridotto (94%→84%), soglie PlayStyle riequilibrate,
 archetipi di personalità resi più raggiungibili ("nessuno" 81%→64%) — vedi [[sprint]] e
-[[decisions]].
+[[decisions]]. Il 2026-08-11: attivato GitHub Pages come canale live pubblico, poi (sessione
+successiva) una sessione di **ottimizzazione layout per schermi di telefono piccoli** — il gioco
+funzionava bene su tablet ma non su telefono (bottoni di decisione irraggiungibili). 5 fix
+(scroll della schermata di gioco, tap target più grandi, safe-area Android edge-to-edge,
+compressione CSS Grid da `min-h-0` non condizionato, pausa musica in background), verificati per
+la prima volta su un dispositivo Android reale via debug USB + ispezione DOM/CSSOM con Chrome
+DevTools Protocol invece di soli screenshot. Rilasciato come v0.7.1.
 
 ## File memoria (carica su richiesta)
 > `@file.md` = import Claude · `[[file]]` = wikilink Obsidian (graph). Tieni entrambi.
@@ -83,3 +89,4 @@ archetipi di personalità resi più raggiungibili ("nessuno" 81%→64%) — vedi
 - `CareerTable` ("Storico") è ora una terza colonna a destra durante la partita (2026-08-08, `CareerGame.tsx`), non più impilata sotto il pannello decisioni — nuovo prop `compact` forza il layout a lista (era solo mobile) anche in questa colonna stretta a schermi larghi. Corpo pagina allargato su tutti gli step nella stessa sessione — vedi [[decisions]].
 - **Bilanciamento generale su 7 fasi** (`lib/career/loop.ts`/`shadow.ts`/`traits.ts`/`trophies.ts`/`playstyles.ts`/`decisions.ts`, 2026-08-10): fix di un bug reale (loop prestiti, `LoopContext.loanReturnBounces`), `SHADOW_SCANDAL_THRESHOLD` 50→28, `CLUB_TROPHY_PRESTIGE_WEIGHT` 0.08→0.03, soglie PlayStyle non più piatte (per-stile, `playstyles.ts`), diverse magnitudini `traitsDelta`/`shadowDelta` alzate in `decisions.ts` — **scoperto un vincolo strutturale di "frequenza di tocco"**: per Shadow/scandalo e archetipi, sotto ~11 cicli/carriera un giocatore incontra troppo poche scelte rilevanti per queste meccaniche perché alzare magnitudini/abbassare soglie crei una separazione netta tra scelta pulita e scelta diretta (satura empiricamente a ~2.5-3x) — vedi [[decisions]] e [[tech-debt]] prima di provare a ritarare ulteriormente questi due sistemi, altrimenti si rischia di ripetere la stessa esplorazione. `simulation.ts` ha ora picker "diretti" riusabili (`pickRiskSeekingOption`/`makeTrainingFocusPicker`/`makeTraitDirectedPicker`) per misurare la raggiungibilità reale, non solo il pavimento di `pickUniformOption`.
 - **GitHub Pages live dal 2026-08-11**: `https://gioixxx.github.io/MyRoad/`, deploy automatico ad ogni push a `main` via `.github/workflows/deploy-pages.yml` (fallisce/non pubblica se i test non passano). **Ribalta la precedente decisione "mai online"** (2026-08-10, packaging Android) — se in futuro si rivaluta TWA/Bubblewrap per Android, il prerequisito di hosting pubblico ora esiste. `next.config.ts` applica `basePath="/MyRoad"` solo con `GITHUB_PAGES=true` in ambiente — build exe/APK restano root-relative, invariate. Qualunque nuovo riferimento hardcoded a un file in `public/` (pattern già visto 2 volte: audio, sprite maglia) **deve** usare `withBasePath()` (`lib/utils.ts`), altrimenti 404 su Pages — vedi [[decisions]].
+- **Bug ricorrente da tenere a mente per qualunque futuro layout mobile (2026-08-11)**: un `min-h-0` Tailwind **non condizionato da breakpoint**, su un item flex/grid dentro un contenitore la cui altezza disponibile può essere inferiore al contenuto reale, azzera l'"automatic minimum size" dell'item — la riga/colonna può essere compressa arbitrariamente sotto il proprio bisogno reale (fino a un floor esplicito se c'è un `min-h-[...]`, altrimenti verso zero). Con `overflow:visible` il contenuto trabocca visivamente ma la riga *successiva* nella griglia parte comunque dal box nominale (compresso), causando sovrapposizioni; con `overflow:hidden` il contenuto in eccesso sparisce del tutto. Verificare `git grep 'min-h-0'` su qualunque nuovo componente di layout mobile — vedi [[decisions]] per il caso reale che ha rivelato il meccanismo (`CareerGame.tsx`/`PositionPicker.tsx`, release v0.7.1). Metodo di verifica mobile efficace: debug USB Android + Chrome DevTools Protocol (ispezione diretta di `getBoundingClientRect()`/`scrollHeight` via `Runtime.evaluate` su WebSocket) invece di soli screenshot.

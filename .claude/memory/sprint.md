@@ -27,6 +27,13 @@ updated: [2026-08-10]
 > gioco intrappolati), Shadow/scandalo reso raggiungibile (era 0%), trofeo di club ridotto
 > (94%→84%), soglie PlayStyle riequilibrate per stile, archetipi di personalità resi più
 > raggiungibili — vedi [[decisions]] per il dettaglio completo di tutte e 7 le fasi.
+> **Sessione 2026-08-11 (deploy Pages, poi sessione successiva):** ottimizzazione layout per
+> schermi di telefono piccoli — 5 fix (scroll schermata di gioco, tap target, safe-area Android,
+> compressione CSS Grid con `min-h-0` non condizionato, pausa musica in background), verificati
+> per la prima volta su un dispositivo Android reale via debug USB + Chrome DevTools remoto invece
+> di soli screenshot. Rilasciato come v0.7.1 (commit c8c3f88). Vedi [[decisions]] per il dettaglio
+> completo, in particolare il meccanismo di compressione CSS Grid scoperto (rilevante per
+> qualunque futuro layout mobile).
 
 # Sprint Corrente
 Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in [[tech-debt]].
