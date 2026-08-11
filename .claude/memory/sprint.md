@@ -521,6 +521,13 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   playtest — **non allegato alla release** (nessuna decisione ancora presa su firma/canale di
   distribuzione pubblica dell'APK, vedi [[backlog]]), solo consegnato localmente.
 
+- [x] **Storico invertito (ciclo più recente in cima)** (2026-08-11, commit e8523d9, release v0.7.2):
+  su richiesta esplicita dell'utente dopo aver testato il fix layout mobile — `CareerTable.tsx`
+  ora mappa `[...player.clubHistory].reverse()` invece di `player.clubHistory` diretto, sia nella
+  vista a lista (mobile/colonna stretta) sia nella tabella desktop; la riga placeholder del ciclo
+  in corso (`pendingLabel`) spostata in cima invece che in fondo, coerente con l'ordine invertito.
+  Nessun test dedicato esistente (`CareerTable` non ha `.test.tsx`), 386 test invariati.
+
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
 - `ClubStint` ora ha un campo `ovr` (OVR del giocatore alla fine di quel ciclo) — necessario per la CareerTable, che deve mostrare l'OVR storico per riga, non quello attuale
