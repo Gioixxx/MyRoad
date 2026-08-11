@@ -528,6 +528,20 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   in corso (`pendingLabel`) spostata in cima invece che in fondo, coerente con l'ordine invertito.
   Nessun test dedicato esistente (`CareerTable` non ha `.test.tsx`), 386 test invariati.
 
+- [x] **Overlay celebrativo per l'obiettivo di ciclo + traguardi OVR distinti + auto-dismiss**
+  (2026-08-11, commit ebdb750/d52c245/0678d41 + tag v0.9.0): su segnalazione dell'utente che il
+  raggiungimento di un obiettivo era poco chiaro visivamente, nuovo moment `"objective"`
+  nell'overlay celebrativo (icona Target verde, in coda alla sequenza), traguardi OVR con copy
+  specifica per soglia + badge OVR riusato da `OvrBadge` (nuova size `"lg"`) al posto della stella
+  generica, auto-dismiss (6s, pausa su hover/cambio finestra, disattivato con
+  `prefers-reduced-motion`) esteso a **tutti** i moment overlay esistenti e nuovi. Vedi
+  [[decisions]] per il dettaglio completo. 397 test (era 386, +11 nuovi in `MomentOverlay.test.ts`/
+  `.test.tsx`), `tsc`/lint puliti. **Verificato dal vivo nel browser** per traguardo OVR e trofeo
+  (badge/copy/barra di progresso/pausa hover); il nuovo overlay obiettivo solo via test automatico
+  — vedi [[tech-debt]] se si vuole chiudere anche quel punto in una sessione futura. Rilasciato
+  come **v0.9.0**, `dist/MyRoad.exe`/`dist/MyRoad.apk` rigenerati e allegati alla [release GitHub
+  v0.9.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.9.0).
+
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
 - `ClubStint` ora ha un campo `ovr` (OVR del giocatore alla fine di quel ciclo) — necessario per la CareerTable, che deve mostrare l'OVR storico per riga, non quello attuale

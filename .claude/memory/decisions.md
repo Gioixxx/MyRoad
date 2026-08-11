@@ -720,3 +720,73 @@ Registro scelte tecniche con motivazioni.
   compare installando via `adb install`, solo nel flusso file scaricato/aperto sul dispositivo).
   Rimuoverlo richiederebbe pubblicare su uno store ufficiale — scope molto più grande, l'utente ha
   scelto di lasciarlo com'è per ora (vedi [[tech-debt]]).
+
+### Overlay celebrativo per l'obiettivo di ciclo + traguardi OVR distinti + auto-dismiss di tutti i moment overlay
+- **Data:** 2026-08-11
+- **Decisione:** su segnalazione diretta dell'utente ("il raggiungimento di un obiettivo è poco
+  chiaro a livello visivo, non so a livello di OVR se viene fatto qualcosa"), indagine (2 agenti
+  Explore) ha confermato due gap distinti: l'obiettivo di ciclo (`CycleObjective`) funzionava a
+  livello di dominio (bonus popolarità/risparmi) ma a schermo era solo una riga di testo colorata
+  nel banner di fine ciclo, senza alcuna festa; i traguardi OVR (60/70/80/85/90) **avevano già**
+  l'overlay celebrativo completo (`MomentOverlay.tsx`), ma erano visivamente quasi identici al
+  moment "playstyle" (stesso cerchio dorato, icona generica) e con copy identica per ogni soglia
+  — facili da percepire come "un altro popup" invece che un traguardo memorabile. Confermato con
+  l'utente (`AskUserQuestion`, 3 giri) di affrontare entrambi i problemi insieme:
+  1. **Nuovo moment `"objective"`**: quando l'obiettivo di ciclo è raggiunto si accoda come vero
+     moment nell'overlay a schermo intero (icona lucide `Target`, cerchio `--color-success`
+     verde — colore non ancora usato da nessun altro moment kind, coerente col colore già usato
+     per la riga "Obiettivo raggiunto" nel banner). Se mancato, nessuna festa: resta solo il testo
+     nel banner come prima. Inserito **in fondo** alla coda `buildCareerMoments` (dopo trofeo/
+     premio/convocazione/traguardo/playstyle) perché è l'evento più frequente di tutti — messo
+     prima avrebbe rubato risalto a eventi rari.
+  2. **Traguardi OVR più distinti**: nuovo `lib/career/milestone-labels.ts` (stesso pattern di
+     `award-labels.ts`/`playstyles.ts`, `Record<OvrMilestoneThreshold, {title, detail}>` esaustivo
+     a compile-time) con copy dedicata per ciascuna delle 5 soglie (es. 60 "Titolare inamovibile",
+     80 "Classe internazionale", 90 "Leggenda vivente"). Per l'accento visivo, **riuso di
+     `OvrBadge.tsx`** (già mostrato su `PlayerCard`/`CareerTable`/`CareerSummary`/`CareerArchive`)
+     invece di inventare un nuovo elemento grafico — nuova size `"lg"` (~80px) aggiunta al
+     componente esistente. Scelta deliberata rispetto a un nuovo elemento: il numero OVR reale è
+     più informativo di un'icona decorativa, la colorazione a fasce di `OvrBadge`
+     (bronzo/argento/oro) dà una progressione visiva naturale tra le 5 soglie che prima non
+     esisteva (colore piatto uguale per tutte), e crea un filo visivo riconoscibile col cartellino
+     ("stesso badge che vedo sempre, solo più grande").
+  3. **Auto-dismiss per tutti i moment overlay** (esistenti e nuovo): 6s di timer, in pausa su
+     hover del pannello (non su focus DOM — il componente ha già un focus trap permanente sul
+     bottone "Continua", usare il focus come trigger di pausa lo fermerebbe all'istante) e su
+     `blur`/`visibilitychange` della finestra (copre il caso di alt-tab durante la lettura),
+     **completamente disattivato** (non solo rallentato) con `prefers-reduced-motion`, stessa
+     identica gating già usata per i coriandoli in questo file. Barra di progresso opzionale
+     aggiunta per comunicare visivamente il countdown. Controllo manuale (bottone/Escape) sempre
+     disponibile e immediato, indipendentemente dal timer.
+  4. Reso esplicito l'ultimo branch dello switch di rendering (prima un `else` implicito per
+     `"callup"`) con un `else` finale esaustivo (`const _exhaustive: never = moment`), stesso
+     idioma già usato in `satisfaction.ts` (`isObjectiveMet`) — rete di sicurezza ora che l'union
+     ha 6 varianti invece di 5.
+- **Perché:** l'utente ha scelto esplicitamente il trattamento "overlay come i trofei" per
+  l'obiettivo (non solo un banner potenziato) e "copy per fascia + accento visivo distinto" per i
+  traguardi OVR, oltre all'auto-dismiss per **tutti** gli overlay (non solo quelli toccati in
+  questo giro) per non lasciare un'incoerenza tra un moment "vecchio" a chiusura manuale e uno
+  "nuovo" a chiusura automatica. Riuso di `OvrBadge` invece di un nuovo componente/CSS
+  (`gold-metal` proposto inizialmente da un agente di design) scelto durante la revisione: stesso
+  principio "riusa pattern esistenti" già seguito per `award-labels.ts`/`playstyles.ts`, con il
+  vantaggio aggiuntivo della progressione bronzo/argento/oro tra le soglie.
+- **Alternative:** icona generica dedicata per il traguardo (invece del badge numerico) — scartata
+  in fase di revisione del piano perché meno informativa e perché duplicava logica già esistente
+  in `OvrBadge`. Pausa dell'auto-dismiss su focus DOM invece che su hover — scartata, incompatibile
+  col focus trap già presente nel componente (lo fermerebbe permanentemente).
+- **Impatto:** `src/components/features/career/MomentOverlay.tsx` (+moment `"objective"`, branch
+  milestone riscritto, timer auto-dismiss, esaustività), `src/components/features/career/
+  OvrBadge.tsx` (+size `"lg"`), `src/lib/career/milestone-labels.ts` (nuovo),
+  `src/components/features/career/CareerGame.tsx` (un campo in più a `buildCareerMoments`),
+  `src/app/globals.css` (+keyframe barra di progresso), 2 nuovi file di test
+  (`MomentOverlay.test.ts` logica pura, `MomentOverlay.test.tsx` RTL+fake timers — nuovo pattern
+  di test per componenti con timer in questo progetto). 397 test (era 386), `tsc`/lint puliti
+  (solo i 4 warning pre-esistenti). **Verificato dal vivo nel browser** (forzando `player.ovr`/
+  `currentObjective` via `localStorage` + reload, stesso metodo già usato in sessioni precedenti):
+  traguardo OVR 80/85 con badge dorato e copy tier-specifica confermati, overlay trofeo con barra
+  di progresso e pausa su hover confermati, banner "Obiettivo raggiunto" invariato confermato — il
+  nuovo overlay verde dell'obiettivo non è stato osservato dal vivo in questa sessione (solo via
+  test automatico), diverso in questo dai casi precedenti dove di solito si è arrivati a una
+  verifica visiva completa. Rilasciato come **v0.9.0** (bump minor, coerente col criterio già
+  usato per bundle di feature UX correlate) con `dist/MyRoad.exe` e `dist/MyRoad.apk` rigenerati e
+  allegati alla release.
