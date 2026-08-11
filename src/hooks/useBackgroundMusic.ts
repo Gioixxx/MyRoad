@@ -63,9 +63,25 @@ export function useBackgroundMusic(): UseBackgroundMusic {
     };
     window.addEventListener("pointerdown", tryPlayOnGesture);
     window.addEventListener("keydown", tryPlayOnGesture);
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        audioRef.current?.pause();
+      } else if (startedImmediately) {
+        tryPlay();
+      }
+    };
+    const handlePageHide = () => {
+      audioRef.current?.pause();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", handlePageHide);
+
     return () => {
       window.removeEventListener("pointerdown", tryPlayOnGesture);
       window.removeEventListener("keydown", tryPlayOnGesture);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", handlePageHide);
     };
   }, []);
 

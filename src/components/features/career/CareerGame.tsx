@@ -487,7 +487,7 @@ export function CareerGame() {
       className={cn(
         "mx-auto flex w-full min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden px-4",
         showPlayShell
-          ? "max-w-[88rem] gap-2 overflow-hidden py-2 sm:gap-3 sm:py-3"
+          ? "max-w-[88rem] gap-2 overflow-y-auto py-2 sm:gap-3 sm:py-3 lg:overflow-hidden"
           : showSummary
             ? "max-w-[88rem] gap-2 overflow-y-auto py-2 sm:gap-3 sm:py-3 lg:overflow-hidden"
             : isIdentity
@@ -599,10 +599,10 @@ export function CareerGame() {
           ) : null}
 
           {showPlayShell && state ? (
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+            <div className="flex min-w-0 flex-1 flex-col gap-3 lg:min-h-0">
               <CareerTimeline player={state.player} />
 
-              <div className="grid min-h-0 min-w-0 flex-1 gap-3 lg:grid-cols-[20rem_1fr_16rem] lg:items-stretch xl:grid-cols-[23rem_1fr_18rem]">
+              <div className="grid min-w-0 flex-1 gap-3 lg:min-h-0 lg:grid-cols-[20rem_1fr_16rem] lg:items-stretch xl:grid-cols-[23rem_1fr_18rem]">
                 <div className="min-w-0 shrink-0 lg:max-h-full lg:overflow-y-auto">
                   <PlayerCard
                     player={state.player}
@@ -611,7 +611,7 @@ export function CareerGame() {
                   />
                 </div>
 
-                <div className="flex min-h-0 min-w-0 flex-col gap-3">
+                <div className="flex min-w-0 flex-col gap-3 lg:min-h-0">
                   <div className="min-w-0 shrink-0">
                     {showSeason && state.lastOutcome ? (
                       <SeasonBeat
@@ -658,7 +658,7 @@ export function CareerGame() {
                   </div>
                 </div>
 
-                <div className="flex min-h-0 min-w-0 flex-col gap-2 lg:max-h-full">
+                <div className="flex min-w-0 flex-col gap-2 lg:min-h-0 lg:max-h-full">
                   <p className="shrink-0 font-display text-sm tracking-[0.15em] text-(--color-text-muted) uppercase">
                     Storico
                   </p>

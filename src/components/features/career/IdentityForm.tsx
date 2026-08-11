@@ -118,7 +118,7 @@ export function IdentityForm({ onSubmit }: IdentityFormProps) {
           <PositionPicker
             value={position}
             onChange={setPosition}
-            className="min-h-[12rem] flex-1 lg:min-h-0"
+            className="min-h-[12rem] lg:min-h-0 lg:flex-1"
           />
         </Field>
       </div>

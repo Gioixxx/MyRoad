@@ -30,7 +30,7 @@ export function PositionPicker({
       role="radiogroup"
       aria-label="Ruolo in campo"
       className={cn(
-        "relative flex min-h-0 min-w-0 flex-col justify-between overflow-hidden rounded-xl border-2 border-white/20",
+        "relative flex min-w-0 flex-col justify-between overflow-x-hidden overflow-y-auto rounded-xl border-2 border-white/20 lg:min-h-0 lg:overflow-hidden",
         compact ? "gap-1 p-2" : "gap-2 p-3 sm:gap-3 sm:p-4",
         className,
       )}
@@ -79,7 +79,7 @@ export function PositionPicker({
                   "transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-focus-glow)",
                   compact
                     ? "h-7 w-9 text-[10px]"
-                    : "h-8 w-10 text-[11px] sm:h-9 sm:w-12 sm:text-xs",
+                    : "h-11 w-12 text-[11px] sm:h-12 sm:w-14 sm:text-xs",
                   selected
                     ? "selection-glow scale-105 bg-white/25 text-white"
                     : "bg-white/10 text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] hover:bg-white/20 hover:scale-105",
