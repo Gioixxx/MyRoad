@@ -50,6 +50,9 @@ next-env.d.ts
 /dist/*.exe
 # profilo/cache WebView2 se mai creato accanto all'exe (non dovrebbe più succedere, vedi MainForm.cs)
 /dist/*.WebView2/
+# APK Android di release, firmata — si rigenera con scripts/build-android.ps1 e si distribuisce
+# solo via GitHub Release, stesso principio di dist/*.exe (vedi .claude/memory/decisions.md)
+/dist/*.apk
 
 # claude-libs / progetto
 ralph/run-state.json
