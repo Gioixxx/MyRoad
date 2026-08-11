@@ -1,5 +1,5 @@
 import type { Country } from "@/data/countries";
-import { cn } from "@/lib/utils";
+import { cn, withBasePath } from "@/lib/utils";
 import { CountryFlag } from "./CountryFlag";
 
 interface JerseyBadgeProps {
@@ -55,7 +55,7 @@ export function JerseyBadge({
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- asset statico locale */}
       <img
-        src="/jersey/base.webp"
+        src={withBasePath("/jersey/base.webp")}
         alt=""
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 h-full w-full object-contain drop-shadow-md"

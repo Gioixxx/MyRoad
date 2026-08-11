@@ -11,7 +11,7 @@ import { loadArchive } from "@/lib/career/storage";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { cn } from "@/lib/utils";
+import { cn, withBasePath } from "@/lib/utils";
 import { AwardBadge } from "./AwardBadge";
 import { CareerArchive } from "./CareerArchive";
 import { CareerSummary } from "./CareerSummary";
@@ -495,7 +495,7 @@ export function CareerGame() {
               : "max-w-4xl gap-3 overflow-y-auto py-4 sm:py-6",
       )}
     >
-      <audio ref={audioRef} src="/audio/passaggio-di-spogliatoio.mp3" loop preload="auto" className="hidden" />
+      <audio ref={audioRef} src={withBasePath("/audio/passaggio-di-spogliatoio.mp3")} loop preload="auto" className="hidden" />
 
       {showPlaying ? (
         <header className="flex shrink-0 items-center justify-between gap-4">
