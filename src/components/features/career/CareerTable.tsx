@@ -40,6 +40,7 @@ function AwardChip({ count }: { count: number }) {
 
 export function CareerTable({ player, pendingLabel, compact = false }: CareerTableProps) {
   const isGoalkeeper = player.position === "GK";
+  const orderedHistory = [...player.clubHistory].reverse();
   const trophiesByAge = new Map<number, number>();
   for (const trophy of player.trophies) {
     trophiesByAge.set(trophy.age, (trophiesByAge.get(trophy.age) ?? 0) + 1);
@@ -53,7 +54,13 @@ export function CareerTable({ player, pendingLabel, compact = false }: CareerTab
     <div className="chalk-panel min-w-0 rounded-xl">
       {/* Mobile (o colonna stretta con compact): card rows — no horizontal scroll */}
       <ul className={cn("divide-y divide-(--color-border)", !compact && "md:hidden")}>
-        {player.clubHistory.map((stint, index) => {
+        {pendingLabel ? (
+          <li className="animate-pulse px-3 py-2.5 text-sm text-(--color-text-muted)">
+            <span className="mr-2 text-xs">{player.age}</span>
+            {pendingLabel}
+          </li>
+        ) : null}
+        {orderedHistory.map((stint, index) => {
           const trophyCount = trophiesByAge.get(stint.ageTo) ?? 0;
           const awardCount = awardsByAge.get(stint.ageTo) ?? 0;
           return (
@@ -84,12 +91,6 @@ export function CareerTable({ player, pendingLabel, compact = false }: CareerTab
             </li>
           );
         })}
-        {pendingLabel ? (
-          <li className="animate-pulse px-3 py-2.5 text-sm text-(--color-text-muted)">
-            <span className="mr-2 text-xs">{player.age}</span>
-            {pendingLabel}
-          </li>
-        ) : null}
       </ul>
 
       {/* Desktop (non compact): tabella a tutta larghezza */}
@@ -105,7 +106,15 @@ export function CareerTable({ player, pendingLabel, compact = false }: CareerTab
           </tr>
         </thead>
         <tbody>
-          {player.clubHistory.map((stint, index) => {
+          {pendingLabel ? (
+            <tr className="animate-pulse">
+              <td className="px-2 py-2 text-(--color-text-muted)">{player.age}</td>
+              <td colSpan={5} className="px-2 py-2 text-(--color-text-muted)">
+                {pendingLabel}
+              </td>
+            </tr>
+          ) : null}
+          {orderedHistory.map((stint, index) => {
             const trophyCount = trophiesByAge.get(stint.ageTo) ?? 0;
             const awardCount = awardsByAge.get(stint.ageTo) ?? 0;
             return (
@@ -143,14 +152,6 @@ export function CareerTable({ player, pendingLabel, compact = false }: CareerTab
               </tr>
             );
           })}
-          {pendingLabel ? (
-            <tr className="animate-pulse">
-              <td className="px-2 py-2 text-(--color-text-muted)">{player.age}</td>
-              <td colSpan={5} className="px-2 py-2 text-(--color-text-muted)">
-                {pendingLabel}
-              </td>
-            </tr>
-          ) : null}
         </tbody>
       </table>
     </div>
