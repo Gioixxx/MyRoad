@@ -509,3 +509,48 @@ Registro scelte tecniche con motivazioni.
   causa probabile è che `targetman` (bonus additivo +0.08 alla chance di convocazione) è ora
   sbloccato dal ~40% dei giocatori invece dell'8% grazie alla Fase 5, un effetto a cascata
   legittimo ma non esplicitamente richiesto — vedi [[tech-debt]] per la decisione se ritararlo.
+
+### GitHub Pages come nuovo canale live pubblico — ribalta la precedente scelta "mai online"
+- **Data:** 2026-08-11
+- **Decisione:** su richiesta esplicita dell'utente ("GitHub Pages deve essere funzionante"),
+  attivato il deploy automatico su `https://gioixxx.github.io/MyRoad/` — project page di default
+  (scelta esplicita dell'utente tra project page vs dominio personalizzato). Nuovo workflow
+  `.github/workflows/deploy-pages.yml` (`actions/checkout`→`npm ci`→`npm test`→`npm run build`
+  con `GITHUB_PAGES=true`→`configure-pages`→`upload-pages-artifact`→`deploy-pages`), triggerato
+  su ogni push a `main` — il deploy fallisce (non pubblica) se i test non passano, stesso gate di
+  qualità già usato per le release exe/APK. Pages abilitato via `gh api repos/.../pages -X POST
+  -f build_type=workflow` (sorgente "GitHub Actions", non branch `gh-pages`).
+  `next.config.ts` imposta `basePath`/`assetPrefix`/`NEXT_PUBLIC_BASE_PATH="/MyRoad"` **solo**
+  quando `GITHUB_PAGES=true` è nell'ambiente di build — la build per l'exe desktop
+  (`scripts/build-launcher.ps1`) e per l'APK Android (`npx cap sync`) restano root-relative come
+  prima, nessuna delle due imposta quella variabile. **Bug trovato e corretto durante il primo
+  giro di verifica locale** (non a posteriori sul sito pubblicato): `basePath`/`assetPrefix`
+  riscrivono automaticamente solo gli asset gestiti da Next.js stesso (`_next/*`, favicon) — due
+  riferimenti hardcoded a file in `public/` (audio di sottofondo in `CareerGame.tsx`, sprite
+  maglia in `JerseyBadge.tsx`) restavano root-relative e avrebbero dato 404 sotto `/MyRoad/`.
+  Nuovo helper `withBasePath()` in `lib/utils.ts` (prefissa con `NEXT_PUBLIC_BASE_PATH`, stringa
+  vuota per le build exe/APK) usato in entrambi i punti — verificato con una build locale
+  `GITHUB_PAGES=true` prima di pushare (grep sull'HTML esportato) e poi di nuovo in produzione
+  dopo il deploy (HTML/JS/audio tutti 200).
+- **Perché:** richiesta diretta dell'utente — ribalta esplicitamente la decisione precedente
+  (2026-08-10, sessione packaging Android) di scartare TWA/Bubblewrap proprio perché "il progetto
+  non ha hosting pubblico live... mai stato live su un dominio pubblico". Quella decisione non è
+  più valida: da qui in poi il progetto **ha** un sito pubblico live. Rilevante se in futuro si
+  torna a valutare TWA/Bubblewrap per una futura release Android firmata (vedi [[backlog]]), il
+  prerequisito che mancava ora esiste.
+- **Alternative:** branch `gh-pages` con build committata — scartata, il workflow "GitHub
+  Actions" come sorgente evita di dover committare artefatti di build (`out/`) nella cronologia
+  git, stesso principio già seguito per `dist/*.exe` (mai committato, solo allegato alle
+  release). Riscrivere i 2 riferimenti hardcoded con percorsi relativi invece di un helper
+  `withBasePath()` — scartata: i componenti non hanno un modo affidabile di conoscere la propria
+  profondità nell'albero DOM per costruire un path relativo corretto in ogni contesto d'uso.
+- **Impatto:** `.github/workflows/deploy-pages.yml` (nuovo), `next.config.ts` (basePath
+  condizionale), `src/lib/utils.ts` (+`withBasePath`), `CareerGame.tsx`/`JerseyBadge.tsx` (2 call
+  site). Repo pubblica dal 2026-08-05 (vedi promemoria in [[domain]]/segnalibri) — il sito ora
+  online rende ancora più rilevante quel promemoria: ogni asset/scelta va valutata assumendo
+  visibilità pubblica. Nessun impatto su `STORAGE_VERSION`/salvataggi. **Annotazione benigna nel
+  log del workflow** da non confondere con un errore: `actions/checkout`'s post-job cleanup
+  tenta un `git submodule foreach` che fallisce con "No url found for submodule path
+  '.claude/libs'" — il symlink tracciato verso `~/.claude/claude-libs` (fuori dal repo, vedi
+  `.claude/libs/CLAUDE.md`) viene scambiato per un submodule dal cleanup step; cosmetico, non
+  blocca né build né deploy (entrambi verdi), non richiede fix.
