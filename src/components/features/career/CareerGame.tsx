@@ -358,6 +358,7 @@ export function CareerGame() {
       nationalCallup: outcome.nationalCallup,
       newMilestones: outcome.newMilestones,
       newPlayStyles: outcome.newPlayStyles,
+      objectiveResult: outcome.objectiveResult,
     });
     setMoments(nextMoments);
     setMomentIndex(0);

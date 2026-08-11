@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 interface OvrBadgeProps {
   ovr: number;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   className?: string;
 }
 
@@ -17,12 +17,12 @@ export function OvrBadge({ ovr, size = "md", className }: OvrBadgeProps) {
     <div
       className={cn(
         "flex flex-col items-center justify-center rounded-lg font-display leading-none",
-        size === "md" ? "h-16 w-16 text-2xl" : "h-11 w-11 text-base",
+        size === "lg" ? "h-20 w-20 text-3xl" : size === "md" ? "h-16 w-16 text-2xl" : "h-11 w-11 text-base",
         tierClasses(ovr),
         className,
       )}
     >
-      {size === "md" ? <span className="text-[10px] tracking-[0.2em]">OVR</span> : null}
+      {size !== "sm" ? <span className="text-[10px] tracking-[0.2em]">OVR</span> : null}
       <span>{ovr}</span>
     </div>
   );

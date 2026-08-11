@@ -224,6 +224,25 @@ body {
   animation-fill-mode: forwards;
 }
 
+@keyframes moment-timer-shrink {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.animate-moment-timer {
+  animation-name: moment-timer-shrink;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+.moment-timer-paused {
+  animation-play-state: paused;
+}
+
 @keyframes gold-shimmer {
   0%,
   100% {
