@@ -1,11 +1,20 @@
 ---
 type: tech-debt
 tags: [memory, tech-debt]
-updated: [2026-08-10]
+updated: [2026-08-11]
 ---
 
 # Tech Debt
 Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spesso in [[conventions]].
+
+> **Chiusura in blocco — 2026-08-11:** su richiesta esplicita dell'utente ("la Tech debt la puoi
+> ritenere chiusa"), tutti gli item sotto sono stati dichiarati chiusi senza una verifica puntuale
+> voce-per-voce — è una decisione di accettare collettivamente il rischio residuo, non la prova che
+> ciascun problema sia stato effettivamente risolto/verificato. Le descrizioni originali restano
+> intatte come riferimento storico (cosa non era ancora verificato e perché), utile se in futuro un
+> bug osservato in gioco rimanda a uno di questi punti. Nessuna voce spostata in Archiviato per non
+> perdere la distinzione tra "chiuso per decisione" e "risolto con verifica reale" (vedi le voci
+> già in Archiviato sotto, quelle sì verificate).
 
 ## Template
 ### [Titolo breve]
@@ -250,8 +259,8 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
 
 ## Priorità
 - **Alta:** —
-- **Media:** momenti celebrativi/timeline non verificati end-to-end; sistema "satisfaction" (Hall of Fame/record/milestone/titoli) non verificato end-to-end; bottone "Chiudi" non verificato nell'exe; ricalibrazione OVR/soglie "grande momento" non verificata end-to-end; espansione mondo/Giant Killer non verificate end-to-end; traits/archetipo + shadow non verificati end-to-end
-- **Bassa:** soglia di ritiro automatico; generatori club-crisis con pesi di base uniformi tra loro; trofeo di club forse troppo comune dopo la ricalibrazione OVR (vedi sopra); promozione di campionato mai osservata esplicitamente nell'originale (vedi sopra); copertura parziale di `sync-league-rosters.ts` (vedi sopra); archetipo/shadow rari sotto scelta uniforme casuale, reachability reale non misurata (vedi sopra); wordmark "My Road - L'Ascesa" non verificato visivamente (vedi sopra); installazioni esistenti di Carriera.exe che non leggono le note di rilascio v0.5.0 (mitigato, vedi sopra); esclusione campionati emergenti (OVR≥84) senza test automatico dedicato (vedi sopra); bottone "Chiudi" non verificato sull'APK Android (vedi sopra); cambio ruolo funzionale non osservato dal vivo (vedi sopra); avviso "App non verificata" di Honor su ogni sideload (vedi sopra)
+- **Media:** — (tutti gli item precedentemente in questa fascia chiusi in blocco il 2026-08-11 su decisione utente, vedi nota in cima al file)
+- **Bassa:** — (idem)
 
 ## Archiviato
 - **Trofeo di club forse troppo comune dopo la ricalibrazione OVR (~91%)** — risolto 2026-08-10: nella sessione di bilanciamento generale (vedi [[decisions]], "Bilanciamento su 7 fasi..."), `CLUB_TROPHY_PRESTIGE_WEIGHT` 0.08→0.03, `CLUB_TROPHY_OVR_DIVISOR` 200→350, `CLUB_TROPHY_OVR_BONUS_CAP` 0.15→0.08, `CLUB_TROPHY_CHANCE_CAP` 0.5→0.3 — "almeno 1 trofeo di club" da 94.8%/94.1% a 84.4%, dentro la fascia 75-85% richiesta esplicitamente dall'utente in questo giro (non più "fuori scope").
