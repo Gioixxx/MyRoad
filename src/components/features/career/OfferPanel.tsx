@@ -1,14 +1,31 @@
 "use client";
 
 import { Star } from "lucide-react";
-import type { Decision, DecisionOption } from "@/types/career";
+import type { Decision, DecisionOption, Player } from "@/types/career";
 import { cn } from "@/lib/utils";
 import { favorableOutcomeWeight } from "@/lib/career/decisions";
+import { tacticalFit, TACTICAL_FIT_LABELS } from "@/lib/career/tactics";
 import { ClubCrest } from "./ClubCrest";
 
 interface OfferPanelProps {
   decision: Decision;
+  player: Pick<Player, "attributes" | "position">;
   onChoose: (optionId: string) => void;
+}
+
+const TACTICAL_FIT_STYLES: Record<string, string> = {
+  ottimo: "text-(--color-success)",
+  neutro: "text-(--color-text-muted)",
+  scarso: "text-(--color-error)",
+};
+
+function TacticalFitChip({ player, club }: { player: OfferPanelProps["player"]; club: NonNullable<DecisionOption["club"]> }) {
+  const fit = tacticalFit(player, club);
+  return (
+    <span className={cn("text-xs", TACTICAL_FIT_STYLES[fit])}>
+      Fit tattico: <span className="font-semibold">{TACTICAL_FIT_LABELS[fit]}</span>
+    </span>
+  );
 }
 
 function PrestigeStars({ prestige }: { prestige: number }) {
@@ -42,7 +59,7 @@ function stakeLabel(option: DecisionOption, decision: Decision): string {
   return "Trasferimento";
 }
 
-export function OfferPanel({ decision, onChoose }: OfferPanelProps) {
+export function OfferPanel({ decision, player, onChoose }: OfferPanelProps) {
   return (
     <div className="animate-step-in flex flex-col gap-4">
       <div>
@@ -81,6 +98,7 @@ export function OfferPanel({ decision, onChoose }: OfferPanelProps) {
                     {option.club.country} · {option.club.competitions.league}
                   </span>
                   <PrestigeStars prestige={option.club.prestige} />
+                  <TacticalFitChip player={player} club={option.club} />
                 </>
               ) : null}
               {option.retire ? (

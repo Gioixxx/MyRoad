@@ -110,6 +110,8 @@ export function projectSeasonStats(
   clubTier: number,
   rng: Rng = Math.random,
   playStyles: PlayStyleId[] = [],
+  /** Moltiplicatore di compatibilità tattica col club corrente (vedi tactics.ts) — <1, 1, >1. */
+  fitMultiplier = 1,
 ): StatLine {
   const appsBase = 24 + Math.round((ovr - 50) / 4);
   const apps = clamp(appsBase + Math.round((rng() - 0.5) * 8), 5, 38);
@@ -118,9 +120,10 @@ export function projectSeasonStats(
   const ovrFactor = Math.max(0, (ovr - 45) / 55);
   const weights = ROLE_WEIGHTS[position];
 
-  const goalsExpected = apps * weights.goals * ovrFactor * tierFactor * playStyleGoalsMultiplier(playStyles);
+  const goalsExpected =
+    apps * weights.goals * ovrFactor * tierFactor * playStyleGoalsMultiplier(playStyles) * fitMultiplier;
   const assistsExpected =
-    apps * weights.assists * ovrFactor * tierFactor * playStyleAssistsMultiplier(playStyles);
+    apps * weights.assists * ovrFactor * tierFactor * playStyleAssistsMultiplier(playStyles) * fitMultiplier;
 
   const variance = () => 0.7 + rng() * 0.6;
   const goals = Math.max(0, Math.round(goalsExpected * variance()));
@@ -139,10 +142,11 @@ export function projectStats(
   seasons: number,
   rng: Rng = Math.random,
   playStyles: PlayStyleId[] = [],
+  fitMultiplier = 1,
 ): StatLine {
   let total: StatLine = { apps: 0, goals: 0, assists: 0 };
   for (let i = 0; i < seasons; i++) {
-    const season = projectSeasonStats(ovr, position, clubTier, rng, playStyles);
+    const season = projectSeasonStats(ovr, position, clubTier, rng, playStyles, fitMultiplier);
     total = {
       apps: total.apps + season.apps,
       goals: total.goals + season.goals,

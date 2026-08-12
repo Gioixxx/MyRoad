@@ -232,6 +232,9 @@ export interface Player extends PlayerIdentity {
   /** Stili di gioco sbloccati (soglia su un attributo) — vedi lib/career/playstyles.ts. Nome
    * deliberatamente diverso da `traits` (personalità/archetipo), concetto non correlato. */
   playStyles: PlayStyleId[];
+  /** Clausola rescissoria col club corrente, in EUR — ricalcolata ad ogni firma (0 se mai
+   * firmato o pre-migrazione). Vedi lib/career/wallet.ts (computeReleaseClauseEur). */
+  releaseClauseEur: number;
 }
 
 /** Tratto distintivo sbloccabile quando un attributo supera una soglia — dà un bonus concreto
@@ -251,6 +254,8 @@ export interface PlayerDelta {
   /** Raro, per eventi narrativi futuri — non ancora prodotto da nessun generatore. */
   potentialDelta?: number;
   attributesDelta?: Partial<Record<AttributeKey, number>>;
+  /** Se presente, nuovo valore assoluto della clausola rescissoria (non un delta). */
+  releaseClauseEur?: number;
 }
 
 export type DecisionCategory =
@@ -267,7 +272,11 @@ export type DecisionCategory =
   | "sponsor"
   /** Categoria forzata (mai nel pool normale) quando `shadow` supera la soglia di scandalo. */
   | "scandal"
-  | "training-focus";
+  | "training-focus"
+  /** Negoziazione col procuratore (clausola/stipendio) — rotazione normale. */
+  | "agent"
+  /** Categoria forzata (mai nel pool normale): un club rivale attiva la clausola rescissoria. */
+  | "clause-activation";
 
 export interface DecisionOutcome {
   /** Peso relativo tra gli outcome della stessa opzione — i pesi di un'opzione sommano a 100. */

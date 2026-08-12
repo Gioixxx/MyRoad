@@ -568,6 +568,25 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   browser** (prima volta per tipo mostra overlay, ripetizione stesso tipo no, tipo diverso sì) e
   sul tablet fisico via ADB. Rilasciato come **v0.9.2**.
 
+- [x] **Fit tattico col club + contratti/potere degli agenti** (2026-08-12, non ancora
+  committato/rilasciato a fine di questa voce): su richiesta dell'utente di analizzare 7 dinamiche
+  reali della carriera di un calciatore e capire cosa inserire, implementate le 2 dinamiche scelte
+  come priorità — le altre 3 rimandate a [[backlog]]. Nuovo `lib/career/tactics.ts` (sistema
+  tattico per club derivato da hash FNV-1a sull'id, nessun nuovo dato — bug di clustering
+  dell'hash trovato e corretto durante la verifica nel browser, non rilevabile dall'harness
+  aggregato), moltiplicatore fit applicato alle proiezioni statistiche, chip UI su offerte/
+  cartellino. Nuovo `Player.releaseClauseEur` (clausola rescissoria, `STORAGE_VERSION` 10→11),
+  bonus alla firma su nuovo club, categoria "agent" (negoziazione clausola) e categoria forzata
+  "clause-activation" (rivale attiva la clausola, stesso pattern architetturale di scandalo/
+  finale continentale). Vedi [[decisions]] per il dettaglio completo. 446 test (era 403), `tsc`/
+  lint puliti, `npm run simulate` verificato (fit tattico non degenere, frequenza clause-activation
+  in linea con gli altri eventi forzati esistenti). **Verificato dal vivo nel browser** in una
+  sessione di playtest fortunata: entrambe le nuove categorie ("agent" e "clause-activation")
+  scattate naturalmente senza bisogno di forzare lo stato via localStorage, tutti i percorsi
+  osservati direttamente (chip fit tattico, clausola+bonus sul cartellino, accetta/rifiuta
+  l'attivazione della clausola, negoziazione clausola più alta verificata all'esatto moltiplicatore
+  atteso).
+
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
 - `ClubStint` ora ha un campo `ovr` (OVR del giocatore alla fine di quel ciclo) — necessario per la CareerTable, che deve mostrare l'OVR storico per riga, non quello attuale

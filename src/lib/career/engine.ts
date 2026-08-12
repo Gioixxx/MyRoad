@@ -11,7 +11,8 @@ import type {
 } from "@/types/career";
 import { clamp, projectOvr, projectStats, sumOvrDeltaForAge, type Rng } from "./progression";
 import { computeMarketValue } from "./market";
-import { resignSalary } from "./wallet";
+import { computeReleaseClauseEur, computeSigningBonusEur, resignSalary } from "./wallet";
+import { tacticalFit, tacticalFitMultiplier } from "./tactics";
 import { applyTraitsDelta, NEUTRAL_TRAITS } from "./traits";
 import { applyShadowDelta } from "./shadow";
 import { applyPotentialDelta, rollInitialPotential } from "./potential";
@@ -83,6 +84,7 @@ export function createPlayer(identity: PlayerIdentity, rng: Rng = Math.random): 
     attributes: createAttributesForPosition(identity.position, rng),
     trainingFocus: null,
     playStyles: [],
+    releaseClauseEur: 0,
   };
 }
 
@@ -93,9 +95,23 @@ export function changePosition(player: Player, newPosition: Position): Player {
   return { ...player, position: newPosition };
 }
 
-/** Firma per un nuovo club (academy offer, transfer window, prestito): aggiorna anche lo stipendio. */
+/**
+ * Firma per un nuovo club (academy offer, transfer window, prestito): aggiorna anche stipendio e
+ * clausola rescissoria. Il bonus alla firma si applica solo su un vero cambio di club, non su
+ * "resta"/rinnovo (stesso club di prima).
+ */
 export function signWithClub(player: Player, club: Club): Player {
-  return { ...player, club, wallet: resignSalary(player.wallet, player.ovr, club.prestige) };
+  const isNewClub = player.club?.id !== club.id;
+  let wallet = resignSalary(player.wallet, player.ovr, club.prestige);
+  if (isNewClub) {
+    wallet = { ...wallet, savingsEur: wallet.savingsEur + computeSigningBonusEur(wallet.salaryEurPerCycle) };
+  }
+  return {
+    ...player,
+    club,
+    wallet,
+    releaseClauseEur: computeReleaseClauseEur(player.marketValueEur, player.age, club.prestige),
+  };
 }
 
 /** Cambia la nazionalità del giocatore (evento "nonno di un altro paese", non ripetibile). */
@@ -160,6 +176,7 @@ export function advanceSeasons(
   );
   const nextOvr = clamp(Math.round(ageBasedOvr + pull), 35, player.potential);
 
+  const fitMultiplier = tacticalFitMultiplier(tacticalFit(player, player.club));
   const seasonStats = projectStats(
     player.ovr,
     player.position,
@@ -167,6 +184,7 @@ export function advanceSeasons(
     seasons,
     rng,
     player.playStyles,
+    fitMultiplier,
   );
 
   const stint: ClubStint = {
@@ -215,6 +233,7 @@ export function applyDelta(player: Player, delta: PlayerDelta): Player {
     attributes: delta.attributesDelta
       ? applyAttributesDelta(player.attributes, delta.attributesDelta)
       : player.attributes,
+    releaseClauseEur: delta.releaseClauseEur ?? player.releaseClauseEur,
   };
 }
 

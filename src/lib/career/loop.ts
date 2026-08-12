@@ -38,6 +38,10 @@ import {
 } from "./satisfaction";
 import { accrueSalary, applyPopularityDelta, popularityDeltaForCycle } from "./wallet";
 import {
+  clauseActivationChance,
+  clauseActivationSuitorPool,
+  generateAgentNegotiation,
+  generateClauseActivationDecision,
   generateClubCrisis,
   generateClubPriority,
   generateCompetitionForSpot,
@@ -59,6 +63,7 @@ import {
   generateTransferWindow,
   generateTriumphantReturn,
   generateUnexpectedProspect,
+  isAgentEligible,
   isClubPriorityEligible,
   isNationalitySwitchEligible,
   isReturnHomeEligible,
@@ -67,6 +72,7 @@ import {
   isTriumphantReturnEligible,
   isUnexpectedProspectEligible,
   LIFESTYLE_DECISIONS,
+  pickClauseActivationSuitor,
   pickCupUpsetOpponent,
   pickDecisionCategory,
   rollNationalCallup,
@@ -176,6 +182,9 @@ export function availableCategories(player: Player, context: LoopContext): Decis
   if (isSponsorEligible(player)) {
     categories.push("sponsor");
   }
+  if (isAgentEligible(player)) {
+    categories.push("agent");
+  }
   return categories;
 }
 
@@ -199,6 +208,20 @@ export function shouldTriggerCupUpset(
   if (!player.club?.competitions.cup) return false;
   if (player.club.prestige > CUP_UPSET_MAX_CLUB_PRESTIGE) return false;
   return rng() < CUP_UPSET_CHANCE;
+}
+
+/** Un club rivale attiva la clausola rescissoria — probabilità gated su un pretendente eleggibile
+ * esistente e su quanto la clausola è "conveniente" (vedi `clauseActivationChance`). */
+export function shouldTriggerClauseActivation(
+  player: Player,
+  context: LoopContext,
+  rng: Rng = Math.random,
+): boolean {
+  if (context.loanParentClub) return false;
+  if (!player.club) return false;
+  if (player.releaseClauseEur <= 0) return false;
+  if (clauseActivationSuitorPool(player).length === 0) return false;
+  return rng() < clauseActivationChance(player);
 }
 
 /** "Finish high school" ha senso solo a inizio carriera — unico evento del pool con un gate d'età. */
@@ -286,6 +309,15 @@ export function pickNextDecision(
     };
   }
 
+  if (shouldTriggerClauseActivation(player, context, rng)) {
+    const suitor = pickClauseActivationSuitor(player, rng)!;
+    return {
+      decision: generateClauseActivationDecision(player, suitor),
+      category: "clause-activation",
+      context,
+    };
+  }
+
   if (shouldTriggerScandal(player, recentCategories)) {
     return { decision: generateScandalDecision(player), category: "scandal", context };
   }
@@ -337,6 +369,8 @@ export function pickNextDecision(
     }
     case "sponsor":
       return { decision: generateSponsorDeal(player, rng), category, context };
+    case "agent":
+      return { decision: generateAgentNegotiation(player), category, context };
     default:
       throw new Error(`Categoria di decisione non gestita nel loop: ${category}`);
   }

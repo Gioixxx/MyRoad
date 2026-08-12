@@ -1,14 +1,14 @@
 ---
 type: memory
 tags: [memory, index]
-updated: [2026-08-11]
+updated: [2026-08-12]
 ---
 
 # My Road - L'Ascesa — Next.js
 > Contesto persistente. Aggiornato da /remember. Vault Obsidian: vedi workflows/obsidian-vault.md.
 > Progetto rinominato da "Carriera" a "My Road - L'Ascesa" il 2026-08-07 — vedi [[decisions]] per il dettaglio del rename (repo GitHub, launcher/exe, UI). La cartella locale del repo resta fisicamente `C:\Dev\Carriera` (non rinominata, solo il nome logico del progetto/repo GitHub).
 
-**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso  **Aggiornamento:** 2026-08-11
+**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso  **Aggiornamento:** 2026-08-12
 
 ## Contesto
 Clone testuale di "Copero — Simulador de carrera" (https://copero.com.ar/juegos/simulador-carrera):
@@ -55,11 +55,18 @@ funzionava bene su tablet ma non su telefono (bottoni di decisione irraggiungibi
 (scroll della schermata di gioco, tap target più grandi, safe-area Android edge-to-edge,
 compressione CSS Grid da `min-h-0` non condizionato, pausa musica in background), verificati per
 la prima volta su un dispositivo Android reale via debug USB + ispezione DOM/CSSOM con Chrome
-DevTools Protocol invece di soli screenshot. Rilasciato come v0.7.1.
+DevTools Protocol invece di soli screenshot. Rilasciato come v0.7.1. Il 2026-08-12 (sessione
+successiva a v0.9.2, non ancora rilasciata a sé): su richiesta dell'utente di analizzare 7
+dinamiche reali della carriera di un calciatore e capire cosa inserire, implementate **fit
+tattico col club** (sistema tattico per club derivato proceduralmente, nessun nuovo dato) e
+**contratti/potere degli agenti** (clausola rescissoria con trigger forzato reale, bonus alla
+firma, negoziazione col procuratore) — le altre 5 dinamiche mappate come già parzialmente coperte
+o rimandate a [[backlog]] su richiesta esplicita. Vedi [[decisions]] per il dettaglio completo.
 
 ## File memoria (carica su richiesta)
 > `@file.md` = import Claude · `[[file]]` = wikilink Obsidian (graph). Tieni entrambi.
-- @decisions.md — [[decisions]] — scelte tecniche con motivazioni
+- @decisions.md — [[decisions]] — scelte tecniche con motivazioni (dal 2026-08-11 in poi)
+- decisions-archive.md — [[decisions-archive]] — **eccezione: nessun `@`, non auto-caricato.** Decisioni 2026-08-04→2026-08-10, spostate qui il 2026-08-12 perché `decisions.md` aveva superato i 160KB (oltre la soglia di 100KB del tool Read). Leggere on-demand (Grep poi Read offset+limit) quando serve contesto storico.
 - @domain.md — [[domain]] — glossario, entità, regole di business
 - @sprint.md — [[sprint]] — task correnti e obiettivi
 - @conventions.md — [[conventions]] — pattern specifici del progetto

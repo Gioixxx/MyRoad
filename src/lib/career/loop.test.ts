@@ -9,6 +9,7 @@ import {
   pickNextDecision,
   pushRecentCategory,
   resolveCycle,
+  shouldTriggerClauseActivation,
   shouldTriggerContinentalFinal,
   shouldTriggerCupUpset,
   type LoopContext,
@@ -56,6 +57,10 @@ describe("availableCategories", () => {
     const aboveThreshold = { ...playerAt(), popularity: 40 };
     expect(availableCategories(belowThreshold, INITIAL_LOOP_CONTEXT)).not.toContain("sponsor");
     expect(availableCategories(aboveThreshold, INITIAL_LOOP_CONTEXT)).toContain("sponsor");
+  });
+
+  it("dovrebbe includere agent per un giocatore con club (clausola già impostata alla firma)", () => {
+    expect(availableCategories(playerAt(), INITIAL_LOOP_CONTEXT)).toContain("agent");
   });
 
   it("dovrebbe includere narrative per un giovane in un club a basso prestigio (unexpected-prospect)", () => {
@@ -132,6 +137,33 @@ describe("shouldTriggerCupUpset", () => {
   });
 });
 
+describe("shouldTriggerClauseActivation", () => {
+  it("dovrebbe essere falso se il giocatore è in prestito", () => {
+    const context: LoopContext = { loanParentClub: JUVENTUS };
+    const player = { ...playerAt(SAMPDORIA), ovr: 75 };
+    expect(shouldTriggerClauseActivation(player, context, () => 0)).toBe(false);
+  });
+
+  it("dovrebbe essere falso senza club", () => {
+    expect(shouldTriggerClauseActivation(createPlayer(IDENTITY), INITIAL_LOOP_CONTEXT, () => 0)).toBe(false);
+  });
+
+  it("dovrebbe essere falso se non esiste un pretendente di prestigio superiore (club già al top)", () => {
+    const player = { ...playerAt(JUVENTUS), ovr: 95 };
+    expect(shouldTriggerClauseActivation(player, INITIAL_LOOP_CONTEXT, () => 0)).toBe(false);
+  });
+
+  it("dovrebbe essere vero se esiste un pretendente e il roll è favorevole", () => {
+    const player = { ...playerAt(SAMPDORIA), ovr: 75 };
+    expect(shouldTriggerClauseActivation(player, INITIAL_LOOP_CONTEXT, () => 0)).toBe(true);
+  });
+
+  it("dovrebbe rispettare la soglia di probabilità", () => {
+    const player = { ...playerAt(SAMPDORIA), ovr: 75 };
+    expect(shouldTriggerClauseActivation(player, INITIAL_LOOP_CONTEXT, () => 0.99)).toBe(false);
+  });
+});
+
 describe("pickNextDecision — scandalo forzato", () => {
   it("dovrebbe generare uno scandalo forzato quando shadow supera la soglia", () => {
     const player = { ...playerAt(JUVENTUS), ovr: 70, shadow: 60 };
@@ -150,6 +182,25 @@ describe("pickNextDecision — scandalo forzato", () => {
     const player = { ...playerAt(JUVENTUS), ovr: 70, shadow: 20 };
     const { category } = pickNextDecision(player, INITIAL_LOOP_CONTEXT, [], () => 0);
     expect(category).not.toBe("scandal");
+  });
+});
+
+describe("pickNextDecision — attivazione forzata della clausola", () => {
+  it("dovrebbe generare l'attivazione della clausola quando esiste un pretendente e il roll è favorevole", () => {
+    // Necaxa (Messico, prestige 0): niente coppa nazionale (Copa MX sospesa) e OVR sotto soglia
+    // per la finale continentale — isola il trigger dell'attivazione clausola dagli altri eventi
+    // forzati che hanno priorità più alta in pickNextDecision.
+    const necaxa = getClub("necaxa")!;
+    const player = { ...playerAt(necaxa), ovr: 75 };
+    const { decision, category } = pickNextDecision(player, INITIAL_LOOP_CONTEXT, [], () => 0);
+    expect(category).toBe("clause-activation");
+    expect(decision.category).toBe("clause-activation");
+  });
+
+  it("non dovrebbe scattare senza un pretendente eleggibile (club già al top)", () => {
+    const player = { ...playerAt(JUVENTUS), ovr: 95, shadow: 0 };
+    const { category } = pickNextDecision(player, INITIAL_LOOP_CONTEXT, [], () => 0);
+    expect(category).not.toBe("clause-activation");
   });
 });
 

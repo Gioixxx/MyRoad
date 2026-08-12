@@ -7,7 +7,7 @@ import { deriveShadowTitle } from "./shadow";
 import { createAttributesFromOvr } from "./attributes";
 
 const STORAGE_KEY = "carriera:save";
-const STORAGE_VERSION = 10;
+const STORAGE_VERSION = 11;
 
 export interface SavedGame {
   version: number;
@@ -95,9 +95,19 @@ function migratePlayerV8(raw: Player): Player {
  * obiettivo, quindi non c'è modo di ricostruire correttamente quali tipi erano già stati
  * celebrati. Chi ha già una carriera in corso vedrà al più un overlay in più per ciascun tipo. */
 function migratePlayerV9(raw: Player): Player {
-  return {
+  return migratePlayerV10({
     ...raw,
     objectiveKindsCelebrated: raw.objectiveKindsCelebrated ?? [],
+  });
+}
+
+/** Arricchisce un save v10 (privo della clausola rescissoria) con 0 — ricalcolata correttamente
+ * alla prossima firma (`signWithClub`), nel frattempo nessuna attivazione forzata la considera
+ * (vedi `shouldTriggerClauseActivation`, gated anche su clausola > 0). */
+function migratePlayerV10(raw: Player): Player {
+  return {
+    ...raw,
+    releaseClauseEur: raw.releaseClauseEur ?? 0,
   };
 }
 
@@ -140,6 +150,9 @@ export function loadGame(): SavedGame | null {
     }
     if (parsed.version === 9) {
       return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV9(parsed.player) };
+    }
+    if (parsed.version === 10) {
+      return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV10(parsed.player) };
     }
     if (parsed.version !== STORAGE_VERSION) return null;
     return parsed;

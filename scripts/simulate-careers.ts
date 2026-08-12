@@ -109,6 +109,13 @@ it("simula molte carriere e stampa le frequenze osservate", () => {
     "85-89": 0,
     "90+": 0,
   };
+  let totalReleaseClause = 0;
+  let clauseSampleCount = 0;
+  const tacticalFitCounts: Record<"ottimo" | "neutro" | "scarso", number> = {
+    ottimo: 0,
+    neutro: 0,
+    scarso: 0,
+  };
 
   for (const {
     player,
@@ -122,6 +129,8 @@ it("simula molte carriere e stampa le frequenze osservate", () => {
     finalShadow,
     hadScandal,
     redeemed,
+    finalReleaseClauseEur,
+    finalTacticalFit,
   } of results) {
     totalTrophies += player.trophies.length;
     totalAwards += player.awards.length;
@@ -160,6 +169,11 @@ it("simula molte carriere e stampa le frequenze osservate", () => {
     else if (player.potential < 85) potentialBuckets["80-84"] += 1;
     else if (player.potential < 90) potentialBuckets["85-89"] += 1;
     else potentialBuckets["90+"] += 1;
+    if (finalReleaseClauseEur > 0) {
+      totalReleaseClause += finalReleaseClauseEur;
+      clauseSampleCount += 1;
+    }
+    if (finalTacticalFit) tacticalFitCounts[finalTacticalFit] += 1;
   }
 
   console.log(`\n=== Simulazione di ${CAREER_COUNT} carriere ===\n`);
@@ -224,6 +238,22 @@ it("simula molte carriere e stampa le frequenze osservate", () => {
   const scandalCycles = categoryTotals["scandal"] ?? 0;
   console.log(`  Carriere con almeno 1 scandalo: ${pct(scandalCount, CAREER_COUNT)} (${pct(scandalCycles, totalCyclesPlayed)} dei cicli totali)`);
   console.log(`  Carriere redente: ${pct(redeemedCount, CAREER_COUNT)}`);
+
+  console.log(`\n--- Fit tattico (con l'ultimo club avuto) ---`);
+  for (const [fit, count] of Object.entries(tacticalFitCounts)) {
+    console.log(`  ${fit}: ${pct(count, CAREER_COUNT)}`);
+  }
+
+  const agentCycles = categoryTotals["agent"] ?? 0;
+  const clauseActivationCycles = categoryTotals["clause-activation"] ?? 0;
+  console.log(`\n--- Contratti e agenti ---`);
+  console.log(`  Cicli "agent" (negoziazione): ${pct(agentCycles, totalCyclesPlayed)} dei cicli totali`);
+  console.log(
+    `  Cicli "clause-activation" (attivazione forzata): ${pct(clauseActivationCycles, totalCyclesPlayed)} dei cicli totali`,
+  );
+  console.log(
+    `  Clausola rescissoria media (ultimo club): ${clauseSampleCount > 0 ? Math.round(totalReleaseClause / clauseSampleCount).toLocaleString("it-IT") : "n/d"} EUR`,
+  );
   console.log("");
 });
 

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   accrueSalary,
   applyPopularityDelta,
+  computeReleaseClauseEur,
   computeSalaryEur,
+  computeSigningBonusEur,
   popularityDeltaForCycle,
   resignSalary,
 } from "./wallet";
@@ -42,6 +44,34 @@ describe("resignSalary", () => {
     const resigned = resignSalary(wallet, 90, 3);
     expect(resigned.salaryEurPerCycle).toBeGreaterThan(0);
     expect(resigned.savingsEur).toBe(5_000);
+  });
+});
+
+describe("computeReleaseClauseEur", () => {
+  it("dovrebbe crescere col prestigio del club a parità di market value/età", () => {
+    expect(computeReleaseClauseEur(10_000_000, 25, 3)).toBeGreaterThan(
+      computeReleaseClauseEur(10_000_000, 25, 0),
+    );
+  });
+
+  it("dovrebbe essere più alta per un giocatore giovane rispetto a un veterano a parità di market value", () => {
+    expect(computeReleaseClauseEur(10_000_000, 20, 1)).toBeGreaterThan(
+      computeReleaseClauseEur(10_000_000, 30, 1),
+    );
+  });
+
+  it("dovrebbe restare un multiplo positivo del market value", () => {
+    expect(computeReleaseClauseEur(5_000_000, 28, 0)).toBeGreaterThan(5_000_000);
+  });
+});
+
+describe("computeSigningBonusEur", () => {
+  it("dovrebbe crescere con lo stipendio", () => {
+    expect(computeSigningBonusEur(200_000)).toBeGreaterThan(computeSigningBonusEur(50_000));
+  });
+
+  it("dovrebbe essere zero con stipendio zero", () => {
+    expect(computeSigningBonusEur(0)).toBe(0);
   });
 });
 

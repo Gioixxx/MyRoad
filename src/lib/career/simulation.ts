@@ -15,6 +15,7 @@ import { generateAcademyOffer } from "./decisions";
 import { INITIAL_LOOP_CONTEXT, pickNextDecision, pushRecentCategory, resolveCycle, type LoopContext } from "./loop";
 import type { Rng } from "./progression";
 import { deriveArchetype } from "./traits";
+import { tacticalFit, type TacticalFit } from "./tactics";
 
 /** Tetto di sicurezza contro loop infiniti se un bug futuro rompe checkRetirement. */
 const MAX_SIMULATED_CYCLES = 60;
@@ -42,6 +43,10 @@ export interface SimulatedCareerResult {
   hadScandal: boolean;
   /** true se il giocatore ha completato l'evento di redenzione dopo uno scandalo. */
   redeemed: boolean;
+  /** Clausola rescissoria all'ultimo club avuto (0 se mai firmato) — per il valore medio nel report. */
+  finalReleaseClauseEur: number;
+  /** Fit tattico con l'ultimo club avuto (attributi finali) — null se mai firmato. */
+  finalTacticalFit: TacticalFit | null;
 }
 
 /**
@@ -151,6 +156,8 @@ export function simulateCareer(
     context = next.context;
   }
 
+  const lastClub = player.club ?? player.clubHistory[player.clubHistory.length - 1]?.club ?? null;
+
   return {
     player,
     cyclesPlayed,
@@ -164,5 +171,7 @@ export function simulateCareer(
     finalShadow: player.shadow,
     hadScandal: player.shadowFlags?.scandalOccurred ?? false,
     redeemed: player.shadowFlags?.redeemed ?? false,
+    finalReleaseClauseEur: player.releaseClauseEur,
+    finalTacticalFit: lastClub ? tacticalFit(player, lastClub) : null,
   };
 }

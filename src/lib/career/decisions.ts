@@ -1265,6 +1265,138 @@ export function generateTrainingFocusDecision(player: Player): Decision {
   };
 }
 
+// ---------- Procuratore: negoziazione della clausola rescissoria ----------
+
+export function isAgentEligible(player: Pick<Player, "club" | "releaseClauseEur">): boolean {
+  return player.club !== null && player.releaseClauseEur > 0;
+}
+
+const AGENT_CLAUSE_UP_MULTIPLIER = 1.3;
+const AGENT_CLAUSE_DOWN_MULTIPLIER = 0.7;
+
+/** Negoziazione col procuratore: alza/abbassa la clausola in cambio di sicurezza/mobilità di
+ * mercato — non è una firma (nessun `option.club`), quindi la nuova clausola va impostata
+ * direttamente nell'effetto invece di lasciarla ricalcolare da `signWithClub`. */
+export function generateAgentNegotiation(player: Pick<Player, "age" | "releaseClauseEur">): Decision {
+  const higherClause = Math.round((player.releaseClauseEur * AGENT_CLAUSE_UP_MULTIPLIER) / 1000) * 1000;
+  const lowerClause = Math.round((player.releaseClauseEur * AGENT_CLAUSE_DOWN_MULTIPLIER) / 1000) * 1000;
+  return {
+    id: `agent-negotiation-${player.age}`,
+    category: "agent",
+    title: "Il tuo procuratore",
+    description: "Il tuo procuratore propone di rinegoziare i termini contrattuali col club.",
+    options: [
+      {
+        id: "raise-clause",
+        label: "Clausola più alta",
+        hint: "Il club ti blinda · meno libertà di mercato",
+        outcomes: [
+          outcome(100, "Il club accetta di blindarti con una clausola più alta.", 0, {
+            releaseClauseEur: higherClause,
+            traitsDelta: { loyalty: 4, ambition: -2 },
+          }),
+        ],
+      },
+      {
+        id: "lower-clause",
+        label: "Clausola più bassa",
+        hint: "Più libertà di mercato · più occhi dai rivali",
+        outcomes: [
+          outcome(100, "Il procuratore ottiene una clausola più bassa: più margine per un futuro trasferimento.", 0, {
+            releaseClauseEur: lowerClause,
+            traitsDelta: { ambition: 4, loyalty: -2 },
+          }),
+        ],
+      },
+      {
+        id: "leave-clause-as-is",
+        label: "Lascia invariato",
+        hint: "Nessun cambiamento",
+        outcomes: [outcome(100, "Decidi di non toccare i termini del contratto per ora.")],
+      },
+    ],
+  };
+}
+
+// ---------- Attivazione forzata della clausola rescissoria ----------
+
+const CLAUSE_ACTIVATION_BASE_CHANCE = 0.05;
+const CLAUSE_ACTIVATION_BARGAIN_SCALAR = 0.08;
+const CLAUSE_ACTIVATION_CHANCE_CAP = 0.3;
+const CLAUSE_ACTIVATION_REJECT_CLAUSE_MULTIPLIER = 1.4;
+
+/** Pool di potenziali pretendenti (prestigio superiore al club corrente) — nessun RNG, per
+ * poter verificare l'esistenza di un pretendente prima di consumare un roll (stesso principio
+ * già seguito da `shouldTriggerCupUpset`, che verifica una condizione deterministica). */
+export function clauseActivationSuitorPool(player: Pick<Player, "club" | "ovr">): Club[] {
+  if (!player.club) return [];
+  return eligibleClubs(player.ovr, player.club.id).filter((c) => c.prestige > player.club!.prestige);
+}
+
+/** Un pretendente di prestigio superiore, scelto a caso nel pool — `null` se il pool è vuoto. */
+export function pickClauseActivationSuitor(player: Player, rng: Rng = Math.random): Club | null {
+  const [suitor] = pickClubs(clauseActivationSuitorPool(player), 1, rng);
+  return suitor ?? null;
+}
+
+/**
+ * Probabilità che un rivale attivi la clausola in questo ciclo — più la clausola è "conveniente"
+ * rispetto al market value corrente (non rinegoziata verso l'alto, vedi categoria "agent" sopra),
+ * più il rischio sale. Dà un significato meccanico reale alle scelte fatte nella negoziazione.
+ */
+export function clauseActivationChance(player: Pick<Player, "marketValueEur" | "releaseClauseEur">): number {
+  if (player.releaseClauseEur <= 0) return 0;
+  const bargainRatio = Math.max(player.marketValueEur / player.releaseClauseEur - 1, 0);
+  return clamp(
+    CLAUSE_ACTIVATION_BASE_CHANCE + bargainRatio * CLAUSE_ACTIVATION_BARGAIN_SCALAR,
+    0,
+    CLAUSE_ACTIVATION_CHANCE_CAP,
+  );
+}
+
+/** Evento forzato (non passa dal pick di categoria normale, vedi `shouldTriggerClauseActivation`
+ * in `loop.ts`): un club rivale deposita la clausola rescissoria del giocatore. */
+export function generateClauseActivationDecision(player: Player, suitor: Club): Decision {
+  if (!player.club) {
+    throw new Error("Serve un club corrente per generare l'attivazione della clausola");
+  }
+  const currentClub = player.club;
+  return {
+    id: `clause-activation-${player.age}`,
+    category: "clause-activation",
+    title: "Clausola rescissoria attivata",
+    description: `Il ${suitor.name} deposita la tua clausola rescissoria al ${currentClub.name} e chiede la cessione immediata.`,
+    options: [
+      signOption(
+        "accept-clause-transfer",
+        `Accetta il trasferimento al ${suitor.name}`,
+        suitor,
+        `Il trasferimento si chiude in poche ore: sei un nuovo giocatore del ${suitor.name}.`,
+        { traitsDelta: { ambition: 6, loyalty: -4 } },
+      ),
+      {
+        id: "reject-clause-transfer",
+        label: `Resta al ${currentClub.name}`,
+        hint: "Il procuratore respinge l'offerta · clausola rinegoziata verso l'alto",
+        outcomes: [
+          outcome(
+            100,
+            `Il tuo procuratore convince il ${currentClub.name} a blindarti con una clausola più alta.`,
+            0,
+            {
+              releaseClauseEur: Math.round(
+                (player.releaseClauseEur * CLAUSE_ACTIVATION_REJECT_CLAUSE_MULTIPLIER) / 1000,
+              ) * 1000,
+              popularityDelta: 3,
+              traitsDelta: { loyalty: 5 },
+            },
+          ),
+        ],
+      },
+    ],
+  };
+}
+
 // ---------- Selezione pesata della categoria, con penalità anti-ripetizione ----------
 
 const BASE_CATEGORY_WEIGHTS: Partial<Record<DecisionCategory, number>> = {
@@ -1286,6 +1418,9 @@ const BASE_CATEGORY_WEIGHTS: Partial<Record<DecisionCategory, number>> = {
   // cicli totali, in linea col peso nominale una volta scontata l'alternanza con le altre
   // categorie — nessun aggiustamento necessario.
   "training-focus": 14,
+  // Peso provvisorio, da confermare con l'harness (npm run simulate) — vedi sessione
+  // "Compatibilità tattica + Contratti/Agenti".
+  agent: 10,
 };
 
 const DEFAULT_CATEGORY_WEIGHT = 5;

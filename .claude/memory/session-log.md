@@ -9,6 +9,13 @@ Snapshot automatici del lavoro in corso, salvati da `save_context.py` su PreComp
 (feature `enforcementHooks`) e ricaricati all'avvio da `session_start.py`. Gestito automaticamente:
 le entry sotto sono sovrascritte per `sessionId` (rolling, ultime ~10). Vedi [[sprint]] per i task attivi.
 
+<!-- session:e7b017c5-8566-4e96-9e05-25adf224fe32 -->
+### tactical-fit-agent-mechanics — 2026-08-12
+- **Branch:** main · **Quando:** 2026-08-12→2026-08-12
+- **Ultima richiesta:** La carriera di un calciatore professionista nella realtà è guidata da dinamiche biologiche, psicologiche e contrattuali fortemente imprevedibili. Crescita non lineare e sviluppo tardivo: Lo sviluppo…
+- **File toccati:** plans/la-carriera-di-un-curious-breeze.md, career/tactics.ts, career/tactics.test.ts, career/progression.ts, career/engine.ts, career/OfferPanel.tsx, career/CareerGame.tsx, career/PlayerCard.tsx, types/career.ts, career/wallet.ts, career/engine.test.ts, career/wallet.test.ts, career/storage.ts, career/storage.test.ts, career/decisions.ts
+- **Comandi:** git; grep; cd; cat; node; tasklist; netstat
+
 <!-- session:0ec43460-2e5b-4b29-8439-a695c94237f6 -->
 ### player-development-attributes-playstyles — 2026-08-10
 - **Branch:** main · **Quando:** 2026-08-10→2026-08-10

@@ -23,6 +23,32 @@ export function resignSalary(wallet: Wallet, ovr: number, prestige: number): Wal
   return { ...wallet, salaryEurPerCycle: computeSalaryEur(ovr, prestige) };
 }
 
+const RELEASE_CLAUSE_BASE_MULTIPLIER = 1.5;
+const RELEASE_CLAUSE_PRESTIGE_STEP = 0.3;
+const RELEASE_CLAUSE_YOUNG_AGE = 23;
+const RELEASE_CLAUSE_YOUNG_BONUS = 0.5;
+
+/**
+ * Clausola rescissoria alla firma, come multiplo del valore di mercato (`computeMarketValue`,
+ * riusato invece di una nuova formula da zero) — più alta per club di prestigio maggiore (i top
+ * club blindano i propri cartellini) e per giocatori giovani (pattern reale: le clausole più
+ * alte proteggono i talenti in prospettiva, non i veterani a fine carriera).
+ */
+export function computeReleaseClauseEur(marketValueEur: number, age: number, prestige: number): number {
+  const multiplier =
+    RELEASE_CLAUSE_BASE_MULTIPLIER +
+    prestige * RELEASE_CLAUSE_PRESTIGE_STEP +
+    (age < RELEASE_CLAUSE_YOUNG_AGE ? RELEASE_CLAUSE_YOUNG_BONUS : 0);
+  return Math.round((marketValueEur * multiplier) / 1000) * 1000;
+}
+
+const SIGNING_BONUS_SALARY_MULTIPLIER = 0.6;
+
+/** Bonus alla firma una tantum (frazione di uno stipendio annuo) su un nuovo contratto. */
+export function computeSigningBonusEur(salaryEurPerCycle: number): number {
+  return Math.round((salaryEurPerCycle * SIGNING_BONUS_SALARY_MULTIPLIER) / 1000) * 1000;
+}
+
 /**
  * Variazione di popolarità per un ciclo, in base a prestazioni e successi ottenuti.
  * `cleanSheets` (valorizzato solo per i portieri) conta come prestazione allo stesso peso dei

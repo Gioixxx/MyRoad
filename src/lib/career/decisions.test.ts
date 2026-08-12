@@ -3,9 +3,13 @@ import type { DecisionCategory, DecisionOption, Player, PlayerIdentity } from "@
 import { getClub } from "@/data/clubs";
 import { createPlayer, signWithClub } from "./engine";
 import {
+  clauseActivationChance,
+  clauseActivationSuitorPool,
   cupUpsetWinChance,
   favorableOutcomeWeight,
   generateAcademyOffer,
+  generateAgentNegotiation,
+  generateClauseActivationDecision,
   generateClubCrisis,
   generateClubPriority,
   generateCompetitionForSpot,
@@ -25,6 +29,7 @@ import {
   generateTransferWindow,
   generateTriumphantReturn,
   generateUnexpectedProspect,
+  isAgentEligible,
   isClubPriorityEligible,
   isNationalitySwitchEligible,
   isReturnHomeEligible,
@@ -35,6 +40,7 @@ import {
   LIFESTYLE_DECISIONS,
   nationalCallupChance,
   penaltyScoreChance,
+  pickClauseActivationSuitor,
   pickCupUpsetOpponent,
   pickDecisionCategory,
   rollNationalCallup,
@@ -667,6 +673,122 @@ describe("generateSponsorDeal", () => {
     const decision = generateSponsorDeal(player, FIXED_RNG);
     const accept = decision.options.find((o) => o.id === "accept")!;
     expect(accept.outcomes.every((o) => o.effect.traitsDelta?.showmanship === 4)).toBe(true);
+  });
+});
+
+describe("isAgentEligible", () => {
+  it("dovrebbe essere falso senza club", () => {
+    expect(isAgentEligible({ club: null, releaseClauseEur: 0 })).toBe(false);
+  });
+
+  it("dovrebbe essere vero con un club e una clausola positiva", () => {
+    const player = playerAt();
+    expect(isAgentEligible(player)).toBe(true);
+  });
+});
+
+describe("generateAgentNegotiation", () => {
+  it("dovrebbe avere categoria agent e 3 opzioni", () => {
+    const player = playerAt();
+    const decision = generateAgentNegotiation(player);
+    expect(decision.category).toBe("agent");
+    expect(decision.options.map((o) => o.id)).toEqual([
+      "raise-clause",
+      "lower-clause",
+      "leave-clause-as-is",
+    ]);
+  });
+
+  it("'raise-clause' dovrebbe alzare la clausola, 'lower-clause' dovrebbe abbassarla", () => {
+    const player = playerAt();
+    const decision = generateAgentNegotiation(player);
+    const raise = decision.options.find((o) => o.id === "raise-clause")!;
+    const lower = decision.options.find((o) => o.id === "lower-clause")!;
+    expect(raise.outcomes[0].effect.releaseClauseEur).toBeGreaterThan(player.releaseClauseEur);
+    expect(lower.outcomes[0].effect.releaseClauseEur).toBeLessThan(player.releaseClauseEur);
+  });
+
+  it("'leave-clause-as-is' non dovrebbe modificare la clausola", () => {
+    const player = playerAt();
+    const decision = generateAgentNegotiation(player);
+    const leave = decision.options.find((o) => o.id === "leave-clause-as-is")!;
+    expect(leave.outcomes[0].effect.releaseClauseEur).toBeUndefined();
+  });
+});
+
+describe("clauseActivationSuitorPool / pickClauseActivationSuitor", () => {
+  it("dovrebbe essere vuoto senza club", () => {
+    expect(clauseActivationSuitorPool({ club: null, ovr: 80 })).toEqual([]);
+  });
+
+  it("dovrebbe essere vuoto per un giocatore già al club di prestigio massimo", () => {
+    const topClub = { ...getClub("juventus")!, prestige: 3 as const };
+    const player = { club: topClub, ovr: 95 };
+    expect(clauseActivationSuitorPool(player)).toEqual([]);
+  });
+
+  it("dovrebbe contenere solo club di prestigio superiore a quello corrente", () => {
+    const lowClub = { ...getClub("juventus")!, prestige: 0 as const };
+    const player = { club: lowClub, ovr: 70 };
+    const pool = clauseActivationSuitorPool(player);
+    expect(pool.length).toBeGreaterThan(0);
+    for (const club of pool) {
+      expect(club.prestige).toBeGreaterThan(0);
+    }
+  });
+
+  it("pickClauseActivationSuitor dovrebbe restituire null se il pool è vuoto", () => {
+    const topClub = { ...getClub("juventus")!, prestige: 3 as const };
+    const player = playerAt(topClub);
+    expect(pickClauseActivationSuitor(player, FIXED_RNG)).toBeNull();
+  });
+});
+
+describe("clauseActivationChance", () => {
+  it("dovrebbe essere zero senza clausola", () => {
+    expect(clauseActivationChance({ marketValueEur: 10_000_000, releaseClauseEur: 0 })).toBe(0);
+  });
+
+  it("dovrebbe crescere quanto più la clausola è bassa rispetto al market value", () => {
+    const bargain = clauseActivationChance({ marketValueEur: 10_000_000, releaseClauseEur: 5_000_000 });
+    const fair = clauseActivationChance({ marketValueEur: 10_000_000, releaseClauseEur: 20_000_000 });
+    expect(bargain).toBeGreaterThan(fair);
+  });
+
+  it("dovrebbe restare tra 0 e 1", () => {
+    const chance = clauseActivationChance({ marketValueEur: 100_000_000, releaseClauseEur: 1 });
+    expect(chance).toBeGreaterThanOrEqual(0);
+    expect(chance).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("generateClauseActivationDecision", () => {
+  it("dovrebbe avere categoria clause-activation e opzioni accetta/resta", () => {
+    const player = playerAt();
+    const suitor = getClub("inter")!;
+    const decision = generateClauseActivationDecision(player, suitor);
+    expect(decision.category).toBe("clause-activation");
+    expect(decision.options.map((o) => o.id)).toEqual([
+      "accept-clause-transfer",
+      "reject-clause-transfer",
+    ]);
+  });
+
+  it("accettare dovrebbe avere il pretendente come club dell'opzione", () => {
+    const player = playerAt();
+    const suitor = getClub("inter")!;
+    const decision = generateClauseActivationDecision(player, suitor);
+    const accept = decision.options.find((o) => o.id === "accept-clause-transfer")!;
+    expect(accept.club).toEqual(suitor);
+  });
+
+  it("respingere dovrebbe alzare la clausola senza cambiare club", () => {
+    const player = playerAt();
+    const suitor = getClub("inter")!;
+    const decision = generateClauseActivationDecision(player, suitor);
+    const reject = decision.options.find((o) => o.id === "reject-clause-transfer")!;
+    expect(reject.club).toBeUndefined();
+    expect(reject.outcomes[0].effect.releaseClauseEur).toBeGreaterThan(player.releaseClauseEur);
   });
 });
 

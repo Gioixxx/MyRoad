@@ -647,7 +647,11 @@ export function CareerGame() {
                             onChoose={handleChoose}
                           />
                         ) : decisionUsesOffers ? (
-                          <OfferPanel decision={state.currentDecision} onChoose={handleChoose} />
+                          <OfferPanel
+                            decision={state.currentDecision}
+                            player={state.player}
+                            onChoose={handleChoose}
+                          />
                         ) : (
                           <DecisionPanel
                             decision={state.currentDecision}

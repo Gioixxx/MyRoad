@@ -67,6 +67,27 @@ describe("signWithClub", () => {
 
     expect(signed.wallet.salaryEurPerCycle).toBeGreaterThan(0);
   });
+
+  it("dovrebbe calcolare una clausola rescissoria positiva", () => {
+    const player = createPlayer(IDENTITY);
+    const signed = signWithClub(player, TEST_CLUB);
+
+    expect(signed.releaseClauseEur).toBeGreaterThan(0);
+  });
+
+  it("dovrebbe applicare un bonus alla firma su un nuovo club", () => {
+    const player = createPlayer(IDENTITY);
+    const signed = signWithClub(player, TEST_CLUB);
+
+    expect(signed.wallet.savingsEur).toBeGreaterThan(0);
+  });
+
+  it("non dovrebbe applicare di nuovo il bonus alla firma restando allo stesso club", () => {
+    const player = signWithClub(createPlayer(IDENTITY), TEST_CLUB);
+    const renewed = signWithClub(player, TEST_CLUB);
+
+    expect(renewed.wallet.savingsEur).toBe(player.wallet.savingsEur);
+  });
 });
 
 describe("switchNationality", () => {

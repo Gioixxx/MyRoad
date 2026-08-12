@@ -9,6 +9,7 @@ import { ARCHETYPE_LABELS, deriveArchetype } from "@/lib/career/traits";
 import { SHADOW_RUMOR_THRESHOLD } from "@/lib/career/shadow";
 import { ATTRIBUTE_LABELS } from "@/lib/career/attributes";
 import { PLAY_STYLE_LABELS } from "@/lib/career/playstyles";
+import { tacticalFit, TACTICAL_FIT_LABELS } from "@/lib/career/tactics";
 import { cn } from "@/lib/utils";
 import { AttributesPanel } from "./AttributesPanel";
 import { ClubCrest } from "./ClubCrest";
@@ -40,6 +41,7 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
   const archetype = deriveArchetype(player.traits, player.shadow);
   const showArchetypeChip = player.clubHistory.length >= 4 && archetype.primary !== null;
   const showRumorsChip = player.shadow >= SHADOW_RUMOR_THRESHOLD;
+  const clubFit = player.club ? tacticalFit(player, player.club) : null;
   const displayOvr = useCountUp(player.ovr, 800);
   const displayApps = useCountUp(player.career.apps, 800);
   const displayGoals = useCountUp(player.career.goals, 800);
@@ -131,6 +133,19 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
                 : `${player.playStyles.length} stili di gioco`}
             </span>
           ) : null}
+          {clubFit && clubFit !== "neutro" ? (
+            <span
+              className={cn(
+                "ml-1.5 rounded px-1.5 py-0.5 text-[11px] font-semibold tracking-wide uppercase",
+                clubFit === "ottimo"
+                  ? "bg-(--color-success)/15 text-(--color-success)"
+                  : "bg-(--color-error)/15 text-(--color-error)",
+              )}
+              title="Compatibilità tra il tuo stile e il sistema di gioco del club"
+            >
+              Fit tattico: {TACTICAL_FIT_LABELS[clubFit]}
+            </span>
+          ) : null}
           <p
             className={cn(
               "font-display truncate leading-tight text-(--color-text)",
@@ -184,6 +199,14 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
             {VALUE_FORMATTER.format(player.wallet.savingsEur)}
           </span>
         </div>
+        {player.club && player.releaseClauseEur > 0 ? (
+          <div className="flex items-center justify-between">
+            <span className="text-(--color-text-muted)">Clausola</span>
+            <span className="font-semibold text-(--color-text)">
+              {VALUE_FORMATTER.format(player.releaseClauseEur)}
+            </span>
+          </div>
+        ) : null}
         <PopularityMeter value={player.popularity} />
       </div>
 

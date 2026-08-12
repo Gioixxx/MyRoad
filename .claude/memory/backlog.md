@@ -113,9 +113,58 @@ Funzionalità e idee a lungo termine. Prioritizzato pre-sprint → confluisce in
 - **Criteri accettazione:** con l'harness esteso già in `simulation.ts` (bucket shadow 90+), misurare quanto è raggiungibile shadow≥90 prima di implementare l'effetto — probabilmente richiede prima di alzare la frequenza degli eventi shadow-positivi, dato che a shadow-tuning invariato la fascia 90+ risulta già ~0% su 2000 carriere casuali.
 - **Stima:** Piccola una volta misurata la reachability — riuso diretto del pattern `Injury`/`tickInjury` già esistente per una sospensione multi-ciclo.
 
+### Crescita non lineare estesa (stalli/esplosioni imprevedibili, declino precoce da sovraccarico)
+- **Priorità:** Media
+- **Tipo:** Feature
+- **Area:** `lib/career/potential.ts`, `lib/career/progression.ts`
+- **Descrizione:** una delle 7 dinamiche "carriera realistica" proposte dall'utente il 2026-08-12
+  (vedi [[decisions]], "Fit tattico + Contratti/agenti"), rimandata su richiesta esplicita.
+  `potential.ts` copre già in parte questa dinamica (tetto OVR individuale con cicli "breakout"),
+  ma la curva base (`progression.ts`, `GROWTH_STAGES`) resta deterministica per fascia d'età —
+  nessuno stallo prolungato realmente imprevedibile (oltre al breakout esistente) né declino
+  precoce collegato a un "sovraccarico" nei primi anni (es. troppi cicli consecutivi ad alta
+  intensità/prestito da giovane).
+- **Criteri accettazione:** da definire in una sessione dedicata — probabile estensione del
+  sistema breakout esistente con un evento simmetrico di "stallo"/infortunio da sovraccarico
+  giovanile, misurata con `npm run simulate` prima/dopo per non alterare la curva OVR già tarata.
+- **Stima:** Media — tocca una formula già calibrata più volte in passato (vedi le sessioni di
+  ricalibrazione OVR in [[decisions-archive]]), richiede lo stesso standard di verifica.
+
+### Declino fisico → riconversione di ruolo age-based (non più solo RNG generico)
+- **Priorità:** Media
+- **Tipo:** Miglioramento
+- **Area:** `lib/career/decisions.ts` (`generatePositionChangeDecision`), `lib/career/attributes.ts`
+- **Descrizione:** stessa sessione 2026-08-12 di cui sopra. Il cambio di ruolo funzionale esiste
+  già (categoria `"position-change"`, peso base 8), ma è un evento puramente casuale — non
+  innescato dal reale declino degli attributi fisici (pace/physical) in età avanzata, a differenza
+  della dinamica reale descritta dall'utente (un'ala che perde passo si reinventa trequartista o
+  regista proprio *perché* il fisico cala, non a caso).
+- **Criteri accettazione:** da definire — probabile nuovo trigger (o eleggibilità aggiuntiva)
+  legato a un calo misurabile di pace/physical rispetto al picco della carriera, con
+  suggerimenti di ruolo target coerenti (es. ala→trequartista, non ala→difensore).
+- **Stima:** Piccola-media — riusa `POSITION_CHANGE_ADJACENCY` e `changePosition` già esistenti,
+  serve solo la nuova logica di eleggibilità/trigger.
+
+### Resilienza mentale/pressione come asse che modula le prestazioni reali
+- **Priorità:** Media
+- **Tipo:** Feature
+- **Area:** nuovo, distinto da `lib/career/traits.ts`/`shadow.ts`
+- **Descrizione:** stessa sessione 2026-08-12 di cui sopra. `traits.ts`/`shadow.ts` coprono
+  personalità/archetipo e debito morale/rischio scandalo, ma nessuno dei due modula mai le
+  prestazioni in campo in base a fiducia/pressione mediatica/rapporto coi tifosi/gestione della
+  panchina — la dinamica reale descritta dall'utente è distinta da entrambi: una "tenuta
+  psicologica" che può far calare temporaneamente il rendimento sotto pressione (media negativi,
+  panchina, fischi) o al contrario dare una spinta (fiducia, sostegno dell'ambiente).
+- **Criteri accettazione:** da definire con l'utente — probabile nuovo stato temporaneo (mirror
+  del pattern `Injury`, con `turnsRemaining`) che applica un moltiplicatore/malus/bonus alle
+  proiezioni statistiche, innescato da eventi già esistenti (panchina, critiche, scandalo) invece
+  di introdurre nuovi generatori da zero.
+- **Stima:** Media-grande — è l'unica delle 3 dinamiche rimandate senza alcuna base di codice
+  preesistente su cui appoggiarsi, richiede design da zero.
+
 ## Priorità
 - **Alta:** —
-- **Media:** pool offerte/eventi filtrati per archetipo/shadow; relazioni NPC persistenti (§2, vedi sopra)
+- **Media:** pool offerte/eventi filtrati per archetipo/shadow; relazioni NPC persistenti (§2, vedi sopra); crescita non lineare estesa; declino fisico→riconversione ruolo age-based; resilienza mentale/pressione (vedi sopra, 3 dinamiche dalla sessione 2026-08-12)
 - **Bassa:** promozione/retrocessione estesa oltre i 4 paesi attuali; trofeo continentale di club assegnabile offscreen; nuovo evento "Sostanza misteriosa" (doping); nuovo evento "Fan backlash" (da ricercare); club per Arabia Saudita e Qatar (completare l'espansione mondo); ritiro forzato/squalifica multi-ciclo a shadow≥90 (vedi sopra); Rete Scouting/Vivaio + Staff Tecnico (gestione rosa/club, vedi sopra); Match Sharpness (esclusa per granularità, vedi sopra)
 
 ## Archiviato
