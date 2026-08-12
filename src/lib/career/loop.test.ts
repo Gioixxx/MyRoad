@@ -489,6 +489,42 @@ describe("resolveCycle — stipendio e popolarità", () => {
   });
 });
 
+describe("resolveCycle — objectiveResult.firstTime per tipo di obiettivo", () => {
+  const option = { id: "stay", label: "Resta", outcomes: [{ weight: 100, effect: {}, resultText: "Resti." }] };
+
+  it("dovrebbe essere true la prima volta che un tipo di obiettivo viene raggiunto", () => {
+    const player = { ...playerAt(), currentObjective: { id: "g1", label: "Segna 1 gol", kind: "goals" as const, target: 0 } };
+    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "end-of-cycle", option, "normal", () => 0.5);
+
+    expect(result.objectiveResult).toEqual({ label: "Segna 1 gol", met: true, firstTime: true });
+    expect(result.player.objectiveKindsCelebrated).toEqual(["goals"]);
+  });
+
+  it("dovrebbe essere false la seconda volta che lo stesso tipo di obiettivo viene raggiunto", () => {
+    const player = {
+      ...playerAt(),
+      objectiveKindsCelebrated: ["goals" as const],
+      currentObjective: { id: "g2", label: "Segna ancora", kind: "goals" as const, target: 0 },
+    };
+    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "end-of-cycle", option, "normal", () => 0.5);
+
+    expect(result.objectiveResult).toEqual({ label: "Segna ancora", met: true, firstTime: false });
+    expect(result.player.objectiveKindsCelebrated).toEqual(["goals"]);
+  });
+
+  it("dovrebbe essere true per un tipo diverso anche se un altro tipo è già stato celebrato", () => {
+    const player = {
+      ...playerAt(),
+      objectiveKindsCelebrated: ["goals" as const],
+      currentObjective: { id: "a1", label: "Raggiungi 10 presenze", kind: "apps" as const, target: 0 },
+    };
+    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "end-of-cycle", option, "normal", () => 0.5);
+
+    expect(result.objectiveResult).toEqual({ label: "Raggiungi 10 presenze", met: true, firstTime: true });
+    expect(result.player.objectiveKindsCelebrated).toEqual(["goals", "apps"]);
+  });
+});
+
 describe("pushRecentCategory", () => {
   it("dovrebbe mantenere solo le ultime 3 categorie", () => {
     const result = pushRecentCategory(

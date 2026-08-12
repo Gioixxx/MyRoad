@@ -69,7 +69,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(9);
+    expect(loaded?.version).toBe(10);
     expect(loaded?.player.injury).toBeNull();
     expect(loaded?.player.wallet).toEqual({ salaryEurPerCycle: 0, savingsEur: 0 });
     expect(loaded?.player.popularity).toBe(15);
@@ -106,7 +106,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(9);
+    expect(loaded?.version).toBe(10);
     expect(loaded?.player.milestonesReached).toEqual([]);
     expect(loaded?.player.currentObjective).toBeNull();
     expect(loaded?.player.records.peakMarketValueEur).toBe(samplePlayer().marketValueEur);
@@ -129,7 +129,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(9);
+    expect(loaded?.version).toBe(10);
     expect(loaded?.player.hasSwitchedNationality).toBe(false);
     expect(loaded?.player.shadow).toBe(0);
   });
@@ -151,7 +151,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(9);
+    expect(loaded?.version).toBe(10);
     expect(loaded?.player.traits).toEqual({
       loyalty: 50,
       ambition: 50,
@@ -178,7 +178,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(9);
+    expect(loaded?.version).toBe(10);
     expect(loaded?.player.potential).toBe(92);
   });
 
@@ -198,7 +198,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(9);
+    expect(loaded?.version).toBe(10);
     expect(loaded?.player.attributes).toBeDefined();
     expect(loaded?.player.attributes.kind).toBe("outfield");
     expect(loaded?.player.trainingFocus).toBeNull();
@@ -219,13 +219,14 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(9);
+    expect(loaded?.version).toBe(10);
     expect(loaded?.player.playStyles).toEqual([]);
   });
 
-  it("dovrebbe migrare un save v8 privo del flag objectiveMomentShown aggiungendo il default false", () => {
+  it("dovrebbe migrare un save v8 (con il vecchio flag globale objectiveMomentShown) alla lista vuota per-tipo", () => {
     const legacyPlayer = samplePlayer() as unknown as Record<string, unknown>;
-    delete legacyPlayer.objectiveMomentShown;
+    delete legacyPlayer.objectiveKindsCelebrated;
+    legacyPlayer.objectiveMomentShown = true;
     window.localStorage.setItem(
       "carriera:save",
       JSON.stringify({
@@ -238,8 +239,27 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(9);
-    expect(loaded?.player.objectiveMomentShown).toBe(false);
+    expect(loaded?.version).toBe(10);
+    expect(loaded?.player.objectiveKindsCelebrated).toEqual([]);
+  });
+
+  it("dovrebbe migrare un save v9 privo di objectiveKindsCelebrated con la lista vuota di default", () => {
+    const legacyPlayer = samplePlayer() as unknown as Record<string, unknown>;
+    delete legacyPlayer.objectiveKindsCelebrated;
+    window.localStorage.setItem(
+      "carriera:save",
+      JSON.stringify({
+        version: 9,
+        player: legacyPlayer,
+        speed: "normal",
+        context: INITIAL_LOOP_CONTEXT,
+        recentCategories: [],
+      }),
+    );
+
+    const loaded = loadGame();
+    expect(loaded?.version).toBe(10);
+    expect(loaded?.player.objectiveKindsCelebrated).toEqual([]);
   });
 });
 

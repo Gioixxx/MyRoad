@@ -76,7 +76,7 @@ export function createPlayer(identity: PlayerIdentity, rng: Rng = Math.random): 
     },
     seasonTitles: [],
     currentObjective: null,
-    objectiveMomentShown: false,
+    objectiveKindsCelebrated: [],
     traits: NEUTRAL_TRAITS,
     shadow: 0,
     shadowFlags: {},

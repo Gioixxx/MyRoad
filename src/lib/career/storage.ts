@@ -7,7 +7,7 @@ import { deriveShadowTitle } from "./shadow";
 import { createAttributesFromOvr } from "./attributes";
 
 const STORAGE_KEY = "carriera:save";
-const STORAGE_VERSION = 9;
+const STORAGE_VERSION = 10;
 
 export interface SavedGame {
   version: number;
@@ -83,12 +83,21 @@ function migratePlayerV7(raw: Player): Player {
   });
 }
 
-/** Arricchisce un save v8 (privo del flag "overlay obiettivo già mostrato") col default false —
- * chi ha già una carriera in corso vedrà l'overlay una volta in più, poi mai più. */
+/** Arricchisce un save v8 (privo del vecchio flag globale "overlay obiettivo già mostrato").
+ * Il campo non esiste più nel tipo Player: la migrazione passa direttamente alla v9, che lo
+ * sostituisce col nuovo tracking per tipo di obiettivo. */
 function migratePlayerV8(raw: Player): Player {
+  return migratePlayerV9(raw);
+}
+
+/** Arricchisce un save v9 (obiettivo "già mostrato" globale, non per tipo) sostituendolo col
+ * nuovo tracking per-kind — riparte da zero: il vecchio flag booleano non distingueva il tipo di
+ * obiettivo, quindi non c'è modo di ricostruire correttamente quali tipi erano già stati
+ * celebrati. Chi ha già una carriera in corso vedrà al più un overlay in più per ciascun tipo. */
+function migratePlayerV9(raw: Player): Player {
   return {
     ...raw,
-    objectiveMomentShown: raw.objectiveMomentShown ?? false,
+    objectiveKindsCelebrated: raw.objectiveKindsCelebrated ?? [],
   };
 }
 
@@ -128,6 +137,9 @@ export function loadGame(): SavedGame | null {
     }
     if (parsed.version === 8) {
       return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV8(parsed.player) };
+    }
+    if (parsed.version === 9) {
+      return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV9(parsed.player) };
     }
     if (parsed.version !== STORAGE_VERSION) return null;
     return parsed;

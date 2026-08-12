@@ -633,12 +633,16 @@ export function resolveCycle(
   let objectiveResult: { label: string; met: boolean; firstTime: boolean } | null = null;
   if (pendingObjective) {
     const evaluated = evaluateObjective(pendingObjective, satCtx);
-    const firstTime = evaluated.met && !nextPlayer.objectiveMomentShown;
+    const alreadyCelebrated = nextPlayer.objectiveKindsCelebrated?.includes(pendingObjective.kind) ?? false;
+    const firstTime = evaluated.met && !alreadyCelebrated;
     objectiveResult = { label: pendingObjective.label, met: evaluated.met, firstTime };
     if (evaluated.met) {
       nextPlayer = applyDelta(nextPlayer, evaluated.reward);
       if (firstTime) {
-        nextPlayer = { ...nextPlayer, objectiveMomentShown: true };
+        nextPlayer = {
+          ...nextPlayer,
+          objectiveKindsCelebrated: [...(nextPlayer.objectiveKindsCelebrated ?? []), pendingObjective.kind],
+        };
       }
     }
   }
