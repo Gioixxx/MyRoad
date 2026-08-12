@@ -869,3 +869,82 @@ Registro scelte tecniche con motivazioni.
   prima della pubblicazione, per non ripetere l'incidente della voce precedente) e allegati alla
   [release GitHub v0.9.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.9.1), installata e
   verificata anche sul tablet fisico via ADB.
+
+### Confronto plausibilità gioco-vs-realtà (nuovo asse, diverso da gioco-vs-originale) + fix convocazione in nazionale
+- **Data:** 2026-08-12
+- **Decisione:** su richiesta esplicita dell'utente di confrontare l'ottenimento di trofei/premi/
+  convocazioni del gioco con la realtà del calcio professionistico (non con l'originale "Copero",
+  già confrontato più volte in passato), prodotto un **Artifact HTML** ("Trofei a confronto",
+  design system dedicato — palette verde campo/oro coerente col "cartellino" del gioco ma adattata
+  a un dossier scouting, Bebas-style condensed per i titoli, serif per il corpo, monospace
+  tabulare per i numeri) con 6 meccaniche confrontate: durata carriera, trofeo di club, trofeo di
+  nazionale, convocazione in nazionale, award generici, Pallone d'Oro. Verdetti distinti in 3
+  categorie: **plausibile** (durata carriera, trofeo di nazionale come astrazione, award generici
+  — nessuna modifica), **generoso per design** (trofeo di club 84.4%, Pallone d'Oro — scostamenti
+  dalla realtà già scelti deliberatamente in sessioni precedenti per rendere il gioco
+  soddisfacente, non bug — lasciati invariati, con un valore alternativo solo documentato come
+  opzione), **da ribilanciare** (convocazione in nazionale, unico scostamento già segnalato come
+  non pianificato in tech-debt.md).
+  - **Fix applicato**: `TARGETMAN_CALLUP_BONUS` in `src/lib/career/playstyles.ts` da 0.08 a 0.03
+    (due giri di misurazione con `npm run simulate`: 0.04 dava 31.8%, ancora sopra la fascia
+    target 20-30%; 0.03 dà **28.4%**, dentro fascia e vicino al ~25-28% tarato deliberatamente
+    prima della deriva della Fase 5 del 2026-08-10). Trofeo di club (82.1%) e trofeo di nazionale
+    (5.5%) rimisurati nella stessa run per confermare che il fix è isolato alla sola convocazione,
+    nessun'altra frequenza si è mossa.
+- **Perché:** stesso principio già consolidato nel progetto ("harness prima, poi ritara") applicato
+  qui su un asse nuovo — il confronto con la realtà, distinto dal confronto con l'originale già
+  fatto più volte. La distinzione tra "generoso per design" e "da ribilanciare" è il punto
+  centrale: molte soglie del gioco sono state rese esplicitamente più generose della realtà in
+  sessioni precedenti per un obiettivo di divertimento/raggiungibilità (documentato più volte in
+  questo stesso file) — ririaprire quelle scelte senza una richiesta esplicita in questa sessione
+  sarebbe stato un errore, mentre la convocazione era un caso diverso: una deriva **non
+  pianificata** già segnalata come aperta in tech-debt.md, quindi l'unico candidato a un fix reale
+  senza bisogno di ridiscutere una decisione di design già presa.
+- **Alternative:** riportare anche il trofeo di club/Pallone d'Oro a valori più realistici —
+  scartato di default (solo documentato come opzione nell'artifact, non applicato), perché
+  contraddirebbe due decisioni di design precedenti già motivate esplicitamente in questo file
+  ("Soglie award/nazionale/coppa continentale... deliberatamente più generose dell'originale",
+  "Bilanciamento su 7 fasi... trofeo di club ridotto... target utente esplicito 75-85%").
+- **Impatto:** `src/lib/career/playstyles.ts` (`TARGETMAN_CALLUP_BONUS` 0.08→0.03). 399 test
+  invariati, `tsc --noEmit` pulito. Item di tech-debt corrispondente spostato in Archiviato
+  (vedi [[tech-debt]]).
+
+### Follow-up stessa sessione: anche i due punti "generosi per design" ristretti su richiesta esplicita dell'utente
+- **Data:** 2026-08-12
+- **Decisione:** dopo aver visto l'artifact, l'utente ha chiesto esplicitamente di intervenire
+  anche su trofeo di club e Pallone d'Oro (non solo sulla convocazione, unico punto originariamente
+  proposto come fix). Non un ritorno ai tassi reali (avrebbe riportato il gioco alla sensazione
+  "irraggiungibile" dell'originale, già scartata in passato), ma un compromesso a metà strada,
+  concordato in chat prima di applicare: trofeo di club verso ~65-70% (da 84,4%), Pallone d'Oro
+  dimezzato nel roll secondario.
+  - **Trofeo di club**: scoperto durante la taratura che `CLUB_TROPHY_CHANCE_CAP` (0,3, poi
+    provato a 0,2) **non era mai vincolante** — il massimo teorico della formula
+    (`prestigio_max×peso + bonus_OVR_cap` = 3×0,03+0,08 = 0,17) è già sotto qualunque valore di
+    cap provato, quindi ridurre il cap da solo è un no-op silenzioso (verificato: 82,1%→82,6%,
+    nessun cambiamento reale, solo rumore statistico tra run). I veri driver sono
+    `CLUB_TROPHY_PRESTIGE_WEIGHT` e `CLUB_TROPHY_OVR_BONUS_CAP`. Tre giri di misurazione con
+    `npm run simulate`: peso 0,03→0,02/cap-bonus 0,08→0,05 (77,6%), poi 0,03→0,014/0,035 (73,9%),
+    poi 0,03→**0,012**/cap-bonus 0,08→**0,03** (**72,2%**, fermato qui — vicino alla fascia
+    obiettivo, ulteriori tagli avrebbero rincorso il rumore tra run). `CLUB_TROPHY_CHANCE_CAP`
+    riportato a 0,3 (il valore originale, dato che non è comunque mai vincolante — nessun motivo
+    di lasciarlo a un valore diverso che implicherebbe falsamente un effetto).
+  - **Pallone d'Oro**: `BALLON_DOR_ROLL_CHANCE` 0,3→0,15 in `trophies.ts` — qui il gate
+    `BALLON_DOR_OVR_THRESHOLD=90` è il vero collo di bottiglia (popolazione già minuscola sotto
+    scelta uniforme nell'harness), il dimezzamento del roll secondario dimezza correttamente le
+    chance nella sottopopolazione che lo raggiunge (misurato 0,1-0,3%→0,0-0,1%, entrambi già
+    vicini a zero sotto scelta uniforme per lo stesso motivo già documentato altrove — vedi nota
+    su `pickUniformOption` che sottostima gli esiti che richiedono OVR molto alto).
+- **Perché:** stesso principio "harness prima, poi ritara" — la scoperta che il cap del trofeo di
+  club non era vincolante è un promemoria diretto (già visto altre volte in questo progetto, es.
+  la ricalibrazione OVR del 2026-08-06) che una costante con un nome che *sembra* la leva giusta
+  può non esserlo affatto: va sempre verificato l'effetto reale con l'harness, non dedotto dal
+  nome della costante.
+- **Alternative:** nessuna — l'utente ha approvato esplicitamente il compromesso proposto (non i
+  tassi reali) prima dell'implementazione.
+- **Impatto:** `src/lib/career/trophies.ts` (`CLUB_TROPHY_PRESTIGE_WEIGHT` 0,03→0,012,
+  `CLUB_TROPHY_OVR_BONUS_CAP` 0,08→0,03, `BALLON_DOR_ROLL_CHANCE` 0,3→0,15;
+  `CLUB_TROPHY_CHANCE_CAP` invariato a 0,3 dopo aver verificato che non è vincolante). 399 test
+  invariati, `tsc --noEmit` pulito. Convocazione (28,9%) e trofeo di nazionale (5,1-5,6%)
+  rimisurati stabili in ogni run, a conferma che le modifiche sono isolate alle rispettive
+  meccaniche. Artifact "Trofei a confronto" aggiornato con i nuovi valori e le formule applicate
+  (stessa URL, redeploy). Nessuna release/bump di versione in questa sessione.

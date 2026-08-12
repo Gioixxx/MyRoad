@@ -216,26 +216,6 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
   `simulation.ts`: `pickRiskSeekingOption`/`makeTraitDirectedPicker`, e i blocchi harness dedicati
   in `scripts/simulate-careers.ts`).
 
-### Convocazione in nazionale salita da ~25% a ~37% come effetto collaterale della Fase 5 (soglie PlayStyle)
-- **Priorità:** Bassa
-- **Area:** `lib/career/decisions.ts` (`nationalCallupChance`), `lib/career/playstyles.ts` (`TARGETMAN_CALLUP_BONUS`)
-- **Data:** 2026-08-10
-- **Descrizione:** durante il bilanciamento generale (vedi [[decisions]]), abbassare la soglia di
-  `targetman` (74, era 82) lo ha reso raggiungibile dal ~40% dei giocatori sotto scelta uniforme
-  (era ~8%) — dato che `targetman` dà un bonus additivo `+0.08` alla chance di convocazione
-  (`TARGETMAN_CALLUP_BONUS`), l'effetto a cascata ha portato "almeno 1 convocazione per carriera"
-  dal ~25% (target calibrato in una sessione precedente) al ~37%. Non era un obiettivo esplicito
-  di questa sessione, solo un effetto collaterale osservato nell'ultimo run completo dell'harness.
-- **Perché rimandato:** l'utente non ha segnalato la convocazione come un problema, e la
-  ricalibrazione del target ~25% era stata fatta in una sessione precedente per un motivo diverso
-  (vedi [[decisions]], "Ricalibrata la curva OVR...") — ritoccarla ora rischierebbe di
-  disallinearsi da quella taratura senza una richiesta esplicita.
-- **Impatto:** basso — una convocazione più facile non rompe nulla meccanicamente, ma si allontana
-  dal ~22-25% ritenuto "generoso ma non assurdo" nella sessione di ricalibrazione precedente.
-- **Risoluzione suggerita:** se si vuole riportare la convocazione vicino al ~25%, alzare
-  leggermente `NATIONAL_CALLUP_OVR_BASELINE`/`_DIVISOR` (decisions.ts) o abbassare
-  `TARGETMAN_CALLUP_BONUS` (playstyles.ts), rimisurando con `npm run simulate`.
-
 ### Avviso "App non verificata" di Honor su ogni installazione sideload
 - **Priorità:** Bassa
 - **Area:** distribuzione APK (`dist/MyRoad.apk`, GitHub Release)
@@ -263,6 +243,7 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
 - **Bassa:** — (idem)
 
 ## Archiviato
+- **Convocazione in nazionale salita da ~25% a ~37% come effetto collaterale della Fase 5 (soglie PlayStyle)** — risolto 2026-08-12: nella sessione di confronto plausibilità gioco-vs-realtà (vedi [[decisions]]), `TARGETMAN_CALLUP_BONUS` in `playstyles.ts` dimezzato prima a 0.04 (misurato 31.8%, ancora leggermente sopra la fascia target 20-30%) poi affinato a 0.03, misurato **28.4%** con `npm run simulate` — dentro la fascia 20-30% e vicino al ~25-28% tarato deliberatamente prima della deriva. Trofeo di club (82.1%) e trofeo di nazionale (5.5%) invariati nella stessa run, a conferma che il fix è isolato alla sola convocazione. 399 test verdi, `tsc` pulito.
 - **Trofeo di club forse troppo comune dopo la ricalibrazione OVR (~91%)** — risolto 2026-08-10: nella sessione di bilanciamento generale (vedi [[decisions]], "Bilanciamento su 7 fasi..."), `CLUB_TROPHY_PRESTIGE_WEIGHT` 0.08→0.03, `CLUB_TROPHY_OVR_DIVISOR` 200→350, `CLUB_TROPHY_OVR_BONUS_CAP` 0.15→0.08, `CLUB_TROPHY_CHANCE_CAP` 0.5→0.3 — "almeno 1 trofeo di club" da 94.8%/94.1% a 84.4%, dentro la fascia 75-85% richiesta esplicitamente dall'utente in questo giro (non più "fuori scope").
 - **Overlay trofeo+badge (TrophyImage) non verificato dal vivo con un vero evento di vittoria** — risolto 2026-08-10: 2 agenti browser paralleli hanno giocato carriere reali fino a vincere un vero trofeo di club (Copa del Rey e La Liga con il Valencia/Málaga, 3 vittorie osservate in totale su 2 carriere indipendenti). Layout `flex items-end justify-center gap-3` (trofeo 104px + badge 44px) confermato pulito in tutte e 3 le istanze: nessuna immagine rotta, bottom-alignment corretto, proporzioni naturali (trofeo elemento dominante, badge companion), nessuna distorsione nonostante dimensioni native diverse tra competizioni (256×256 vs 512×512, entrambe quadrate). URL reali verificati via DOM: tutte le immagini `complete: true`. Non ancora osservato in questo giro: overlay premio individuale o convocazione in nazionale (entrambi RNG-gated più rari) — se emerge un problema specifico a quelle varianti andrà riaperta una voce dedicata, ma il rischio principale (layout badge+trofeo mai visto) è chiuso.
 - **Finestra di ritiro probabilistico forse più ampia di 34-40** — risolto 2026-08-06: `RETIREMENT_RISK_START_AGE` in `engine.ts` abbassata da 34 a 31, formula passata da quadratica a cubica dopo aver verificato con `npm run simulate` che il solo allargamento con esponente invariato spostava troppo peso verso i ritiri anticipati (auto-cap a 40 anni sceso dal 49.5% al 22.2%, contro un ~50% osservato nella ricerca). Con la cubica l'auto-cap torna al 43.8%, con solo una coda minoritaria di ritiri a 32-34 anni (3.5%+0.1%). Vedi [[decisions]] per il dettaglio numerico completo.

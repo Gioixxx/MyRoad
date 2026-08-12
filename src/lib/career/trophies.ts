@@ -17,10 +17,10 @@ const CONFEDERATION_TOURNAMENT: Record<Confederation, string> = {
  * generosa dell'originale — nel gioco originale i trofei restavano rari anche con club di
  * prestigio massimo, il che li rendeva poco "sentiti" (vedi piano, esplorazione aggiuntiva 3).
  */
-const CLUB_TROPHY_PRESTIGE_WEIGHT = 0.03;
+const CLUB_TROPHY_PRESTIGE_WEIGHT = 0.012;
 const CLUB_TROPHY_OVR_BASELINE = 60;
 const CLUB_TROPHY_OVR_DIVISOR = 350;
-const CLUB_TROPHY_OVR_BONUS_CAP = 0.08;
+const CLUB_TROPHY_OVR_BONUS_CAP = 0.03;
 const CLUB_TROPHY_CHANCE_CAP = 0.3;
 
 export function clubTrophyChance(prestige: number, ovr: number): number {
@@ -110,7 +110,7 @@ export function awardChance(ovr: number): number {
 }
 
 const TOP_SCORER_ROLL_CHANCE = 0.5;
-const BALLON_DOR_ROLL_CHANCE = 0.3;
+const BALLON_DOR_ROLL_CHANCE = 0.15;
 
 export function rollAward(
   player: Pick<Player, "ovr" | "club" | "shadow">,
