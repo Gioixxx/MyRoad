@@ -57,63 +57,57 @@ export function IdentityForm({ onSubmit }: IdentityFormProps) {
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
       <div className="grid min-h-0 min-w-0 flex-1 gap-4 lg:grid-cols-[auto_1fr_auto] lg:items-stretch lg:gap-6">
-        <div className="flex justify-center lg:h-full lg:items-center lg:justify-start">
+        <div className="flex justify-center lg:row-span-2 lg:h-full lg:items-center lg:justify-start">
           <JerseyCard lastName={lastName} number={number} country={country} />
         </div>
 
-        <div className="flex min-w-0 flex-col gap-3 lg:h-full lg:justify-between lg:gap-0 lg:py-1">
-          <div className="flex min-w-0 flex-col gap-3 lg:gap-5">
-            <div className="grid grid-cols-[1fr_4.5rem] gap-2.5 sm:gap-3">
-              <Field label="Cognome" htmlFor="last-name" error={errors.lastName}>
-                <input
-                  id="last-name"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  maxLength={15}
-                  placeholder="Es. Rossi"
-                  className="input-recessed rounded-md px-3 py-2 text-sm"
-                />
-              </Field>
-              <Field label="Numero" htmlFor="number" error={errors.number}>
-                <input
-                  id="number"
-                  type="number"
-                  min={1}
-                  max={99}
-                  value={number ?? ""}
-                  onChange={(e) => setNumber(e.target.value ? Number(e.target.value) : null)}
-                  className="input-recessed rounded-md px-3 py-2 text-sm"
-                />
-              </Field>
-            </div>
-
-            <Field label="Piede preferito">
-              <SegmentedControl
-                name="Piede preferito"
-                value={foot}
-                onChange={setFoot}
-                className="w-full"
-                options={[
-                  { value: "left", label: "Sinistro" },
-                  { value: "right", label: "Destro" },
-                ]}
+        <div className="flex min-w-0 flex-col gap-3 lg:gap-5">
+          <div className="grid grid-cols-[1fr_4.5rem] gap-2.5 sm:gap-3">
+            <Field label="Cognome" htmlFor="last-name" error={errors.lastName}>
+              <input
+                id="last-name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                maxLength={15}
+                placeholder="Es. Rossi"
+                className="input-recessed rounded-md px-3 py-2 text-sm"
               />
             </Field>
-
-            <Field label="Nazionalità" htmlFor="nationality" error={errors.nationality}>
-              <NationalitySelect id="nationality" value={nationality} onChange={setNationality} />
+            <Field label="Numero" htmlFor="number" error={errors.number}>
+              <input
+                id="number"
+                type="number"
+                min={1}
+                max={99}
+                value={number ?? ""}
+                onChange={(e) => setNumber(e.target.value ? Number(e.target.value) : null)}
+                className="input-recessed rounded-md px-3 py-2 text-sm"
+              />
             </Field>
           </div>
 
-          <Button onClick={handleSubmit} className="mt-1 self-center lg:mt-0 lg:self-start">
-            Conferma identità
-          </Button>
+          <Field label="Piede preferito">
+            <SegmentedControl
+              name="Piede preferito"
+              value={foot}
+              onChange={setFoot}
+              className="w-full"
+              options={[
+                { value: "left", label: "Sinistro" },
+                { value: "right", label: "Destro" },
+              ]}
+            />
+          </Field>
+
+          <Field label="Nazionalità" htmlFor="nationality" error={errors.nationality}>
+            <NationalitySelect id="nationality" value={nationality} onChange={setNationality} />
+          </Field>
         </div>
 
         <Field
           label="Ruolo in campo"
           error={errors.position}
-          className="flex min-h-0 min-w-0 flex-col gap-1.5 lg:h-full lg:w-[15rem]"
+          className="flex min-w-0 flex-col gap-1.5 lg:row-span-2 lg:h-full lg:min-h-0 lg:w-[15rem]"
         >
           <PositionPicker
             value={position}
@@ -121,6 +115,13 @@ export function IdentityForm({ onSubmit }: IdentityFormProps) {
             className="min-h-[12rem] lg:min-h-0 lg:flex-1"
           />
         </Field>
+
+        <Button
+          onClick={handleSubmit}
+          className="mt-1 self-center lg:col-start-2 lg:row-start-2 lg:mt-0 lg:self-start"
+        >
+          Conferma identità
+        </Button>
       </div>
     </div>
   );

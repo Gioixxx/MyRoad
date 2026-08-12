@@ -667,7 +667,7 @@ export function CareerGame() {
                   <p className="shrink-0 font-display text-sm tracking-[0.15em] text-(--color-text-muted) uppercase">
                     Storico
                   </p>
-                  <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+                  <div className="min-w-0 flex-1 overflow-y-auto lg:min-h-0">
                     <CareerTable
                       player={state.player}
                       compact

@@ -374,7 +374,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
                 {trophies.map((t, i) => (
                   <li key={`trophy-${i}`} className="flex min-w-0 items-center gap-2">
                     <CompetitionBadge competition={t.competition} size={16} />
-                    <span className="min-w-0 truncate text-(--color-text)">
+                    <span className="min-w-0 text-(--color-text)">
                       {t.competition}
                       <span className="text-(--color-text-muted)">
                         {" "}
@@ -386,7 +386,7 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
                 {awards.map((a, i) => (
                   <li key={`award-${i}`} className="flex min-w-0 items-center gap-2">
                     <AwardBadge type={a.type} size={16} />
-                    <span className="min-w-0 truncate text-(--color-text)">
+                    <span className="min-w-0 text-(--color-text)">
                       {AWARD_LABELS[a.type]}
                       <span className="text-(--color-text-muted)">
                         {" "}
