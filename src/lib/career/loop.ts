@@ -381,7 +381,7 @@ export interface CycleResult {
   injuryHealed: boolean;
   newMilestones: number[];
   seasonTitle: SeasonTitleEntry | null;
-  objectiveResult: { label: string; met: boolean } | null;
+  objectiveResult: { label: string; met: boolean; firstTime: boolean } | null;
   brokenRecords: string[];
   highlights: string[];
   clubTierChange: "promoted" | "relegated" | null;
@@ -630,12 +630,16 @@ export function resolveCycle(
     };
   }
 
-  let objectiveResult: { label: string; met: boolean } | null = null;
+  let objectiveResult: { label: string; met: boolean; firstTime: boolean } | null = null;
   if (pendingObjective) {
     const evaluated = evaluateObjective(pendingObjective, satCtx);
-    objectiveResult = { label: pendingObjective.label, met: evaluated.met };
+    const firstTime = evaluated.met && !nextPlayer.objectiveMomentShown;
+    objectiveResult = { label: pendingObjective.label, met: evaluated.met, firstTime };
     if (evaluated.met) {
       nextPlayer = applyDelta(nextPlayer, evaluated.reward);
+      if (firstTime) {
+        nextPlayer = { ...nextPlayer, objectiveMomentShown: true };
+      }
     }
   }
 

@@ -272,7 +272,7 @@ export function buildCareerMoments(input: {
   nationalCallup: boolean;
   newMilestones?: number[];
   newPlayStyles?: PlayStyleId[];
-  objectiveResult?: { label: string; met: boolean } | null;
+  objectiveResult?: { label: string; met: boolean; firstTime: boolean } | null;
 }): CareerMoment[] {
   const moments: CareerMoment[] = [];
   for (const trophy of input.newTrophies) {
@@ -290,7 +290,7 @@ export function buildCareerMoments(input: {
   for (const playStyleId of input.newPlayStyles ?? []) {
     moments.push({ kind: "playstyle", playStyleId });
   }
-  if (input.objectiveResult?.met) {
+  if (input.objectiveResult?.firstTime) {
     moments.push({ kind: "objective", label: input.objectiveResult.label });
   }
   return moments;

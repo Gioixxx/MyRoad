@@ -7,7 +7,7 @@ import { deriveShadowTitle } from "./shadow";
 import { createAttributesFromOvr } from "./attributes";
 
 const STORAGE_KEY = "carriera:save";
-const STORAGE_VERSION = 8;
+const STORAGE_VERSION = 9;
 
 export interface SavedGame {
   version: number;
@@ -77,9 +77,18 @@ function migratePlayerV6(raw: Player): Player {
 
 /** Arricchisce un save v7 (privo di playstyle) con la lista vuota di default. */
 function migratePlayerV7(raw: Player): Player {
-  return {
+  return migratePlayerV8({
     ...raw,
     playStyles: raw.playStyles ?? [],
+  });
+}
+
+/** Arricchisce un save v8 (privo del flag "overlay obiettivo già mostrato") col default false —
+ * chi ha già una carriera in corso vedrà l'overlay una volta in più, poi mai più. */
+function migratePlayerV8(raw: Player): Player {
+  return {
+    ...raw,
+    objectiveMomentShown: raw.objectiveMomentShown ?? false,
   };
 }
 
@@ -116,6 +125,9 @@ export function loadGame(): SavedGame | null {
     }
     if (parsed.version === 7) {
       return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV7(parsed.player) };
+    }
+    if (parsed.version === 8) {
+      return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV8(parsed.player) };
     }
     if (parsed.version !== STORAGE_VERSION) return null;
     return parsed;

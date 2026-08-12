@@ -22,18 +22,29 @@ describe("buildCareerMoments", () => {
       newTrophies: [],
       newAward: null,
       nationalCallup: false,
-      objectiveResult: { label: "Segna almeno 10 gol", met: false },
+      objectiveResult: { label: "Segna almeno 10 gol", met: false, firstTime: false },
     });
 
     expect(moments).toHaveLength(0);
   });
 
-  it("include il moment obiettivo con il label esatto quando è stato raggiunto", () => {
+  it("non include il moment obiettivo quando è stato raggiunto ma non è la prima volta in carriera", () => {
     const moments = buildCareerMoments({
       newTrophies: [],
       newAward: null,
       nationalCallup: false,
-      objectiveResult: { label: "Segna almeno 10 gol", met: true },
+      objectiveResult: { label: "Segna almeno 10 gol", met: true, firstTime: false },
+    });
+
+    expect(moments).toHaveLength(0);
+  });
+
+  it("include il moment obiettivo con il label esatto la prima volta che viene raggiunto", () => {
+    const moments = buildCareerMoments({
+      newTrophies: [],
+      newAward: null,
+      nationalCallup: false,
+      objectiveResult: { label: "Segna almeno 10 gol", met: true, firstTime: true },
     });
 
     expect(moments).toEqual([{ kind: "objective", label: "Segna almeno 10 gol" }]);
@@ -46,7 +57,7 @@ describe("buildCareerMoments", () => {
       nationalCallup: true,
       newMilestones: [80],
       newPlayStyles: ["playmaker"],
-      objectiveResult: { label: "Segna almeno 10 gol", met: true },
+      objectiveResult: { label: "Segna almeno 10 gol", met: true, firstTime: true },
     });
 
     expect(moments.map((m) => m.kind)).toEqual([

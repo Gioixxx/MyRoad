@@ -213,6 +213,9 @@ export interface Player extends PlayerIdentity {
   /** Ultimi titoli di stagione (cap applicato nel dominio). */
   seasonTitles: SeasonTitleEntry[];
   currentObjective: CycleObjective | null;
+  /** true se l'overlay celebrativo per un obiettivo di ciclo è già stato mostrato una volta
+   * in questa carriera — dal secondo obiettivo raggiunto in poi resta solo il banner. */
+  objectiveMomentShown?: boolean;
   /** true se il giocatore ha già cambiato nazionalità una volta (evento non ripetibile). */
   hasSwitchedNationality?: boolean;
   /** Vettori di personalità, 0-100 ciascuno, punto di partenza neutro (50). */

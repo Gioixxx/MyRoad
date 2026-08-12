@@ -40,7 +40,7 @@ export interface CycleOutcomeSummary {
   popularityDelta: number;
   newMilestones: number[];
   seasonTitle: SeasonTitleEntry | null;
-  objectiveResult: { label: string; met: boolean } | null;
+  objectiveResult: { label: string; met: boolean; firstTime: boolean } | null;
   brokenRecords: string[];
   highlights: string[];
   newPlayStyles: PlayStyleId[];
