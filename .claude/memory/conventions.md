@@ -1,7 +1,7 @@
 ---
 type: conventions
 tags: [memory, conventions]
-updated: [2026-08-04]
+updated: [2026-08-12]
 ---
 
 # Convenzioni Locali
@@ -28,3 +28,4 @@ Pattern e regole specifiche del progetto. Workaround che generano debito → [[t
 ## Vincoli noti
 - Il piano di implementazione dettagliato vive fuori dal repo: `C:\Users\Gioix\.claude\plans\piped-bouncing-cocke.md` — leggerlo prima di riprendere lo sviluppo.
 - Stemmi dei club: solo hotlink a URL esterni se mai implementati, mai download/salvataggio di loghi nel repo (rischio copyright su marchi registrati).
+- **Test di layout mobile in browser (Claude in Chrome)**: `resize_window` del tool browser non altera il vero viewport di rendering in questo ambiente (`window.innerWidth` resta quello desktop nonostante l'API dichiari successo, verificato empiricamente il 2026-08-12) — non fidarsi del suo esito per verificare breakpoint Tailwind. Tecnica che funziona: iniettare un iframe con `width`/`height` fissi (es. 390×844) nella pagina via `document.documentElement.innerHTML`, puntato allo stesso `localhost:3000` — un iframe ha un proprio viewport CSS indipendente, quindi le media query rispondono correttamente. Vedi [[decisions]] per il caso reale che ha portato a questa scoperta.

@@ -237,10 +237,32 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
 - **Risoluzione suggerita:** nessuna azione a meno che non si decida in futuro di pubblicare
   l'app su uno store ufficiale.
 
+### Pattern `min-h-0` non condizionato ricorrente — audit puntuale invece che sistematico
+- **Priorità:** Bassa
+- **Area:** componenti di layout mobile in `src/components/features/career/`
+- **Data:** 2026-08-12
+- **Descrizione:** il meccanismo di compressione CSS Grid/Flex scoperto in v0.7.1 (un `min-h-0`
+  Tailwind non condizionato da `lg:`, applicato a un item flex/grid, azzera l'"automatic minimum
+  size" e può far collassare il contenitore a pochi pixel sotto `lg:`) è stato trovato una
+  **seconda volta** in questa sessione, in due punti diversi (`CareerGame.tsx:670`,
+  `IdentityForm.tsx`, quest'ultimo scoperto solo indirettamente correggendo un altro bug) —
+  nonostante il promemoria "verificare `git grep 'min-h-0'` su qualunque nuovo componente di
+  layout mobile" fosse già scritto in `MEMORY.md` dopo il primo episodio. Finora ogni istanza è
+  stata trovata per caso durante un playtest/test manuale, non con una verifica sistematica.
+- **Perché rimandato:** ogni episodio finora è stato risolto localmente non appena scoperto;
+  non è mai stato fatto un audit completo una tantum su tutto il codebase.
+- **Impatto:** basso-medio — un `min-h-0` incondizionato rimasto non scoperto in un componente
+  poco visitato durante i playtest resterebbe silenzioso finché qualcuno non lo nota (esattamente
+  il motivo per cui questo episodio è stato trovato solo ora, mesi dopo il primo).
+- **Risoluzione suggerita:** un giro dedicato di `git grep -n 'min-h-0' src/components` (e
+  `min-w-0` per lo stesso motivo sull'asse orizzontale) per verificare uno per uno che ogni
+  occorrenza non gated da `lg:`/altro breakpoint sia intenzionale, invece di continuare a
+  scoprirli uno alla volta durante i playtest.
+
 ## Priorità
 - **Alta:** —
 - **Media:** — (tutti gli item precedentemente in questa fascia chiusi in blocco il 2026-08-11 su decisione utente, vedi nota in cima al file)
-- **Bassa:** — (idem)
+- **Bassa:** pattern `min-h-0` non condizionato ricorrente (vedi sopra)
 
 ## Archiviato
 - **Convocazione in nazionale salita da ~25% a ~37% come effetto collaterale della Fase 5 (soglie PlayStyle)** — risolto 2026-08-12: nella sessione di confronto plausibilità gioco-vs-realtà (vedi [[decisions]]), `TARGETMAN_CALLUP_BONUS` in `playstyles.ts` dimezzato prima a 0.04 (misurato 31.8%, ancora leggermente sopra la fascia target 20-30%) poi affinato a 0.03, misurato **28.4%** con `npm run simulate` — dentro la fascia 20-30% e vicino al ~25-28% tarato deliberatamente prima della deriva. Trofeo di club (82.1%) e trofeo di nazionale (5.5%) invariati nella stessa run, a conferma che il fix è isolato alla sola convocazione. 399 test verdi, `tsc` pulito.

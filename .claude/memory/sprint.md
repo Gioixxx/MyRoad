@@ -568,8 +568,9 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   browser** (prima volta per tipo mostra overlay, ripetizione stesso tipo no, tipo diverso sì) e
   sul tablet fisico via ADB. Rilasciato come **v0.9.2**.
 
-- [x] **Fit tattico col club + contratti/potere degli agenti** (2026-08-12, non ancora
-  committato/rilasciato a fine di questa voce): su richiesta dell'utente di analizzare 7 dinamiche
+- [x] **Fit tattico col club + contratti/potere degli agenti** (2026-08-12, committato come
+  `57eb69f` e rilasciato in **v0.10.0** in una sessione successiva): su richiesta dell'utente di
+  analizzare 7 dinamiche
   reali della carriera di un calciatore e capire cosa inserire, implementate le 2 dinamiche scelte
   come priorità — le altre 3 rimandate a [[backlog]]. Nuovo `lib/career/tactics.ts` (sistema
   tattico per club derivato da hash FNV-1a sull'id, nessun nuovo dato — bug di clustering
@@ -597,6 +598,18 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   lint puliti. Verificato sia su iframe mobile sia su viewport desktop (nessuna regressione al
   layout a 3 colonne di `IdentityForm`). Rilasciato insieme al commit `57eb69f` (fit tattico +
   agenti, sessione precedente non ancora taggata) come **v0.10.0**.
+
+- [x] **Release v0.10.0 pubblicata** (2026-08-12, commit ee95827 + tag v0.10.0): bump
+  `package.json`/`package-lock.json` 0.9.2→0.10.0 (minor, dato che il rilascio bundla anche una
+  feature — fit tattico + agenti, non solo i 3 fix mobile). `dist/MyRoad.exe` rigenerato via
+  `scripts/build-launcher.ps1` (FileVersion 0.10.0.0 verificata) e `dist/MyRoad.apk` via
+  `scripts/build-android.ps1` (versionCode 1000/versionName 0.10.0 verificati con `aapt2 dump
+  badging`, firma verificata con `apksigner verify --print-certs` — stessa chiave stabile del
+  progetto), entrambi allegati alla [release GitHub
+  v0.10.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.10.0). Build Android inizialmente
+  fallita per `JAVA_HOME` non impostato nell'ambiente della sessione — risolto puntando al JBR
+  incluso in Android Studio (`C:\Program Files\Android\Android Studio\jbr`), non serve un JDK
+  standalone separato su questa macchina.
 
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
