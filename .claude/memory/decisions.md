@@ -790,3 +790,82 @@ Registro scelte tecniche con motivazioni.
   verifica visiva completa. Rilasciato come **v0.9.0** (bump minor, coerente col criterio già
   usato per bundle di feature UX correlate) con `dist/MyRoad.exe` e `dist/MyRoad.apk` rigenerati e
   allegati alla release.
+
+### APK v0.9.0 stantio nella release GitHub — causa reale nella redirezione stderr di PowerShell
+- **Data:** 2026-08-12
+- **Decisione:** l'utente ha segnalato che l'APK v0.9.0 "non si aggiornava" nemmeno disinstallando
+  e reinstallando. Diagnosticato con il tablet collegato via ADB: `dumpsys package` mostrava
+  `versionCode=800`/`versionName=0.8.0` — l'APK allegato alla release v0.9.0 era in realtà una
+  build **vecchia rimasta in `dist/`** da una sessione precedente, non quella nuova. Causa: il
+  giorno prima `scripts/build-android.ps1` era stato lanciato con `2>&1 | Select-Object` — un
+  warning innocuo di Gradle sull'SDK XML finiva su stderr, e con `$ErrorActionPreference = "Stop"`
+  nello script PowerShell lo trasforma in un errore terminante che interrompe l'esecuzione
+  *prima* dello step "copia l'APK in dist/" — lo script uscito con `NativeCommandError` era stato
+  scambiato per un fallimento innocuo, senza notare che l'APK effettivamente pubblicato non era
+  mai stato rigenerato. Fix: ricostruita la build **senza** `2>&1` (comportamento già documentato
+  come anti-pattern nelle istruzioni del tool PowerShell di questa sessione — "Avoid `2>&1` on
+  native executables... stderr is already captured for you"), verificata con `aapt2 dump badging`
+  (versionCode/versionName) e `apksigner verify --print-certs` **prima** di ricaricare l'asset
+  sbagliato sulla release esistente (`gh release upload --clobber`), poi installata via ADB sul
+  tablet per conferma diretta.
+- **Perché:** conferma pratica di una lezione già nota in astratto (vedi istruzioni del tool
+  PowerShell) ma non ancora vissuta in un incidente reale su questo progetto — un warning
+  innocuo su stderr può silenziosamente troncare uno script di build che sembra "quasi riuscito"
+  (l'APK in `dist/` esisteva, aveva la dimensione giusta, sembrava plausibile), rendendo la
+  build-non-aggiornata quasi impossibile da notare senza verificare esplicitamente
+  versionCode/versionName del file prodotto.
+- **Alternative:** nessuna — una volta isolata la causa, il fix è diretto (non redirigere stderr).
+- **Impatto:** nessun file di progetto cambiato (solo procedura di build/release). **Promemoria
+  procedurale per il futuro**: dopo ogni `build-android.ps1`/`build-launcher.ps1`, verificare
+  SEMPRE `versionCode`/`versionName`/`FileVersion` del file appena prodotto (`aapt2 dump badging`,
+  `Get-Item ... | .VersionInfo.FileVersion`) prima di allegarlo a una release — non fidarsi solo
+  del fatto che lo script sia arrivato in fondo senza un errore visibile in console.
+
+### Overlay obiettivo di ciclo: mostrato una sola volta per carriera, non ad ogni completamento
+- **Data:** 2026-08-12
+- **Decisione:** su segnalazione diretta dell'utente ("il raggiungimento degli obiettivi... non
+  deve essere ripetuto. se già è spuntato una volta basta quella"), il nuovo moment "objective"
+  (introdotto in v0.9.0, vedi sopra) ora si accoda **solo la prima volta** in cui un obiettivo di
+  ciclo viene raggiunto in una data carriera — dato che è l'evento più frequente di tutti (quasi
+  ogni ciclo), ripeterlo ogni volta lo rendeva percepito come rumore invece che una celebrazione.
+  Nuovo campo persistito `Player.objectiveMomentShown?: boolean` (default `false`,
+  `STORAGE_VERSION` 8→9, `migratePlayerV8`); `objectiveResult` in `CycleResult`/
+  `CycleOutcomeSummary` guadagna un campo `firstTime: boolean` (calcolato in `loop.ts` come
+  `evaluated.met && !player.objectiveMomentShown`, che poi imposta il flag a `true`);
+  `buildCareerMoments` in `MomentOverlay.tsx` accoda il moment solo se `objectiveResult.firstTime`
+  (non più solo `met`). **Il banner di fine ciclo resta invariato**: mostra "Obiettivo raggiunto/
+  mancato" ad ogni ciclo come prima — solo l'overlay a schermo intero smette di ripetersi. I
+  reward (popolarità/risparmi) restano invariati, si applicano ad ogni obiettivo raggiunto
+  indipendentemente da `firstTime`.
+- **Perché:** a differenza di trofei/premi/convocazioni/traguardi OVR (eventi rari per natura),
+  l'obiettivo di ciclo viene rollato e valutato quasi ogni ciclo — mostrarlo come festa a
+  schermo intero ogni volta ne svaluta l'impatto molto più in fretta degli altri moment.
+- **Nota di processo — debug**: la prima verifica manuale nel browser sembrava mostrare un bug (la
+  logica pareva corretta ma l'overlay non compariva mai, nemmeno alla prima occorrenza) —
+  investigato con log temporanei (rimossi prima del commit) fino a scoprire che `chooseOption`
+  (hook `useCareerGame.ts`) usa `setState((prev) => ...)`, e React Strict Mode (attivo di default
+  in `next dev`) **invoca due volte** le funzioni updater passate a `setState` per rilevare
+  impurità — questo aveva fatto sospettare una race condition nel codice, ma si è rivelato un
+  falso allarme: entrambe le invocazioni ricevono lo stesso `prev` e calcolano `firstTime` in
+  modo identico, quindi non causa il problema. La causa reale dei primi test "falliti" era solo
+  un artefatto di osservazione (click troppo ravvicinati/coordinate del bottone "Continua"
+  riferite allo screenshot sbagliato in una sequenza `browser_batch`, non un bug nel codice) —
+  confermato in modo definitivo instrumentando `window.__debugLogs` invece di fidarsi di
+  screenshot con timing incerto. Utile ricordare per future sessioni di debug UI in questo
+  progetto: **in `next dev`, ogni `setState(prev => ...)` viene eseguito due volte** — se un log
+  di debug sembra "raddoppiato" non è necessariamente un sintomo di un bug reale.
+- **Alternative:** nessuna — richiesta chiara e specifica dell'utente, un solo modo ragionevole di
+  implementarla (flag persistito "già mostrato una volta").
+- **Impatto:** `src/types/career.ts` (+`Player.objectiveMomentShown?`), `src/lib/career/engine.ts`
+  (`createPlayer`), `src/lib/career/storage.ts` (`STORAGE_VERSION` 9, `migratePlayerV8`),
+  `src/lib/career/loop.ts` (`objectiveResult.firstTime`), `src/hooks/useCareerGame.ts` (tipo
+  `CycleOutcomeSummary.objectiveResult`), `src/components/features/career/MomentOverlay.tsx`
+  (`buildCareerMoments` condiziona su `firstTime`). 399 test (era 397, +2: caso "raggiunto ma non
+  prima volta" e migrazione v8→v9), `tsc`/lint puliti. **Verificato dal vivo nel browser**
+  (a differenza della v0.9.0, questa volta con successo): prima occorrenza mostra l'overlay verde
+  con Target, seconda occorrenza nella stessa carriera mostra solo il banner — entrambi i casi
+  osservati direttamente. Rilasciato come **v0.9.1** (patch, fix comportamentale non nuova
+  feature), `dist/MyRoad.exe`/`dist/MyRoad.apk` rigenerati (versionCode/FileVersion verificati
+  prima della pubblicazione, per non ripetere l'incidente della voce precedente) e allegati alla
+  [release GitHub v0.9.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.9.1), installata e
+  verificata anche sul tablet fisico via ADB.

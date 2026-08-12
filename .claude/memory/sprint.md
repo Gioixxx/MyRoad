@@ -542,6 +542,21 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   come **v0.9.0**, `dist/MyRoad.exe`/`dist/MyRoad.apk` rigenerati e allegati alla [release GitHub
   v0.9.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.9.0).
 
+- [x] **Fix APK v0.9.0 stantio + overlay obiettivo mostrato una sola volta per carriera**
+  (2026-08-12, commit 62443ed/71de856 + tag v0.9.1): l'utente ha segnalato che l'APK non si
+  aggiornava — diagnosticato che l'asset allegato alla release v0.9.0 era in realtà una build
+  vecchia (0.8.0) rimasta in `dist/`, causa un `2>&1` in PowerShell che trasformava un warning
+  innocuo di Gradle in un errore terminante prima della copia dell'APK. Ricostruito e ricaricato
+  l'asset corretto sulla release esistente. Nella stessa sessione, richiesta separata dell'utente:
+  l'overlay celebrativo "Obiettivo raggiunto" (v0.9.0) si accodava ad ogni ciclo in cui l'obiettivo
+  veniva centrato — ora compare solo la prima volta per carriera (`Player.objectiveMomentShown`,
+  `STORAGE_VERSION` 8→9). Vedi [[decisions]] per il dettaglio completo di entrambi, inclusa la
+  nota di processo sul falso allarme di debug legato al doppio-invoke di React Strict Mode sugli
+  updater di `setState`. 399 test (era 397), `tsc`/lint puliti. **Verificato dal vivo nel
+  browser** (prima volta con overlay, seconda volta senza) e sul tablet fisico via ADB. Rilasciato
+  come **v0.9.1**, con verifica esplicita di versionCode/FileVersion prima della pubblicazione per
+  non ripetere l'incidente della release precedente.
+
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
 - `ClubStint` ora ha un campo `ovr` (OVR del giocatore alla fine di quel ciclo) — necessario per la CareerTable, che deve mostrare l'OVR storico per riga, non quello attuale
