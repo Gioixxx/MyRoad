@@ -947,4 +947,35 @@ Registro scelte tecniche con motivazioni.
   invariati, `tsc --noEmit` pulito. Convocazione (28,9%) e trofeo di nazionale (5,1-5,6%)
   rimisurati stabili in ogni run, a conferma che le modifiche sono isolate alle rispettive
   meccaniche. Artifact "Trofei a confronto" aggiornato con i nuovi valori e le formule applicate
-  (stessa URL, redeploy). Nessuna release/bump di versione in questa sessione.
+  (stessa URL, redeploy). Nessuna release/bump di versione in questa sessione — poi inclusa nella
+  v0.9.2 di una sessione parallela (vedi voce sotto), che ha rilasciato entrambe insieme.
+
+### Correzione: overlay obiettivo "una volta sola" era per carriera, doveva essere per tipo
+- **Data:** 2026-08-12
+- **Decisione:** subito dopo il rilascio di v0.9.1 (overlay obiettivo mostrato una sola volta in
+  assoluto per carriera, vedi voce precedente), l'utente ha corretto il requisito: "deve spuntare
+  solo una volta per tipo di obiettivo", non una volta per l'intera carriera. Sostituito il flag
+  globale `Player.objectiveMomentShown: boolean` con `Player.objectiveKindsCelebrated:
+  CycleObjectiveKind[]` — ogni tipo di obiettivo (goals/apps/trophy/no-injury/callup/ovr-gain) ha
+  la propria "prima volta" indipendente dagli altri. `objectiveResult.firstTime` in `loop.ts` ora
+  controlla `!player.objectiveKindsCelebrated.includes(pendingObjective.kind)` invece del flag
+  booleano. `STORAGE_VERSION` 9→10, `migratePlayerV9` (il vecchio flag non distingueva il tipo,
+  riparte da lista vuota — chi ha già una carriera in corso può vedere una celebrazione in più per
+  tipo, comportamento accettabile e coerente col criterio già usato per migrazioni analoghe).
+- **Perché:** correzione diretta di un fraintendimento del requisito nella sessione precedente —
+  nessun'altra motivazione, richiesta esplicita e specifica dell'utente.
+- **Impatto:** `src/types/career.ts`, `src/lib/career/engine.ts`, `src/lib/career/loop.ts`,
+  `src/lib/career/storage.ts` (migrazione), `src/lib/career/loop.test.ts` (+3 test dedicati:
+  prima volta per un tipo, seconda volta stesso tipo, prima volta per un tipo diverso),
+  `src/lib/career/storage.test.ts` (migrazione v8/v9→v10 aggiornata). 403 test (era 399),
+  `tsc`/lint puliti. **Verificato dal vivo nel browser**: primo obiettivo di tipo "goals" mostra
+  l'overlay verde, un secondo obiettivo dello stesso tipo mostra solo il banner, un terzo
+  obiettivo di tipo "apps" (mai celebrato) mostra di nuovo l'overlay — tutti e 3 i casi osservati
+  direttamente. Rilasciato insieme al ribilanciamento della voce precedente come **v0.9.2**
+  (versionCode/FileVersion verificati prima della pubblicazione), installata e verificata anche
+  sul tablet fisico via ADB.
+- **Nota di processo**: durante questa sessione sono state trovate modifiche non committate ad
+  opera di una sessione/lavoro parallelo (`playstyles.ts`/`trophies.ts`, già documentate nella
+  voce precedente) — verificato con l'utente (`AskUserQuestion`) prima di includerle nella stessa
+  release invece di assumerlo silenziosamente, dato che una build locale (`npm run build`) compila
+  sempre dai file presenti su disco, committati o no.

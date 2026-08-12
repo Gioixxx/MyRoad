@@ -557,6 +557,17 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   come **v0.9.1**, con verifica esplicita di versionCode/FileVersion prima della pubblicazione per
   non ripetere l'incidente della release precedente.
 
+- [x] **Overlay obiettivo per-tipo + ribilanciamento convocazione/trofeo club/Pallone d'Oro**
+  (2026-08-12, commit 55983e1/81c4396/... + tag v0.9.2): l'utente ha corretto v0.9.1 — l'overlay
+  "Obiettivo raggiunto" doveva essere una volta per tipo di obiettivo, non una volta per l'intera
+  carriera (`Player.objectiveKindsCelebrated: CycleObjectiveKind[]`, `STORAGE_VERSION` 9→10).
+  Nella stessa release, incluso anche un ribilanciamento fatto in una sessione parallela
+  (confronto plausibilità gioco-vs-realtà con un Artifact dedicato): convocazione in nazionale
+  ~37%→~28%, trofeo di club ~84%→~72%, Pallone d'Oro dimezzato. Vedi [[decisions]] per il
+  dettaglio completo di entrambe. 403 test (era 399), `tsc`/lint puliti. **Verificato dal vivo nel
+  browser** (prima volta per tipo mostra overlay, ripetizione stesso tipo no, tipo diverso sì) e
+  sul tablet fisico via ADB. Rilasciato come **v0.9.2**.
+
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
 - `ClubStint` ora ha un campo `ovr` (OVR del giocatore alla fine di quel ciclo) — necessario per la CareerTable, che deve mostrare l'OVR storico per riga, non quello attuale
