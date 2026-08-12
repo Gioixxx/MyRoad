@@ -14,8 +14,11 @@ import { clubs, clubsByCountry } from "@/data/clubs";
 import { countries } from "@/data/countries";
 import { clamp, type Rng } from "./progression";
 import { isNationalTeamBanned, shadowMultiplier } from "./shadow";
-import { ATTRIBUTE_LABELS, attributeKeysForPosition } from "./attributes";
+import { ATTRIBUTE_LABELS, attributeKeysForPosition, peaksFromAttributes } from "./attributes";
 import { playStyleCallupBonus } from "./playstyles";
+import { tacticalFit, TACTICAL_SYSTEM_LABELS, clubTacticalSystem, playerPreferredSystem, type TacticalSystem } from "./tactics";
+import { deriveArchetype } from "./traits";
+import { getRelation } from "./relations";
 
 // ---------- Helper di selezione club ----------
 
@@ -68,6 +71,97 @@ function shuffle<T>(items: T[], rng: Rng): T[] {
 
 function pickClubs(pool: Club[], count: number, rng: Rng): Club[] {
   return shuffle(pool, rng).slice(0, count);
+}
+
+function scoreOfferClub(player: Player, club: Club): number {
+  const archetype = deriveArchetype(player.traits, player.shadow).primary;
+  let score = 1;
+  if (club.country === player.nationality) {
+    score += archetype === "flagbearer" ? 8 : 3;
+  } else if (archetype === "mercenary") {
+    score += 3;
+  }
+  const fit = tacticalFit(player, club);
+  if (fit === "ottimo") score += 4;
+  if (fit === "scarso") score += archetype === "problem" ? 3 : -2;
+  const target = targetPrestige(player.ovr);
+  if (club.prestige > target) {
+    score += archetype === "mercenary" || archetype === "leader" ? 5 : 2;
+  }
+  if (club.prestige >= 2 && archetype === "leader") score += 2;
+  return score;
+}
+
+/** Motivo in italiano per un'offerta club (hint sulla card). */
+export function offerReasonHint(
+  player: Pick<Player, "nationality" | "attributes" | "position" | "ovr">,
+  club: Club,
+): string {
+  const reasons: string[] = [];
+  if (club.country === player.nationality) reasons.push("Club di casa");
+  const fit = tacticalFit(player, club);
+  if (fit === "ottimo") reasons.push("Fit ottimo");
+  else if (fit === "scarso") reasons.push("Fit scarso");
+  const target = targetPrestige(player.ovr);
+  if (club.prestige > target) reasons.push("Salto di categoria");
+  else if (club.prestige < target) reasons.push("Progetto");
+  return reasons.join(" · ") || "Nuovo ambiente";
+}
+
+/**
+ * Seleziona fino a `count` club dal pool privilegiando casa, fit tattico ottimo e step-up di
+ * prestigio, poi il punteggio da archetipo. Non esclude i restanti: riempie i posti rimasti.
+ */
+export function pickCuratedOffers(player: Player, pool: Club[], count: number, rng: Rng): Club[] {
+  if (pool.length <= count) return shuffle(pool, rng);
+  const remaining = [...pool];
+  const picked: Club[] = [];
+
+  const takeBest = (predicate: (club: Club) => boolean) => {
+    if (picked.length >= count) return;
+    const candidates = remaining.filter(predicate);
+    if (candidates.length === 0) return;
+    const ranked = candidates
+      .map((club) => ({ club, score: scoreOfferClub(player, club) + rng() }))
+      .sort((a, b) => b.score - a.score);
+    const chosen = ranked[0]!.club;
+    picked.push(chosen);
+    remaining.splice(
+      remaining.findIndex((c) => c.id === chosen.id),
+      1,
+    );
+  };
+
+  takeBest((c) => c.country === player.nationality);
+  takeBest((c) => tacticalFit(player, c) === "ottimo");
+  takeBest((c) => c.prestige > targetPrestige(player.ovr));
+
+  while (picked.length < count && remaining.length > 0) {
+    const ranked = remaining
+      .map((club) => ({ club, score: scoreOfferClub(player, club) + rng() * 2 }))
+      .sort((a, b) => b.score - a.score);
+    const chosen = ranked[0]!.club;
+    picked.push(chosen);
+    remaining.splice(
+      remaining.findIndex((c) => c.id === chosen.id),
+      1,
+    );
+  }
+
+  return shuffle(picked, rng);
+}
+
+/** Riga "perché no" per il cartellino (nazionale / clausola). `null` se non c'è nulla da dire. */
+export function prospectStatusLine(player: Player): string | null {
+  const parts: string[] = [];
+  if (!player.nationalTeam.called && player.ovr < NATIONAL_CALLUP_OVR_BASELINE) {
+    parts.push(`Nazionale da OVR ${NATIONAL_CALLUP_OVR_BASELINE}`);
+  }
+  if (player.releaseClauseEur > 0 && player.marketValueEur > 0) {
+    const bargainRatio = Math.max(player.marketValueEur / player.releaseClauseEur - 1, 0);
+    parts.push(bargainRatio > 0 ? "Clausola conveniente" : "Blindato");
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 // ---------- Helper per costruire decisioni/opzioni ----------
@@ -382,7 +476,7 @@ export function generateTransferWindow(player: Player, rng: Rng = Math.random): 
     throw new Error("Serve un club corrente per generare una finestra di mercato");
   }
   const currentClub = player.club;
-  const offers = pickClubs(eligibleClubs(player.ovr, currentClub.id), 3, rng);
+  const offers = pickCuratedOffers(player, eligibleClubs(player.ovr, currentClub.id), 3, rng);
   return {
     id: `transfer-window-${player.age}`,
     category: "transfer",
@@ -395,7 +489,7 @@ export function generateTransferWindow(player: Player, rng: Rng = Math.random): 
           signOption(`sign-${c.id}`, `Firma per ${c.name}`, c, `Ti trasferisci al ${c.name}.`, {
             traitsDelta: { ambition: 4, loyalty: -2 },
           }),
-          "Nuovo ambiente · stipendio ricalcolato",
+          offerReasonHint(player, c),
         ),
       ),
       withHint(
@@ -408,12 +502,14 @@ export function generateTransferWindow(player: Player, rng: Rng = Math.random): 
   };
 }
 
-/** Alcune finestre di prestito nell'originale non offrono l'opzione "resta" — replica quel comportamento. */
+/** Alcune finestre di prestito nell'originale non offrono l'opzione "resta" — qui il prestito
+ * è una proposta: si può restare a lottare per il posto. */
 export function generateLoanOffer(player: Player, rng: Rng = Math.random): Decision {
   if (!player.club) {
     throw new Error("Serve un club corrente per generare un'offerta di prestito");
   }
-  const offers = pickClubs(
+  const offers = pickCuratedOffers(
+    player,
     eligibleClubs(Math.max(player.ovr - 8, 0), player.club.id),
     4,
     rng,
@@ -421,11 +517,26 @@ export function generateLoanOffer(player: Player, rng: Rng = Math.random): Decis
   return {
     id: `loan-offer-${player.age}`,
     category: "loan",
-    title: "Offerta di prestito",
-    description: "Il tuo club vuole farti giocare altrove per crescere.",
-    options: offers.map((c) =>
-      signOption(`loan-${c.id}`, `Vai in prestito al ${c.name}`, c, `Vai in prestito al ${c.name}.`),
-    ),
+    title: "Proposta di prestito",
+    description:
+      "Il club propone un prestito per farti giocare con più continuità. Puoi accettare o restare a lottare per il posto.",
+    options: [
+      ...offers.map((c) =>
+        withHint(
+          signOption(`loan-${c.id}`, `Vai in prestito al ${c.name}`, c, `Vai in prestito al ${c.name}.`),
+          offerReasonHint(player, c),
+        ),
+      ),
+      withHint(
+        signOption(
+          "stay",
+          `Resta e lotta per il posto al ${player.club.name}`,
+          player.club,
+          `Resti al ${player.club.name} e lotti per il posto.`,
+        ),
+        "Continuità",
+      ),
+    ],
   };
 }
 
@@ -434,9 +545,12 @@ export function generateLoanReturn(
   parentClub: Club,
   rng: Rng = Math.random,
 ): Decision {
-  const offers = pickClubs(eligibleClubs(player.ovr, player.club?.id ?? parentClub.id), 3, rng);
+  const offers = pickCuratedOffers(player, eligibleClubs(player.ovr, player.club?.id ?? parentClub.id), 3, rng);
   const options: DecisionOption[] = offers.map((c) =>
-    signOption(`loan-${c.id}`, `Vai in prestito al ${c.name}`, c, `Vai in prestito al ${c.name}.`),
+    withHint(
+      signOption(`loan-${c.id}`, `Vai in prestito al ${c.name}`, c, `Vai in prestito al ${c.name}.`),
+      offerReasonHint(player, c),
+    ),
   );
   if (player.club) {
     options.push(
@@ -461,7 +575,7 @@ export function generateClubCrisis(player: Player, rng: Rng = Math.random): Deci
   if (!player.club) {
     throw new Error("Serve un club corrente per generare una crisi di squadra");
   }
-  const [alternative] = pickClubs(eligibleClubs(player.ovr, player.club.id), 1, rng);
+  const [alternative] = pickCuratedOffers(player, eligibleClubs(player.ovr, player.club.id), 1, rng);
   return {
     id: `club-crisis-${player.age}`,
     category: "club-crisis",
@@ -476,6 +590,7 @@ export function generateClubCrisis(player: Player, rng: Rng = Math.random): Deci
         outcomes: [
           outcome(100, "Meno possibilità di vincere qualcosa quest'anno.", -2, {
             traitsDelta: { leadership: 9, loyalty: 4 },
+            relationsDelta: { coach: 1 },
           }),
         ],
       },
@@ -484,8 +599,9 @@ export function generateClubCrisis(player: Player, rng: Rng = Math.random): Deci
           traitsDelta: { ambition: 3, loyalty: -3 },
           shadowDelta: 19,
           shadowFlags: { fanBetrayed: true },
+          relationsDelta: { coach: -1 },
         }),
-        "Cambio di ambiente",
+        offerReasonHint(player, alternative),
       ),
     ],
   };
@@ -543,12 +659,14 @@ export function generateControversialStatement(player: Player, rng: Rng = Math.r
           outcome(100, "Ti scusi ma il minutaggio cala.", -1, {
             traitsDelta: { showmanship: 5 },
             shadowDelta: 6,
+            relationsDelta: { coach: 1 },
           }),
         ],
       },
       signOption("leave", `Firma per ${alternative.name}`, alternative, `Lasci per il ${alternative.name}.`, {
         traitsDelta: { showmanship: 5, ambition: 2, loyalty: -2 },
         shadowDelta: 6,
+        relationsDelta: { coach: -1 },
       }),
     ],
   };
@@ -578,12 +696,14 @@ export function generateControversialPost(player: Player, rng: Rng = Math.random
           outcome(100, "Cancelli il post, ma il caso mediatico ti pesa addosso.", -1, {
             traitsDelta: { showmanship: 5 },
             shadowDelta: 6,
+            relationsDelta: { coach: 1 },
           }),
         ],
       },
       signOption("leave", `Firma per ${alternative.name}`, alternative, `Lasci per il ${alternative.name}.`, {
         traitsDelta: { showmanship: 5, ambition: 2, loyalty: -2 },
         shadowDelta: 6,
+        relationsDelta: { coach: -1 },
       }),
     ],
   };
@@ -626,7 +746,7 @@ export function generateClubPriority(player: Player): Decision {
 }
 
 export function generateEndOfCycle(player: Player, rng: Rng = Math.random): Decision {
-  const offers = pickClubs(eligibleClubs(player.ovr, player.club?.id), 3, rng);
+  const offers = pickCuratedOffers(player, eligibleClubs(player.ovr, player.club?.id), 3, rng);
   return {
     id: `end-of-cycle-${player.age}`,
     category: "end-of-cycle",
@@ -634,7 +754,10 @@ export function generateEndOfCycle(player: Player, rng: Rng = Math.random): Deci
     description: "Il tuo club ha deciso di non rinnovarti. Scegli il prossimo passo della carriera.",
     options: [
       ...offers.map((c) =>
-        signOption(`sign-${c.id}`, `Firma per ${c.name}`, c, `Firmi per il ${c.name}.`),
+        withHint(
+          signOption(`sign-${c.id}`, `Firma per ${c.name}`, c, `Firmi per il ${c.name}.`),
+          offerReasonHint(player, c),
+        ),
       ),
       {
         id: "retire",
@@ -1037,6 +1160,54 @@ export function generateCupUpsetDecision(
   };
 }
 
+const DECISIVE_MATCH_SYSTEMS: TacticalSystem[] = ["possesso", "pressing", "contropiede"];
+
+export function decisiveMatchWinWeight(player: Player, system: TacticalSystem): number {
+  let win = 40;
+  const preferred = playerPreferredSystem(player.attributes, player.position);
+  if (preferred === system) win += 14;
+  if (player.club && clubTacticalSystem(player.club) === system) win += 10;
+  if (player.club && tacticalFit(player, player.club) === "ottimo" && preferred === system) win += 6;
+  return clamp(win, 28, 72);
+}
+
+function decisiveMatchHint(player: Player, system: TacticalSystem): string {
+  const preferred = playerPreferredSystem(player.attributes, player.position);
+  const clubSystem = player.club ? clubTacticalSystem(player.club) : null;
+  if (preferred === system && clubSystem === system) return "Il tuo stile · sistema della squadra";
+  if (preferred === system) return "Il tuo stile";
+  if (clubSystem === system) return "Sistema della squadra";
+  return "Scelta tattica";
+}
+
+export function generateDecisiveMatchDecision(player: Player): Decision {
+  if (!player.club) {
+    throw new Error("Serve un club corrente per generare una partita decisiva");
+  }
+  const league = player.club.competitions.league;
+  return {
+    id: `decisive-match-${player.age}`,
+    category: "decisive-match",
+    title: "Partita decisiva",
+    description: `Ultima giornata: il ${player.club.name} si gioca ${league}. Il mister ti chiede come affrontare la partita.`,
+    options: DECISIVE_MATCH_SYSTEMS.map((system) => {
+      const win = decisiveMatchWinWeight(player, system);
+      return {
+        id: `tactic-${system}`,
+        label: TACTICAL_SYSTEM_LABELS[system],
+        hint: decisiveMatchHint(player, system),
+        outcomes: [
+          {
+            ...outcome(win, `Il piano funziona: sollevi il trofeo di ${league}.`),
+            leagueWin: true,
+          },
+          outcome(100 - win, "Il piano non basta: il titolo sfuma all'ultimo."),
+        ],
+      };
+    }),
+  };
+}
+
 // ---------- Sponsor/endorsement ----------
 
 const SPONSOR_ELIGIBILITY_POPULARITY = 25;
@@ -1048,7 +1219,7 @@ export function isSponsorEligible(player: Pick<Player, "popularity">): boolean {
 function economicOutcome(
   weight: number,
   resultText: string,
-  effect: Pick<PlayerDelta, "savingsDelta" | "popularityDelta" | "traitsDelta" | "shadowDelta">,
+  effect: Pick<PlayerDelta, "savingsDelta" | "popularityDelta" | "traitsDelta" | "shadowDelta" | "relationsDelta">,
 ): DecisionOutcome {
   return { weight, effect, resultText };
 }
@@ -1212,12 +1383,40 @@ const POSITION_CHANGE_ADJACENCY: Partial<Record<Position, Position[]>> = {
   ST: ["CAM"],
 };
 
+/** Target preferiti quando il calo fisico innesca la riconversione (può uscire dall'adiacenza stretta). */
+const DECLINE_PREFERRED_TARGETS: Partial<Record<Position, Position[]>> = {
+  LW: ["CAM", "LM"],
+  RW: ["CAM", "RM"],
+  ST: ["CAM"],
+  LM: ["CAM", "CM"],
+  RM: ["CAM", "CM"],
+  LB: ["CB"],
+  RB: ["CB"],
+};
+
+const PHYSICAL_DECLINE_MIN_AGE = 29;
+const PHYSICAL_DECLINE_DROP = 6;
+
+export function isPhysicalDeclineReconversion(player: Player): boolean {
+  if (player.position === "GK" || player.age < PHYSICAL_DECLINE_MIN_AGE) return false;
+  if (player.attributes.kind !== "outfield") return false;
+  const peaks = player.attributePeaks ?? peaksFromAttributes(player.attributes);
+  const paceDrop = peaks.pace - player.attributes.pace;
+  const physDrop = peaks.physical - player.attributes.physical;
+  return paceDrop >= PHYSICAL_DECLINE_DROP || physDrop >= PHYSICAL_DECLINE_DROP;
+}
+
 export function generatePositionChangeDecision(player: Player, rng: Rng = Math.random): Decision {
-  const targets = POSITION_CHANGE_ADJACENCY[player.position] ?? [];
+  const decline = isPhysicalDeclineReconversion(player);
+  const adjacent = POSITION_CHANGE_ADJACENCY[player.position] ?? [];
+  const preferred = DECLINE_PREFERRED_TARGETS[player.position];
+  const targets = decline && preferred ? preferred : adjacent;
   const options: DecisionOption[] = targets.map((newPosition) => ({
     id: `switch-to-${newPosition}`,
     label: `Diventa ${newPosition}`,
-    hint: "Più minutaggio nel nuovo ruolo · adattamento costoso in OVR",
+    hint: decline
+      ? "Meno dipendenza dalla corsa · adattamento costoso in OVR"
+      : "Più minutaggio nel nuovo ruolo · adattamento costoso in OVR",
     newPosition,
     outcomes: [outcome(100, `Ti riadatti al ruolo di ${newPosition}: serve tempo per l'ambientamento.`, -2)],
   }));
@@ -1230,9 +1429,91 @@ export function generatePositionChangeDecision(player: Player, rng: Rng = Math.r
   return {
     id: `position-change-${player.age}-${Math.round(rng() * 1000)}`,
     category: "position-change",
-    title: "Cambio di ruolo",
-    description: "Il mister ha bisogno che tu copra un'altra posizione.",
+    title: decline ? "Riconversione di ruolo" : "Cambio di ruolo",
+    description: decline
+      ? "Il fisico non è più quello di una volta. Il mister ti propone un ruolo meno dipendente dalla corsa."
+      : "Il mister ha bisogno che tu copra un'altra posizione.",
     options,
+  };
+}
+
+export function isCoachRoleRequestEligible(player: Player): boolean {
+  if (player.position === "GK") return false;
+  const coach = getRelation(player, "coach");
+  if (!coach || coach.affinity < 1) return false;
+  const targets = POSITION_CHANGE_ADJACENCY[player.position] ?? [];
+  return targets.length > 0;
+}
+
+/** Il mister, se c'è affinità, chiede un cambio ruolo — evento condizionato nel pool club-crisis. */
+export function generateCoachRoleRequest(player: Player): Decision {
+  const coach = getRelation(player, "coach");
+  const coachName = coach?.name ?? "Il mister";
+  const adjacent = POSITION_CHANGE_ADJACENCY[player.position] ?? [];
+  const options: DecisionOption[] = adjacent.map((newPosition) => ({
+    id: `switch-to-${newPosition}`,
+    label: `Diventa ${newPosition}`,
+    hint: "Fiducia del mister · adattamento costoso in OVR",
+    newPosition,
+    outcomes: [
+      outcome(100, `${coachName} ti sposta a ${newPosition}: serve tempo per l'ambientamento.`, -2, {
+        relationsDelta: { coach: 1 },
+      }),
+    ],
+  }));
+  options.push({
+    id: "reject-coach-role",
+    label: "Rifiuta",
+    hint: "Mantieni il ruolo · il mister non la prende bene",
+    outcomes: [outcome(100, `Rifiuti la proposta di ${coachName}.`, 0, { relationsDelta: { coach: -1 } })],
+  });
+  return {
+    id: `coach-role-request-${player.age}`,
+    category: "club-crisis",
+    title: "Il mister ti chiede il cambio ruolo",
+    description: `${coachName} si fida di te e ti chiede di coprire un'altra posizione.`,
+    options,
+  };
+}
+
+export function isAgentGreyDealEligible(player: Player): boolean {
+  const agent = getRelation(player, "agent");
+  return Boolean(agent && agent.affinity <= -1);
+}
+
+/** L'agente, se l'affinità è bassa, propone un accordo opaco — evento condizionato nel pool narrative. */
+export function generateAgentGreyDeal(player: Player): Decision {
+  const agent = getRelation(player, "agent");
+  const agentName = agent?.name ?? "Il tuo procuratore";
+  return {
+    id: `agent-grey-deal-${player.age}`,
+    category: "narrative",
+    title: "Un favore in grigio",
+    description: `${agentName} ti propone un accordo opaco: soldi subito, poche domande.`,
+    options: [
+      {
+        id: "accept-grey",
+        label: "Accetta",
+        hint: "Soldi subito · debito morale",
+        outcomes: [
+          economicOutcome(100, `Incassi in silenzio. ${agentName} non dimentica il favore.`, {
+            savingsDelta: 80_000,
+            shadowDelta: 12,
+            relationsDelta: { agent: 1 },
+          }),
+        ],
+      },
+      {
+        id: "refuse-grey",
+        label: "Rifiuta",
+        hint: "Niente soldi · l'agente se la prende",
+        outcomes: [
+          economicOutcome(100, `Rifiuti. ${agentName} non la prende bene.`, {
+            relationsDelta: { agent: -1 },
+          }),
+        ],
+      },
+    ],
   };
 }
 
@@ -1277,14 +1558,16 @@ const AGENT_CLAUSE_DOWN_MULTIPLIER = 0.7;
 /** Negoziazione col procuratore: alza/abbassa la clausola in cambio di sicurezza/mobilità di
  * mercato — non è una firma (nessun `option.club`), quindi la nuova clausola va impostata
  * direttamente nell'effetto invece di lasciarla ricalcolare da `signWithClub`. */
-export function generateAgentNegotiation(player: Pick<Player, "age" | "releaseClauseEur">): Decision {
+export function generateAgentNegotiation(player: Pick<Player, "age" | "releaseClauseEur" | "relations">): Decision {
   const higherClause = Math.round((player.releaseClauseEur * AGENT_CLAUSE_UP_MULTIPLIER) / 1000) * 1000;
   const lowerClause = Math.round((player.releaseClauseEur * AGENT_CLAUSE_DOWN_MULTIPLIER) / 1000) * 1000;
+  const agent = getRelation(player, "agent");
+  const agentName = agent?.name ?? "Il tuo procuratore";
   return {
     id: `agent-negotiation-${player.age}`,
     category: "agent",
-    title: "Il tuo procuratore",
-    description: "Il tuo procuratore propone di rinegoziare i termini contrattuali col club.",
+    title: agent ? agent.name : "Il tuo procuratore",
+    description: `${agentName} propone di rinegoziare i termini contrattuali col club.`,
     options: [
       {
         id: "raise-clause",
@@ -1294,6 +1577,7 @@ export function generateAgentNegotiation(player: Pick<Player, "age" | "releaseCl
           outcome(100, "Il club accetta di blindarti con una clausola più alta.", 0, {
             releaseClauseEur: higherClause,
             traitsDelta: { loyalty: 4, ambition: -2 },
+            relationsDelta: { agent: 1 },
           }),
         ],
       },
@@ -1305,6 +1589,7 @@ export function generateAgentNegotiation(player: Pick<Player, "age" | "releaseCl
           outcome(100, "Il procuratore ottiene una clausola più bassa: più margine per un futuro trasferimento.", 0, {
             releaseClauseEur: lowerClause,
             traitsDelta: { ambition: 4, loyalty: -2 },
+            relationsDelta: { agent: 1 },
           }),
         ],
       },
@@ -1426,16 +1711,45 @@ const BASE_CATEGORY_WEIGHTS: Partial<Record<DecisionCategory, number>> = {
 const DEFAULT_CATEGORY_WEIGHT = 5;
 const REPEAT_PENALTY = 0.15;
 
+/** Moltiplicatore di peso in base allo stato del giocatore — prestito/rinnovo/mercato come conseguenze. */
+export function categoryWeightMultiplier(category: DecisionCategory, player?: Player): number {
+  if (!player) return 1;
+  if (category === "loan") {
+    if (player.age <= 21 && player.ovr < 70) return 1.6;
+    if (player.ovr >= 80 || player.age >= 25) return 0.08;
+    return 0.5;
+  }
+  if (category === "end-of-cycle") {
+    const prestige = player.club?.prestige ?? 0;
+    if (player.ovr >= 82 && prestige >= 2 && !player.injury) return 0.15;
+    if (player.age >= 32 || player.shadow >= 28 || player.injury) return 1.8;
+    if (player.ovr < 60) return 1.4;
+    return 0.6;
+  }
+  if (category === "transfer") {
+    const archetype = deriveArchetype(player.traits, player.shadow).primary;
+    if (archetype === "flagbearer" || player.traits.loyalty >= 58) return 0.55;
+    if (archetype === "mercenary") return 1.35;
+    return 1;
+  }
+  if (category === "position-change") {
+    return isPhysicalDeclineReconversion(player) ? 3 : 1;
+  }
+  return 1;
+}
+
 export function pickDecisionCategory(
   availableCategories: DecisionCategory[],
   recentCategories: DecisionCategory[],
   rng: Rng = Math.random,
+  player?: Player,
 ): DecisionCategory {
   if (availableCategories.length === 0) {
     throw new Error("Serve almeno una categoria disponibile per scegliere una decisione");
   }
   const weighted = availableCategories.map((category) => {
-    const base = BASE_CATEGORY_WEIGHTS[category] ?? DEFAULT_CATEGORY_WEIGHT;
+    const base =
+      (BASE_CATEGORY_WEIGHTS[category] ?? DEFAULT_CATEGORY_WEIGHT) * categoryWeightMultiplier(category, player);
     const weight = recentCategories.includes(category) ? base * REPEAT_PENALTY : base;
     return { category, weight };
   });

@@ -1,5 +1,8 @@
-import type { Injury, Position } from "@/types/career";
+import type { Injury, Position, StatLine } from "@/types/career";
 import { clamp, type Rng } from "./progression";
+
+/** Quota di apps/gol/assist (e extras portiere) che resta in un ciclo infortunato. */
+export const INJURY_STATS_MULTIPLIER = 0.45;
 
 const HIGH_RISK_POSITIONS = new Set<Position>(["CDM", "CB", "ST"]);
 
@@ -61,4 +64,17 @@ export function rollInjury(
 export function tickInjury(injury: Injury): Injury | null {
   if (injury.turnsRemaining <= 1) return null;
   return { ...injury, turnsRemaining: injury.turnsRemaining - 1 };
+}
+
+/** Riduce le stats di uno stint per un ciclo passato infortunato. */
+export function scaleStatLine(stats: StatLine, multiplier: number): StatLine {
+  const scale = (n: number) => Math.max(0, Math.round(n * multiplier));
+  const next: StatLine = {
+    apps: scale(stats.apps),
+    goals: scale(stats.goals),
+    assists: scale(stats.assists),
+  };
+  if (stats.goalsAgainst !== undefined) next.goalsAgainst = scale(stats.goalsAgainst);
+  if (stats.cleanSheets !== undefined) next.cleanSheets = scale(stats.cleanSheets);
+  return next;
 }

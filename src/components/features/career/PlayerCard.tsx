@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Award as AwardIcon, HeartCrack, Target, Trophy as TrophyIcon } from "lucide-react";
-import type { Player } from "@/types/career";
+import type { Player, AttributeKey } from "@/types/career";
 import { countries } from "@/data/countries";
 import { useCountUp } from "@/hooks/useMotion";
 import { ARCHETYPE_LABELS, deriveArchetype } from "@/lib/career/traits";
@@ -10,6 +10,8 @@ import { SHADOW_RUMOR_THRESHOLD } from "@/lib/career/shadow";
 import { ATTRIBUTE_LABELS } from "@/lib/career/attributes";
 import { PLAY_STYLE_LABELS } from "@/lib/career/playstyles";
 import { tacticalFit, TACTICAL_FIT_LABELS } from "@/lib/career/tactics";
+import { prospectStatusLine } from "@/lib/career/decisions";
+import { RELATION_LABELS, formatAffinity } from "@/lib/career/relations";
 import { cn } from "@/lib/utils";
 import { AttributesPanel } from "./AttributesPanel";
 import { ClubCrest } from "./ClubCrest";
@@ -23,6 +25,7 @@ interface PlayerCardProps {
   compact?: boolean;
   /** Label dei record appena battuti (flash UI). */
   flashRecords?: string[];
+  onTrainingFocus?: (key: AttributeKey | null) => void;
 }
 
 const VALUE_FORMATTER = new Intl.NumberFormat("it-IT", {
@@ -32,7 +35,7 @@ const VALUE_FORMATTER = new Intl.NumberFormat("it-IT", {
   maximumFractionDigits: 1,
 });
 
-export function PlayerCard({ player, compact = false, flashRecords }: PlayerCardProps) {
+export function PlayerCard({ player, compact = false, flashRecords, onTrainingFocus }: PlayerCardProps) {
   const country = countries.find((c) => c.name === player.nationality);
   const trophyCount = player.trophies.length;
   const awardCount = player.awards.length;
@@ -42,6 +45,7 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
   const showArchetypeChip = player.clubHistory.length >= 4 && archetype.primary !== null;
   const showRumorsChip = player.shadow >= SHADOW_RUMOR_THRESHOLD;
   const clubFit = player.club ? tacticalFit(player, player.club) : null;
+  const prospectLine = compact ? null : prospectStatusLine(player);
   const displayOvr = useCountUp(player.ovr, 800);
   const displayApps = useCountUp(player.career.apps, 800);
   const displayGoals = useCountUp(player.career.goals, 800);
@@ -146,6 +150,18 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
               Fit tattico: {TACTICAL_FIT_LABELS[clubFit]}
             </span>
           ) : null}
+          {player.relations.map((rel) => (
+            <span
+              key={rel.id}
+              className={cn(
+                "ml-1.5 rounded bg-(--color-surface) px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-text-muted) uppercase",
+                compact && "hidden sm:inline-flex",
+              )}
+              title={`${rel.name} · affinità ${formatAffinity(rel.affinity)}`}
+            >
+              {RELATION_LABELS[rel.id]} {formatAffinity(rel.affinity)}
+            </span>
+          ))}
           <p
             className={cn(
               "font-display truncate leading-tight text-(--color-text)",
@@ -160,6 +176,9 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
             ) : null}
             {player.club ? player.club.name : "Svincolato"} · {player.age} anni
           </p>
+          {prospectLine ? (
+            <p className="truncate text-[11px] text-(--color-text-muted)">{prospectLine}</p>
+          ) : null}
         </div>
         <div className="flex flex-col items-center gap-0.5">
           <OvrBadge ovr={displayOvr} />
@@ -210,7 +229,12 @@ export function PlayerCard({ player, compact = false, flashRecords }: PlayerCard
         <PopularityMeter value={player.popularity} />
       </div>
 
-      <AttributesPanel attributes={player.attributes} className={cn(compact && "hidden sm:flex")} />
+      <AttributesPanel
+        attributes={player.attributes}
+        trainingFocus={player.trainingFocus}
+        onTrainingFocus={onTrainingFocus}
+        className={cn(compact && !onTrainingFocus && "hidden sm:flex")}
+      />
 
       <div
         key={recordsFlashKey || "records"}

@@ -74,6 +74,8 @@ export interface SeasonTitleContext {
   nationalGoals: number;
   /** true solo sul ciclo in cui è stata vinta una sorpresa di coppa ("Giant Killer"). */
   cupUpsetWin: boolean;
+  /** Stagioni del ciclo (Intense 1 / Normal 2 / Express 3) — le soglie per-stagione si dividono per questo. */
+  seasons?: number;
 }
 
 export interface CycleSatisfactionContext {
@@ -93,6 +95,8 @@ export interface CycleSatisfactionContext {
   nationalGoals: number;
   marketValueEur: number;
   wasAlreadyCalled: boolean;
+  /** Stagioni del ciclo — record e confronti per-stagione si normalizzano con questo. */
+  seasons?: number;
 }
 
 export function emptyPersonalRecords(peakMarketValueEur = 0): PersonalRecords {
@@ -129,17 +133,27 @@ export function evaluateSeasonTitle(ctx: SeasonTitleContext): SeasonTitleEntry {
   return { age: ctx.age, id, label: SEASON_TITLE_LABELS[id] };
 }
 
-const IRON_WALL_CLEAN_SHEETS_THRESHOLD = 15;
+const IRON_WALL_CLEAN_SHEETS_PER_SEASON = 15;
+const WORKHORSE_APPS_PER_SEASON = 32;
+const BALLONDOR_GOALS_PER_SEASON = 25;
+const REVELATION_GOALS_PER_SEASON = 12;
+
+function perSeason(total: number, seasons: number | undefined): number {
+  return total / Math.max(seasons ?? 1, 1);
+}
 
 function pickSeasonTitleId(ctx: SeasonTitleContext): SeasonTitleId {
+  const goalsRate = perSeason(ctx.goals, ctx.seasons);
+  const appsRate = perSeason(ctx.apps, ctx.seasons);
+  const cleanSheetsRate = perSeason(ctx.cleanSheets ?? 0, ctx.seasons);
   if (ctx.cupUpsetWin) return "giantKiller";
   if (ctx.trophies.length > 0) return "champion";
-  if (ctx.award || ctx.goals >= 25) return "ballondorSeason";
-  if ((ctx.cleanSheets ?? 0) >= IRON_WALL_CLEAN_SHEETS_THRESHOLD) return "ironWall";
+  if (ctx.award || goalsRate >= BALLONDOR_GOALS_PER_SEASON) return "ballondorSeason";
+  if (cleanSheetsRate >= IRON_WALL_CLEAN_SHEETS_PER_SEASON) return "ironWall";
   if (ctx.nationalCallup && ctx.nationalGoals > 0) return "nationalHero";
-  if (ctx.age <= 21 && (ctx.ovrDelta >= 3 || ctx.goals >= 12)) return "revelation";
+  if (ctx.age <= 21 && (ctx.ovrDelta >= 3 || goalsRate >= REVELATION_GOALS_PER_SEASON)) return "revelation";
   if (ctx.injuryHealed) return "comeback";
-  if (ctx.apps >= 55) return "workhorse";
+  if (appsRate >= WORKHORSE_APPS_PER_SEASON) return "workhorse";
   if (ctx.newInjury || ctx.ovrDelta <= -2) return "toughYear";
   return "steady";
 }
@@ -198,12 +212,14 @@ function isObjectiveMet(objective: CycleObjective, ctx: CycleSatisfactionContext
   }
 }
 
-/** Genera l'obiettivo del ciclo successivo in base allo stato del giocatore. */
-export function rollCycleObjective(player: Player, rng: Rng = Math.random): CycleObjective {
+/** Genera l'obiettivo del ciclo successivo in base allo stato del giocatore.
+ * `seasons` scala i target gol/presenze (valori Intense × stagioni del ciclo). */
+export function rollCycleObjective(player: Player, rng: Rng = Math.random, seasons = 1): CycleObjective {
+  const seasonCount = Math.max(seasons, 1);
   const candidates: { kind: CycleObjectiveKind; weight: number; build: () => CycleObjective }[] = [];
 
   if (player.club) {
-    const goalTarget = goalTargetForPlayer(player);
+    const goalTarget = goalTargetForPlayer(player) * seasonCount;
     if (goalTarget > 0) {
       candidates.push({
         kind: "goals",
@@ -217,7 +233,7 @@ export function rollCycleObjective(player: Player, rng: Rng = Math.random): Cycl
       });
     }
 
-    const appsTarget = player.age < 20 ? 20 : 30;
+    const appsTarget = (player.age < 20 ? 20 : 30) * seasonCount;
     candidates.push({
       kind: "apps",
       weight: 22,
@@ -318,21 +334,26 @@ export function updatePersonalRecords(
 ): { records: PersonalRecords; broken: (keyof PersonalRecords)[] } {
   const next = { ...records };
   const broken: (keyof PersonalRecords)[] = [];
+  const seasonGoals = Math.round(perSeason(ctx.goals, ctx.seasons));
+  const seasonAssists = Math.round(perSeason(ctx.assists, ctx.seasons));
+  const seasonApps = Math.round(perSeason(ctx.apps, ctx.seasons));
+  const seasonCleanSheets =
+    ctx.cleanSheets !== undefined ? Math.round(perSeason(ctx.cleanSheets, ctx.seasons)) : undefined;
 
-  if (ctx.goals > records.bestSeasonGoals) {
-    next.bestSeasonGoals = ctx.goals;
+  if (seasonGoals > records.bestSeasonGoals) {
+    next.bestSeasonGoals = seasonGoals;
     broken.push("bestSeasonGoals");
   }
-  if (ctx.assists > records.bestSeasonAssists) {
-    next.bestSeasonAssists = ctx.assists;
+  if (seasonAssists > records.bestSeasonAssists) {
+    next.bestSeasonAssists = seasonAssists;
     broken.push("bestSeasonAssists");
   }
-  if (ctx.apps > records.bestSeasonApps) {
-    next.bestSeasonApps = ctx.apps;
+  if (seasonApps > records.bestSeasonApps) {
+    next.bestSeasonApps = seasonApps;
     broken.push("bestSeasonApps");
   }
-  if (ctx.cleanSheets !== undefined && ctx.cleanSheets > (records.bestSeasonCleanSheets ?? 0)) {
-    next.bestSeasonCleanSheets = ctx.cleanSheets;
+  if (seasonCleanSheets !== undefined && seasonCleanSheets > (records.bestSeasonCleanSheets ?? 0)) {
+    next.bestSeasonCleanSheets = seasonCleanSheets;
     broken.push("bestSeasonCleanSheets");
   }
   if (ctx.marketValueEur > records.peakMarketValueEur) {
@@ -355,18 +376,18 @@ export function brokenRecordLabels(broken: (keyof PersonalRecords)[]): string[] 
 export function buildHighlightReel(ctx: CycleSatisfactionContext, rng: Rng = Math.random): string[] {
   const pool: string[] = [];
 
-  if (ctx.goals >= 20) pool.push("Caccia al capocannoniere: stagione da bomber assoluto");
-  else if (ctx.goals >= 12) pool.push("Doppietta nel derby di campionato");
-  else if (ctx.goals >= 6) pool.push("Gol decisivo sotto i tre pali");
+  if (ctx.goals >= 20 * Math.max(ctx.seasons ?? 1, 1)) pool.push("Caccia al capocannoniere: stagione da bomber assoluto");
+  else if (ctx.goals >= 12 * Math.max(ctx.seasons ?? 1, 1)) pool.push("Doppietta nel derby di campionato");
+  else if (ctx.goals >= 6 * Math.max(ctx.seasons ?? 1, 1)) pool.push("Gol decisivo sotto i tre pali");
 
-  if (ctx.assists >= 12) pool.push("Regista silenzioso: assist a raffica");
-  else if (ctx.assists >= 6) pool.push("Assist decisivo in coppa");
+  if (ctx.assists >= 12 * Math.max(ctx.seasons ?? 1, 1)) pool.push("Regista silenzioso: assist a raffica");
+  else if (ctx.assists >= 6 * Math.max(ctx.seasons ?? 1, 1)) pool.push("Assist decisivo in coppa");
 
-  if ((ctx.cleanSheets ?? 0) >= 15) pool.push("Muro invalicabile: clean sheet a raffica");
-  else if ((ctx.cleanSheets ?? 0) >= 8) pool.push("Serata da titolare: porta blindata");
+  if ((ctx.cleanSheets ?? 0) >= 15 * Math.max(ctx.seasons ?? 1, 1)) pool.push("Muro invalicabile: clean sheet a raffica");
+  else if ((ctx.cleanSheets ?? 0) >= 8 * Math.max(ctx.seasons ?? 1, 1)) pool.push("Serata da titolare: porta blindata");
 
-  if (ctx.apps >= 50) pool.push("Mai fuori dal undici titolare");
-  else if (ctx.apps >= 35) pool.push("Presenze da maratoneta");
+  if (ctx.apps >= 32 * Math.max(ctx.seasons ?? 1, 1)) pool.push("Mai fuori dal undici titolare");
+  else if (ctx.apps >= 24 * Math.max(ctx.seasons ?? 1, 1)) pool.push("Presenze da maratoneta");
 
   if (ctx.trophies.length > 0) {
     const name = ctx.trophies[0]!.competition;

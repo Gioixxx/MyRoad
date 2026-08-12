@@ -106,6 +106,16 @@ export interface NationalTeamStats extends StatLine {
   called: boolean;
 }
 
+export type RelationId = "coach" | "agent" | "rival";
+export type RelationAffinity = -2 | -1 | 0 | 1 | 2;
+
+/** NPC di carriera: mister (reset al transfer), agente (persistente), rivale (gated). */
+export interface Relation {
+  id: RelationId;
+  name: string;
+  affinity: RelationAffinity;
+}
+
 /** Infortunio attivo: tiene fuori il giocatore per N cicli con un malus OVR temporaneo. */
 export interface Injury {
   label: string;
@@ -229,12 +239,16 @@ export interface Player extends PlayerIdentity {
   attributes: Attributes;
   /** Attributo su cui si concentra la crescita del prossimo ciclo, o null per allenamento bilanciato. */
   trainingFocus: AttributeKey | null;
+  /** Picco di velocità/fisico visto in carriera — per la riconversione di ruolo da declino. */
+  attributePeaks?: { pace: number; physical: number };
   /** Stili di gioco sbloccati (soglia su un attributo) — vedi lib/career/playstyles.ts. Nome
    * deliberatamente diverso da `traits` (personalità/archetipo), concetto non correlato. */
   playStyles: PlayStyleId[];
   /** Clausola rescissoria col club corrente, in EUR — ricalcolata ad ogni firma (0 se mai
    * firmato o pre-migrazione). Vedi lib/career/wallet.ts (computeReleaseClauseEur). */
   releaseClauseEur: number;
+  /** Relazioni NPC leggere (mister, agente, rivale) — max 3. */
+  relations: Relation[];
 }
 
 /** Tratto distintivo sbloccabile quando un attributo supera una soglia — dà un bonus concreto
@@ -256,6 +270,8 @@ export interface PlayerDelta {
   attributesDelta?: Partial<Record<AttributeKey, number>>;
   /** Se presente, nuovo valore assoluto della clausola rescissoria (non un delta). */
   releaseClauseEur?: number;
+  /** Spostamento di affinità per relazione esistente (clamp -2..+2). */
+  relationsDelta?: Partial<Record<RelationId, number>>;
 }
 
 export type DecisionCategory =
@@ -276,7 +292,9 @@ export type DecisionCategory =
   /** Negoziazione col procuratore (clausola/stipendio) — rotazione normale. */
   | "agent"
   /** Categoria forzata (mai nel pool normale): un club rivale attiva la clausola rescissoria. */
-  | "clause-activation";
+  | "clause-activation"
+  /** Categoria forzata: partita decisiva di campionato (scelta tattica). */
+  | "decisive-match";
 
 export interface DecisionOutcome {
   /** Peso relativo tra gli outcome della stessa opzione — i pesi di un'opzione sommano a 100. */
@@ -287,6 +305,8 @@ export interface DecisionOutcome {
   continentalWin?: boolean;
   /** true solo sull'outcome che rappresenta la vittoria di una sorpresa di coppa ("Giant Killer"). */
   cupUpsetWin?: boolean;
+  /** true solo sull'outcome che rappresenta la vittoria della partita decisiva di campionato. */
+  leagueWin?: boolean;
 }
 
 export interface DecisionOption {

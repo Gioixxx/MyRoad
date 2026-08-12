@@ -12,6 +12,7 @@ import {
   shouldTriggerClauseActivation,
   shouldTriggerContinentalFinal,
   shouldTriggerCupUpset,
+  shouldTriggerDecisiveMatch,
   type LoopContext,
 } from "./loop";
 
@@ -50,6 +51,7 @@ describe("availableCategories", () => {
     expect(categories).toEqual(
       expect.arrayContaining(["transfer", "loan", "lifestyle", "position-change", "club-crisis", "end-of-cycle"]),
     );
+    expect(categories).not.toContain("training-focus");
   });
 
   it("dovrebbe includere sponsor solo sopra la soglia di popolarità", () => {
@@ -87,6 +89,17 @@ describe("availableCategories", () => {
       shadowFlags: { scandalOccurred: true },
     };
     expect(availableCategories(redeemable, INITIAL_LOOP_CONTEXT)).toContain("narrative");
+  });
+
+  it("dovrebbe includere narrative se l'agente propone un deal grigio", () => {
+    const base = playerAt();
+    const cold = {
+      ...base,
+      relations: base.relations.map((rel) =>
+        rel.id === "agent" ? { ...rel, affinity: -1 as const } : rel,
+      ),
+    };
+    expect(availableCategories(cold, INITIAL_LOOP_CONTEXT)).toContain("narrative");
   });
 });
 
@@ -134,6 +147,25 @@ describe("shouldTriggerCupUpset", () => {
 
   it("dovrebbe rispettare la soglia di probabilità", () => {
     expect(shouldTriggerCupUpset(playerAt(SAMPDORIA), INITIAL_LOOP_CONTEXT, () => 0.99)).toBe(false);
+  });
+});
+
+describe("shouldTriggerDecisiveMatch", () => {
+  it("dovrebbe essere falso se il giocatore è in prestito", () => {
+    const context: LoopContext = { loanParentClub: JUVENTUS };
+    expect(shouldTriggerDecisiveMatch({ ...playerAt(), ovr: 80 }, context, () => 0)).toBe(false);
+  });
+
+  it("dovrebbe essere falso se il prestige del club è sotto soglia", () => {
+    expect(shouldTriggerDecisiveMatch({ ...playerAt(SAMPDORIA), ovr: 80 }, INITIAL_LOOP_CONTEXT, () => 0)).toBe(false);
+  });
+
+  it("dovrebbe essere falso se l'OVR è sotto soglia", () => {
+    expect(shouldTriggerDecisiveMatch({ ...playerAt(), ovr: 70 }, INITIAL_LOOP_CONTEXT, () => 0)).toBe(false);
+  });
+
+  it("dovrebbe essere vero se club/OVR sono eleggibili e il roll è favorevole", () => {
+    expect(shouldTriggerDecisiveMatch({ ...playerAt(), ovr: 80 }, INITIAL_LOOP_CONTEXT, () => 0)).toBe(true);
   });
 });
 
@@ -219,6 +251,15 @@ describe("pickNextDecision", () => {
     expect(decision.category).toBe("cup-upset");
   });
 
+  it("dovrebbe generare una partita decisiva quando continentale e coppa non scattano", () => {
+    // OVR sotto la soglia della finale continentale (78), prestige troppo alto per la sorpresa di coppa.
+    const player = { ...playerAt(), ovr: 76 };
+    const { decision, category } = pickNextDecision(player, INITIAL_LOOP_CONTEXT, [], () => 0);
+    expect(category).toBe("decisive-match");
+    expect(decision.category).toBe("decisive-match");
+    expect(decision.title).toBe("Partita decisiva");
+  });
+
   it("dovrebbe generare una loan-return se il giocatore è in prestito", () => {
     const context: LoopContext = { loanParentClub: JUVENTUS };
     const player = signWithClub(playerAt(SEVILLA), SEVILLA);
@@ -282,6 +323,13 @@ describe("nextLoopContext", () => {
     const option = { id: "loan-sevilla", label: "Vai in prestito", club: SEVILLA, outcomes: [] };
     const context = nextLoopContext("loan", option, player, INITIAL_LOOP_CONTEXT);
     expect(context.loanParentClub).toEqual(JUVENTUS);
+  });
+
+  it("non dovrebbe impostare il prestito se si resta a lottare per il posto", () => {
+    const player = playerAt(JUVENTUS);
+    const option = { id: "stay", label: "Resta", club: JUVENTUS, outcomes: [] };
+    const context = nextLoopContext("loan", option, player, INITIAL_LOOP_CONTEXT);
+    expect(context.loanParentClub).toBeNull();
   });
 
   it("dovrebbe azzerare il club di appartenenza firmando a titolo definitivo dal prestito", () => {
@@ -427,6 +475,44 @@ describe("resolveCycle", () => {
     expect(result.newTrophies.some((t) => t.competition === SAMPDORIA.competitions.cup)).toBe(false);
   });
 
+  it("dovrebbe assegnare il trofeo di campionato se la partita decisiva è vinta", () => {
+    const player = { ...playerAt(), ovr: 80 };
+    const option = {
+      id: "tactic-possesso",
+      label: "Possesso palla",
+      outcomes: [
+        {
+          weight: 100,
+          effect: {},
+          resultText: `Il piano funziona: sollevi il trofeo di ${JUVENTUS.competitions.league}.`,
+          leagueWin: true,
+        },
+      ],
+    };
+    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "decisive-match", option, "normal", () => 0.99);
+
+    expect(result.newTrophies.filter((t) => t.competition === JUVENTUS.competitions.league)).toHaveLength(1);
+  });
+
+  it("non dovrebbe assegnare il campionato offscreen se la partita decisiva è persa", () => {
+    const player = { ...playerAt(), ovr: 90 };
+    const option = {
+      id: "tactic-possesso",
+      label: "Possesso palla",
+      outcomes: [{ weight: 100, effect: {}, resultText: "Il piano non basta: il titolo sfuma all'ultimo." }],
+    };
+    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "decisive-match", option, "normal", () => 0);
+
+    expect(result.newTrophies.some((t) => t.competition === JUVENTUS.competitions.league)).toBe(false);
+  });
+
+  it("dovrebbe far nascere un rivale da OVR 78", () => {
+    const player = { ...playerAt(), ovr: 78 };
+    const option = { id: "stay", label: "Resta", outcomes: [{ weight: 100, effect: {}, resultText: "Resti." }] };
+    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "lifestyle", option, "normal", () => 0.99);
+    expect(result.player.relations.some((rel) => rel.id === "rival")).toBe(true);
+  });
+
   it("dovrebbe promuovere il club se il campionato del tier corrente è vinto", () => {
     const player = playerAt(SAMPDORIA);
     const option = { id: "stay", label: "Resta", outcomes: [{ weight: 100, effect: {}, resultText: "Resti." }] };
@@ -506,6 +592,41 @@ describe("resolveCycle — gestione infortuni", () => {
       turnsRemaining: 1,
       ovrPenalty: 4,
     });
+  });
+
+  it("non dovrebbe tickare un infortunio appena applicato da un evento, e deve applicare il malus OVR", () => {
+    const player = playerAt();
+    const option = {
+      id: "train-hard",
+      label: "Allenati duramente",
+      outcomes: [
+        {
+          weight: 100,
+          effect: { injury: { label: "Distorsione alla caviglia", turnsRemaining: 2, ovrPenalty: 4 } },
+          resultText: "Infortunio.",
+        },
+      ],
+    };
+    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "lifestyle", option, "normal", () => 0.99);
+
+    expect(result.newInjury).toEqual({ label: "Distorsione alla caviglia", turnsRemaining: 2, ovrPenalty: 4 });
+    expect(result.player.injury?.turnsRemaining).toBe(2);
+    const stintOvr = result.player.clubHistory[result.player.clubHistory.length - 1]!.ovr;
+    expect(result.player.ovr).toBe(stintOvr - 4);
+    expect(result.injuryHealed).toBe(false);
+  });
+
+  it("dovrebbe ripristinare esattamente il malus OVR alla guarigione, senza extra", () => {
+    const player = {
+      ...playerAt(),
+      ovr: 70,
+      injury: { label: "Distorsione alla caviglia", turnsRemaining: 1, ovrPenalty: 4 },
+    };
+    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "lifestyle", lifestyleOption, "normal", () => 0.99);
+
+    expect(result.injuryHealed).toBe(true);
+    expect(result.player.injury).toBeNull();
+    expect(result.player.ovr).toBeGreaterThanOrEqual(70);
   });
 });
 

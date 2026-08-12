@@ -108,6 +108,12 @@ export function createAttributesForPosition(position: Position, rng: Rng = Math.
   return buildAttributes(position, 50, rng);
 }
 
+/** Picco iniziale di pace/physical (0 per i portieri). */
+export function peaksFromAttributes(attributes: Attributes): { pace: number; physical: number } {
+  if (attributes.kind !== "outfield") return { pace: 0, physical: 0 };
+  return { pace: attributes.pace, physical: attributes.physical };
+}
+
 /** Attributi retroattivi per un save esistente senza `attributes` (migrazione storage) — baseline
  * intorno all'OVR già raggiunto, non al neutro di partenza. */
 export function createAttributesFromOvr(position: Position, ovr: number, rng: Rng = Math.random): Attributes {

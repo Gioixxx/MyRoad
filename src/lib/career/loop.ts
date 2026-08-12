@@ -22,7 +22,7 @@ import {
   switchNationality,
   SEASONS_PER_CYCLE,
 } from "./engine";
-import { rollInjury, tickInjury } from "./injuries";
+import { INJURY_STATS_MULTIPLIER, rollInjury, scaleStatLine, tickInjury } from "./injuries";
 import { clamp, projectNationalStats, type Rng } from "./progression";
 import { computeMarketValue } from "./market";
 import {
@@ -41,14 +41,17 @@ import {
   clauseActivationChance,
   clauseActivationSuitorPool,
   generateAgentNegotiation,
+  generateAgentGreyDeal,
   generateClauseActivationDecision,
   generateClubCrisis,
   generateClubPriority,
+  generateCoachRoleRequest,
   generateCompetitionForSpot,
   generateContinentalFinalDecision,
   generateControversialPost,
   generateControversialStatement,
   generateCupUpsetDecision,
+  generateDecisiveMatchDecision,
   generateEndOfCycle,
   generateLoanOffer,
   generateLoanReturn,
@@ -64,7 +67,9 @@ import {
   generateTriumphantReturn,
   generateUnexpectedProspect,
   isAgentEligible,
+  isAgentGreyDealEligible,
   isClubPriorityEligible,
+  isCoachRoleRequestEligible,
   isNationalitySwitchEligible,
   isReturnHomeEligible,
   isSponsorEligible,
@@ -83,6 +88,7 @@ import { isRedemptionEligible, shouldTriggerScandal } from "./shadow";
 import { applyTraitsDelta } from "./traits";
 import { applyPotentialDelta, evaluatePotentialGrowth } from "./potential";
 import { detectNewPlayStyles, playStyleInjuryMultiplier, playStyleTrophyBonus } from "./playstyles";
+import { maybeSpawnRival, ensureCoreRelations } from "./relations";
 import { getCountry } from "@/data/countries";
 
 /** Convocazione in nazionale come fonte di leadership (vedi §1: "capitano, difesa compagni, nazionale"). */
@@ -115,6 +121,10 @@ const CONTINENTAL_FINAL_CHANCE = 0.15;
 const CUP_UPSET_MAX_CLUB_PRESTIGE = 1;
 /** Sotto la chance della finale continentale, così i due eventi decisivi non competono troppo spesso. */
 const CUP_UPSET_CHANCE = 0.12;
+
+const MIN_DECISIVE_MATCH_OVR = 75;
+const DECISIVE_MATCH_MIN_PRESTIGE = 2;
+const DECISIVE_MATCH_CHANCE = 0.12;
 
 const RECENT_DECISIONS_WINDOW = 4;
 const EVENT_REPEAT_PENALTY = 0.2;
@@ -163,7 +173,6 @@ export function availableCategories(player: Player, context: LoopContext): Decis
     "lifestyle",
     "club-crisis",
     "end-of-cycle",
-    "training-focus",
   ];
   // Il cambio di ruolo funzionale non ha senso per i portieri (nessuna adiacenza GK↔outfield).
   if (player.position !== "GK") {
@@ -175,7 +184,8 @@ export function availableCategories(player: Player, context: LoopContext): Decis
     isUnexpectedProspectEligible(player) ||
     isTriumphantReturnEligible(player) ||
     isNationalitySwitchEligible(player) ||
-    isRedemptionEligible(player)
+    isRedemptionEligible(player) ||
+    isAgentGreyDealEligible(player)
   ) {
     categories.push("narrative");
   }
@@ -208,6 +218,18 @@ export function shouldTriggerCupUpset(
   if (!player.club?.competitions.cup) return false;
   if (player.club.prestige > CUP_UPSET_MAX_CLUB_PRESTIGE) return false;
   return rng() < CUP_UPSET_CHANCE;
+}
+
+export function shouldTriggerDecisiveMatch(
+  player: Player,
+  context: LoopContext,
+  rng: Rng = Math.random,
+): boolean {
+  if (context.loanParentClub) return false;
+  if (!player.club) return false;
+  if (player.club.prestige < DECISIVE_MATCH_MIN_PRESTIGE) return false;
+  if (player.ovr < MIN_DECISIVE_MATCH_OVR) return false;
+  return rng() < DECISIVE_MATCH_CHANCE;
 }
 
 /** Un club rivale attiva la clausola rescissoria — probabilità gated su un pretendente eleggibile
@@ -250,6 +272,9 @@ function pickClubCrisisDecision(player: Player, recentDecisionIds: string[], rng
   if (isClubPriorityEligible(player)) {
     generators.push({ kind: "club-priority", build: () => generateClubPriority(player) });
   }
+  if (isCoachRoleRequestEligible(player)) {
+    generators.push({ kind: "coach-role-request", build: () => generateCoachRoleRequest(player) });
+  }
   return pickWeightedByKind(generators, recentDecisionIds, rng);
 }
 
@@ -273,6 +298,9 @@ function pickNarrativeDecision(player: Player, recentDecisionIds: string[], rng:
   if (isRedemptionEligible(player)) {
     generators.push({ kind: "redemption", build: () => generateRedemptionDecision(player) });
   }
+  if (isAgentGreyDealEligible(player)) {
+    generators.push({ kind: "agent-grey-deal", build: () => generateAgentGreyDeal(player) });
+  }
   if (generators.length === 0) {
     throw new Error("Nessun evento narrativo disponibile per questo giocatore");
   }
@@ -292,6 +320,7 @@ export function pickNextDecision(
   recentCategories: DecisionCategory[],
   rng: Rng = Math.random,
 ): NextDecision {
+  player = ensureCoreRelations(player);
   if (shouldTriggerContinentalFinal(player, context, rng)) {
     return {
       decision: generateContinentalFinalDecision(player, player.club!.competitions.continental!, rng),
@@ -305,6 +334,14 @@ export function pickNextDecision(
     return {
       decision: generateCupUpsetDecision(player, opponent, player.club!.competitions.cup!, rng),
       category: "cup-upset",
+      context,
+    };
+  }
+
+  if (shouldTriggerDecisiveMatch(player, context, rng)) {
+    return {
+      decision: generateDecisiveMatchDecision(player),
+      category: "decisive-match",
       context,
     };
   }
@@ -323,7 +360,7 @@ export function pickNextDecision(
   }
 
   const categories = availableCategories(player, context);
-  const category = pickDecisionCategory(categories, recentCategories, rng);
+  const category = pickDecisionCategory(categories, recentCategories, rng, player);
   const recentDecisionIds = context.recentDecisionIds ?? [];
 
   switch (category) {
@@ -384,6 +421,9 @@ export function nextLoopContext(
   context: LoopContext,
 ): LoopContext {
   if (category === "loan") {
+    if (option.id === "stay") {
+      return { loanParentClub: null };
+    }
     return { loanParentClub: playerBeforeChange.club };
   }
   if (category === "loan-return") {
@@ -435,44 +475,82 @@ function emptySatisfactionFields(): Pick<
   };
 }
 
-/** Fa avanzare l'infortunio del giocatore di un ciclo, o ne estrae uno nuovo, aggiustando l'OVR. */
+function applyOvrPenalty(player: Player, penalty: number): Player {
+  const nextOvr = clamp(player.ovr - penalty, 30, player.potential);
+  return { ...player, ovr: nextOvr, marketValueEur: computeMarketValue(nextOvr, player.age) };
+}
+
+function restoreOvrPenalty(player: Player, penalty: number): Player {
+  const nextOvr = clamp(player.ovr + penalty, 30, player.potential);
+  return { ...player, ovr: nextOvr, marketValueEur: computeMarketValue(nextOvr, player.age) };
+}
+
+/**
+ * Fa avanzare l'infortunio del giocatore di un ciclo, o ne estrae uno nuovo, aggiustando l'OVR.
+ * `injuryFromOutcome`: l'infortunio è appena stato applicato da un evento — non tickare e
+ * applica il malus OVR (applyDelta imposta solo l'oggetto Injury).
+ */
 function processInjuries(
   player: Player,
   seasons: number,
   rng: Rng,
-): { player: Player; newInjury: Injury | null; injuryHealed: boolean } {
+  injuryFromOutcome: boolean,
+): { player: Player; newInjury: Injury | null; injuryHealed: boolean; cutStats: boolean } {
+  if (injuryFromOutcome && player.injury) {
+    return {
+      player: applyOvrPenalty(player, player.injury.ovrPenalty),
+      newInjury: player.injury,
+      injuryHealed: false,
+      cutStats: true,
+    };
+  }
+
   if (player.injury) {
     const ticked = tickInjury(player.injury);
     if (ticked === null) {
-      const restoredOvr = clamp(player.ovr + player.injury.ovrPenalty, 30, player.potential);
       return {
-        player: {
-          ...player,
-          injury: null,
-          ovr: restoredOvr,
-          marketValueEur: computeMarketValue(restoredOvr, player.age),
-        },
+        player: { ...restoreOvrPenalty(player, player.injury.ovrPenalty), injury: null },
         newInjury: null,
         injuryHealed: true,
+        cutStats: true,
       };
     }
-    return { player: { ...player, injury: ticked }, newInjury: null, injuryHealed: false };
+    return { player: { ...player, injury: ticked }, newInjury: null, injuryHealed: false, cutStats: true };
   }
 
   const rolled = rollInjury(player.age, player.position, seasons, rng, playStyleInjuryMultiplier(player.playStyles));
   if (!rolled) {
-    return { player, newInjury: null, injuryHealed: false };
+    return { player, newInjury: null, injuryHealed: false, cutStats: false };
   }
-  const penalizedOvr = clamp(player.ovr - rolled.ovrPenalty, 30, player.potential);
   return {
-    player: {
-      ...player,
-      injury: rolled,
-      ovr: penalizedOvr,
-      marketValueEur: computeMarketValue(penalizedOvr, player.age),
-    },
+    player: { ...applyOvrPenalty(player, rolled.ovrPenalty), injury: rolled },
     newInjury: rolled,
     injuryHealed: false,
+    cutStats: true,
+  };
+}
+
+/** Sostituisce le stats dell'ultimo stint (e i cumulative di carriera) dopo un infortunio. */
+function applyInjuryStatCut(player: Player): Player {
+  const last = player.clubHistory[player.clubHistory.length - 1];
+  if (!last) return player;
+  const cut = scaleStatLine(last.stats, INJURY_STATS_MULTIPLIER);
+  const history = [...player.clubHistory];
+  history[history.length - 1] = { ...last, stats: cut };
+  return {
+    ...player,
+    clubHistory: history,
+    career: {
+      apps: player.career.apps - last.stats.apps + cut.apps,
+      goals: player.career.goals - last.stats.goals + cut.goals,
+      assists: player.career.assists - last.stats.assists + cut.assists,
+      ...(player.position === "GK"
+        ? {
+            goalsAgainst: (player.career.goalsAgainst ?? 0) - (last.stats.goalsAgainst ?? 0) + (cut.goalsAgainst ?? 0),
+            cleanSheets: (player.career.cleanSheets ?? 0) - (last.stats.cleanSheets ?? 0) + (cut.cleanSheets ?? 0),
+          }
+        : {}),
+    },
   };
 }
 
@@ -485,6 +563,7 @@ export function resolveCycle(
   speed: GameSpeed,
   rng: Rng = Math.random,
 ): CycleResult {
+  player = ensureCoreRelations(player);
   const ovrBefore = player.ovr;
   const wasAlreadyCalled = player.nationalTeam.called;
   const pendingObjective = player.currentObjective;
@@ -531,6 +610,7 @@ export function resolveCycle(
   const stintType = nextContext.loanParentClub ? "loan" : "permanent";
   const seasons = SEASONS_PER_CYCLE[speed];
   nextPlayer = advanceSeasons(nextPlayer, seasons, rng, stintType);
+  nextPlayer = maybeSpawnRival(nextPlayer);
 
   // Rilevato subito dopo la crescita degli attributi del ciclo, così un playstyle appena
   // sbloccato si applica già ai roll (infortunio/trofeo/callup) dello stesso ciclo.
@@ -539,12 +619,23 @@ export function resolveCycle(
     nextPlayer = { ...nextPlayer, playStyles: [...nextPlayer.playStyles, ...newPlayStyles] };
   }
 
-  const injuryResult = processInjuries(nextPlayer, seasons, rng);
+  const injuryFromOutcome = outcome.effect.injury !== undefined && outcome.effect.injury !== null;
+  const injuryResult = processInjuries(nextPlayer, seasons, rng, injuryFromOutcome);
   nextPlayer = injuryResult.player;
+  if (injuryResult.cutStats) {
+    nextPlayer = applyInjuryStatCut(nextPlayer);
+  }
   nextPlayer = { ...nextPlayer, wallet: accrueSalary(nextPlayer.wallet, seasons) };
 
   const newTrophies: Trophy[] = nextPlayer.club
-    ? rollClubTrophies(nextPlayer.club, nextPlayer.ovr, nextPlayer.age, rng, playStyleTrophyBonus(nextPlayer.playStyles))
+    ? rollClubTrophies(
+        nextPlayer.club,
+        nextPlayer.ovr,
+        nextPlayer.age,
+        rng,
+        playStyleTrophyBonus(nextPlayer.playStyles),
+        category === "decisive-match",
+      )
     : [];
 
   if (category === "continental-final" && nextPlayer.club?.competitions.continental) {
@@ -565,6 +656,14 @@ export function resolveCycle(
         age: nextPlayer.age,
       });
     }
+  }
+
+  if (category === "decisive-match" && outcome.leagueWin === true && nextPlayer.club) {
+    newTrophies.push({
+      competition: nextPlayer.club.competitions.league,
+      club: nextPlayer.club,
+      age: nextPlayer.age,
+    });
   }
 
   let clubTierChange: "promoted" | "relegated" | null = null;
@@ -609,7 +708,10 @@ export function resolveCycle(
       },
     };
     const confederation = getCountry(nextPlayer.nationality)?.confederation ?? "UEFA";
-    newTrophies.push(...rollNationalTrophies(true, nextPlayer.ovr, nextPlayer.age, confederation, rng));
+    const cycleAgeFrom = nextPlayer.clubHistory[nextPlayer.clubHistory.length - 1]?.ageFrom ?? nextPlayer.age - seasons;
+    newTrophies.push(
+      ...rollNationalTrophies(true, nextPlayer.ovr, nextPlayer.age, confederation, rng, cycleAgeFrom),
+    );
   }
 
   if (newTrophies.length > 0) {
@@ -649,6 +751,7 @@ export function resolveCycle(
     nationalGoals: nationalGoalsThisCycle,
     marketValueEur: nextPlayer.marketValueEur,
     wasAlreadyCalled,
+    seasons,
   };
 
   const newMilestoneEntries = detectOvrMilestones(
@@ -695,6 +798,7 @@ export function resolveCycle(
     nationalCallup,
     nationalGoals: nationalGoalsThisCycle,
     cupUpsetWin: outcome.cupUpsetWin === true,
+    seasons,
   });
   nextPlayer = {
     ...nextPlayer,
@@ -725,7 +829,7 @@ export function resolveCycle(
   }
 
   if (!nextPlayer.retired) {
-    nextPlayer = { ...nextPlayer, currentObjective: rollCycleObjective(nextPlayer, rng) };
+    nextPlayer = { ...nextPlayer, currentObjective: rollCycleObjective(nextPlayer, rng, seasons) };
   } else {
     nextPlayer = { ...nextPlayer, currentObjective: null };
   }

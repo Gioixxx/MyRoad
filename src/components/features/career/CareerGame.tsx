@@ -311,7 +311,7 @@ export function CareerGame() {
   const [step, setStep] = useState<Step>("menu");
   const [speed, setSpeed] = useState<GameSpeed | null>(null);
   const [archiveEntries, setArchiveEntries] = useState<ArchivedCareer[]>([]);
-  const { state, startCareer, chooseOption, restart, isResuming } = useCareerGame();
+  const { state, startCareer, chooseOption, setTrainingFocus, restart, isResuming } = useCareerGame();
   const prefersReducedMotion = usePrefersReducedMotion();
   const { audioRef, volume, muted, setVolume, setMuted } = useBackgroundMusic();
 
@@ -609,6 +609,7 @@ export function CareerGame() {
                     player={state.player}
                     compact
                     flashRecords={state.lastOutcome?.brokenRecords}
+                    onTrainingFocus={setTrainingFocus}
                   />
                 </div>
 

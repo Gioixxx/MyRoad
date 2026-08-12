@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { injuryChance, rollInjury, tickInjury } from "./injuries";
+import { injuryChance, rollInjury, scaleStatLine, tickInjury } from "./injuries";
 
 describe("injuryChance", () => {
   it("dovrebbe crescere con l'età oltre i 30 anni", () => {
@@ -73,5 +73,25 @@ describe("tickInjury", () => {
   it("dovrebbe restituire null (guarito) quando i cicli residui arrivano a 0", () => {
     const injury = { label: "Test", turnsRemaining: 1, ovrPenalty: 4 };
     expect(tickInjury(injury)).toBeNull();
+  });
+});
+
+describe("scaleStatLine", () => {
+  it("dovrebbe arrotondare le stats per il moltiplicatore infortunio", () => {
+    expect(scaleStatLine({ apps: 20, goals: 10, assists: 4 }, 0.45)).toEqual({
+      apps: 9,
+      goals: 5,
+      assists: 2,
+    });
+  });
+
+  it("dovrebbe scalare anche gli extra del portiere", () => {
+    expect(scaleStatLine({ apps: 20, goals: 0, assists: 0, goalsAgainst: 10, cleanSheets: 8 }, 0.45)).toEqual({
+      apps: 9,
+      goals: 0,
+      assists: 0,
+      goalsAgainst: 5,
+      cleanSheets: 4,
+    });
   });
 });

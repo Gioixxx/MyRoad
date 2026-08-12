@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { VersionBadge } from "@/components/VersionBadge";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="field-atmosphere flex h-dvh min-h-0 flex-col overflow-x-hidden pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           {children}
+          <VersionBadge />
         </ThemeProvider>
       </body>
     </html>

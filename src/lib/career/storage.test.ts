@@ -69,7 +69,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(11);
+    expect(loaded?.version).toBe(14);
     expect(loaded?.player.injury).toBeNull();
     expect(loaded?.player.wallet).toEqual({ salaryEurPerCycle: 0, savingsEur: 0 });
     expect(loaded?.player.popularity).toBe(15);
@@ -106,7 +106,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(11);
+    expect(loaded?.version).toBe(14);
     expect(loaded?.player.milestonesReached).toEqual([]);
     expect(loaded?.player.currentObjective).toBeNull();
     expect(loaded?.player.records.peakMarketValueEur).toBe(samplePlayer().marketValueEur);
@@ -129,7 +129,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(11);
+    expect(loaded?.version).toBe(14);
     expect(loaded?.player.hasSwitchedNationality).toBe(false);
     expect(loaded?.player.shadow).toBe(0);
   });
@@ -151,7 +151,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(11);
+    expect(loaded?.version).toBe(14);
     expect(loaded?.player.traits).toEqual({
       loyalty: 50,
       ambition: 50,
@@ -178,7 +178,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(11);
+    expect(loaded?.version).toBe(14);
     expect(loaded?.player.potential).toBe(92);
   });
 
@@ -198,7 +198,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(11);
+    expect(loaded?.version).toBe(14);
     expect(loaded?.player.attributes).toBeDefined();
     expect(loaded?.player.attributes.kind).toBe("outfield");
     expect(loaded?.player.trainingFocus).toBeNull();
@@ -219,7 +219,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(11);
+    expect(loaded?.version).toBe(14);
     expect(loaded?.player.playStyles).toEqual([]);
   });
 
@@ -239,7 +239,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(11);
+    expect(loaded?.version).toBe(14);
     expect(loaded?.player.objectiveKindsCelebrated).toEqual([]);
   });
 
@@ -258,7 +258,7 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(11);
+    expect(loaded?.version).toBe(14);
     expect(loaded?.player.objectiveKindsCelebrated).toEqual([]);
   });
 
@@ -277,8 +277,88 @@ describe("saveGame / loadGame", () => {
     );
 
     const loaded = loadGame();
-    expect(loaded?.version).toBe(11);
+    expect(loaded?.version).toBe(14);
     expect(loaded?.player.releaseClauseEur).toBe(0);
+  });
+
+  it("dovrebbe migrare un save v11 senza decisione corrente (al resume si rirolla)", () => {
+    const player = samplePlayer();
+    window.localStorage.setItem(
+      "carriera:save",
+      JSON.stringify({
+        version: 11,
+        player,
+        speed: "normal",
+        context: INITIAL_LOOP_CONTEXT,
+        recentCategories: ["transfer"],
+      }),
+    );
+
+    const loaded = loadGame();
+    expect(loaded?.version).toBe(14);
+    expect(loaded?.currentDecision).toBeUndefined();
+    expect(loaded?.currentCategory).toBeUndefined();
+  });
+
+  it("dovrebbe migrare un save v12 senza attributePeaks ricostruendoli dagli attributi", () => {
+    const player = samplePlayer() as unknown as Record<string, unknown>;
+    delete player.attributePeaks;
+    window.localStorage.setItem(
+      "carriera:save",
+      JSON.stringify({
+        version: 12,
+        player,
+        speed: "normal",
+        context: INITIAL_LOOP_CONTEXT,
+        recentCategories: [],
+      }),
+    );
+
+    const loaded = loadGame();
+    expect(loaded?.version).toBe(14);
+    expect(loaded?.player.attributePeaks).toBeDefined();
+  });
+
+  it("dovrebbe migrare un save v13 senza relations aggiungendo l'agente", () => {
+    const player = samplePlayer() as unknown as Record<string, unknown>;
+    delete player.relations;
+    window.localStorage.setItem(
+      "carriera:save",
+      JSON.stringify({
+        version: 13,
+        player,
+        speed: "normal",
+        context: INITIAL_LOOP_CONTEXT,
+        recentCategories: [],
+      }),
+    );
+
+    const loaded = loadGame();
+    expect(loaded?.version).toBe(14);
+    expect(loaded?.player.relations.some((rel) => rel.id === "agent")).toBe(true);
+  });
+
+  it("dovrebbe persistere e ricaricare la decisione corrente", () => {
+    const player = samplePlayer();
+    const decision = {
+      id: "academy-offer",
+      category: "transfer" as const,
+      title: "Offerta dal settore giovanile",
+      description: "Scegli.",
+      options: [],
+    };
+    saveGame({
+      player,
+      speed: "normal",
+      context: INITIAL_LOOP_CONTEXT,
+      recentCategories: [],
+      currentDecision: decision,
+      currentCategory: "transfer",
+    });
+
+    const loaded = loadGame();
+    expect(loaded?.currentDecision).toEqual(decision);
+    expect(loaded?.currentCategory).toBe("transfer");
   });
 });
 

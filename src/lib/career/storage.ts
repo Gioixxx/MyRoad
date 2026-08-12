@@ -1,13 +1,14 @@
-import type { ArchivedCareer, DecisionCategory, GameSpeed, Player } from "@/types/career";
+import type { ArchivedCareer, Decision, DecisionCategory, GameSpeed, Player } from "@/types/career";
 import type { LoopContext } from "./loop";
 import { emptyPersonalRecords, pickBestCareerTitle } from "./satisfaction";
 import { peakOvr } from "./summary";
 import { NEUTRAL_TRAITS, deriveArchetype } from "./traits";
 import { deriveShadowTitle } from "./shadow";
-import { createAttributesFromOvr } from "./attributes";
+import { createAttributesFromOvr, peaksFromAttributes } from "./attributes";
+import { ensureCoreRelations } from "./relations";
 
 const STORAGE_KEY = "carriera:save";
-const STORAGE_VERSION = 11;
+const STORAGE_VERSION = 14;
 
 export interface SavedGame {
   version: number;
@@ -15,6 +16,9 @@ export interface SavedGame {
   speed: GameSpeed;
   context: LoopContext;
   recentCategories: DecisionCategory[];
+  /** Decisione attualmente mostrata — se assente (save pre-v12) al resume si rirolla. */
+  currentDecision?: Decision | null;
+  currentCategory?: DecisionCategory | null;
 }
 
 /** Arricchisce un save v1 (privo di injury/wallet/popularity) con i default, invece di scartarlo. */
@@ -105,10 +109,24 @@ function migratePlayerV9(raw: Player): Player {
  * alla prossima firma (`signWithClub`), nel frattempo nessuna attivazione forzata la considera
  * (vedi `shouldTriggerClauseActivation`, gated anche su clausola > 0). */
 function migratePlayerV10(raw: Player): Player {
-  return {
+  return migratePlayerV13({
     ...raw,
     releaseClauseEur: raw.releaseClauseEur ?? 0,
-  };
+  });
+}
+
+function migratePlayerV13(raw: Player): Player {
+  return migratePlayerV14({
+    ...raw,
+    attributePeaks: raw.attributePeaks ?? peaksFromAttributes(raw.attributes ?? createAttributesFromOvr(raw.position, raw.ovr)),
+  });
+}
+
+function migratePlayerV14(raw: Player): Player {
+  return ensureCoreRelations({
+    ...raw,
+    relations: raw.relations ?? [],
+  });
 }
 
 export function saveGame(save: Omit<SavedGame, "version">): void {
@@ -153,6 +171,15 @@ export function loadGame(): SavedGame | null {
     }
     if (parsed.version === 10) {
       return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV10(parsed.player) };
+    }
+    if (parsed.version === 11) {
+      return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV13(parsed.player) };
+    }
+    if (parsed.version === 12) {
+      return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV13(parsed.player) };
+    }
+    if (parsed.version === 13) {
+      return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV14(parsed.player) };
     }
     if (parsed.version !== STORAGE_VERSION) return null;
     return parsed;

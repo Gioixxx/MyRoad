@@ -48,6 +48,8 @@ describe("createPlayer", () => {
     expect(player.injury).toBeNull();
     expect(player.wallet).toEqual({ salaryEurPerCycle: 0, savingsEur: 0 });
     expect(player.popularity).toBeGreaterThan(0);
+    expect(player.relations.some((rel) => rel.id === "agent")).toBe(true);
+    expect(player.relations.some((rel) => rel.id === "coach")).toBe(false);
   });
 });
 
@@ -87,6 +89,25 @@ describe("signWithClub", () => {
     const renewed = signWithClub(player, TEST_CLUB);
 
     expect(renewed.wallet.savingsEur).toBe(player.wallet.savingsEur);
+  });
+
+  it("dovrebbe generare il mister alla prima firma e resetarlo al transfer", () => {
+    const signed = signWithClub(createPlayer(IDENTITY), TEST_CLUB);
+    const coach = signed.relations.find((rel) => rel.id === "coach");
+    const agent = signed.relations.find((rel) => rel.id === "agent");
+    expect(coach).toBeDefined();
+    expect(agent).toBeDefined();
+
+    const trusted = {
+      ...signed,
+      relations: signed.relations.map((rel) =>
+        rel.id === "coach" ? { ...rel, affinity: 2 as const } : rel,
+      ),
+    };
+    const otherClub: Club = { ...TEST_CLUB, id: "other-club", name: "Other FC" };
+    const moved = signWithClub(trusted, otherClub);
+    expect(moved.relations.find((rel) => rel.id === "coach")?.affinity).toBe(0);
+    expect(moved.relations.find((rel) => rel.id === "agent")?.name).toBe(agent!.name);
   });
 });
 
@@ -208,6 +229,13 @@ describe("applyDelta", () => {
     const second = applyDelta(first, { shadowFlags: { leakedTactics: true } });
 
     expect(second.shadowFlags).toEqual({ doped: true, leakedTactics: true });
+  });
+
+  it("dovrebbe applicare relationsDelta clampando l'affinità", () => {
+    const player = signWithClub(createPlayer(IDENTITY), TEST_CLUB);
+    const next = applyDelta(player, { relationsDelta: { coach: 3, agent: -1 } });
+    expect(next.relations.find((rel) => rel.id === "coach")?.affinity).toBe(2);
+    expect(next.relations.find((rel) => rel.id === "agent")?.affinity).toBe(-1);
   });
 });
 

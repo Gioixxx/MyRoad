@@ -12,6 +12,7 @@ import type {
   PlayStyleId,
   SeasonTitleEntry,
   Trophy,
+  AttributeKey,
 } from "@/types/career";
 import { createPlayer } from "@/lib/career/engine";
 import { generateAcademyOffer } from "@/lib/career/decisions";
@@ -61,6 +62,7 @@ export interface UseCareerGame {
   state: CareerGameState | null;
   startCareer: (identity: PlayerIdentity, speed: GameSpeed) => void;
   chooseOption: (optionId: string) => void;
+  setTrainingFocus: (key: AttributeKey | null) => void;
   restart: () => void;
   isResuming: boolean;
 }
@@ -94,15 +96,18 @@ export function useCareerGame(): UseCareerGame {
 
     const saved = loadGame();
     if (saved && !saved.player.retired) {
-      const next = pickNextDecision(saved.player, saved.context, saved.recentCategories, Math.random);
+      const hasPersistedDecision = Boolean(saved.currentDecision && saved.currentCategory);
+      const next = hasPersistedDecision
+        ? null
+        : pickNextDecision(saved.player, saved.context, saved.recentCategories, Math.random);
       // eslint-disable-next-line react-hooks/set-state-in-effect -- vedi commento sopra l'effect
       setState({
         player: saved.player,
         speed: saved.speed,
-        context: next.context,
+        context: next?.context ?? saved.context,
         recentCategories: saved.recentCategories,
-        currentDecision: next.decision,
-        currentCategory: next.category,
+        currentDecision: saved.currentDecision ?? next!.decision,
+        currentCategory: saved.currentCategory ?? next!.category,
         lastOutcome: null,
         retired: false,
       });
@@ -117,6 +122,8 @@ export function useCareerGame(): UseCareerGame {
       speed: state.speed,
       context: state.context,
       recentCategories: state.recentCategories,
+      currentDecision: state.currentDecision,
+      currentCategory: state.currentCategory,
     });
   }, [state]);
 
@@ -207,5 +214,12 @@ export function useCareerGame(): UseCareerGame {
     setState(null);
   }, []);
 
-  return { state, startCareer, chooseOption, restart, isResuming };
+  const setTrainingFocus = useCallback((key: AttributeKey | null) => {
+    setState((prev) => {
+      if (!prev || prev.retired) return prev;
+      return { ...prev, player: { ...prev.player, trainingFocus: key } };
+    });
+  }, []);
+
+  return { state, startCareer, chooseOption, setTrainingFocus, restart, isResuming };
 }

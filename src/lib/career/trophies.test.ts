@@ -33,11 +33,10 @@ describe("rollClubTrophies", () => {
     expect(trophies).toHaveLength(0);
   });
 
-  it("un club senza coppa nazionale non dovrebbe mai generare quel trofeo", () => {
-    const clubWithoutCup: Club = { ...LOW_PRESTIGE_CLUB, competitions: { league: "Serie B" } };
-    const trophies = rollClubTrophies(clubWithoutCup, 90, 25, () => 0);
-    expect(trophies.every((t) => t.competition !== undefined)).toBe(true);
-    expect(trophies.some((t) => t.competition === "Coppa Italia")).toBe(false);
+  it("non dovrebbe assegnare il campionato se skipLeague è true", () => {
+    const trophies = rollClubTrophies(JUVENTUS, 90, 25, () => 0, 0, true);
+    expect(trophies.some((t) => t.competition === "Serie A")).toBe(false);
+    expect(trophies.some((t) => t.competition === "Coppa Italia")).toBe(true);
   });
 });
 
@@ -65,43 +64,49 @@ describe("rollNationalTrophies", () => {
     expect(rollNationalTrophies(true, 95, 28, "UEFA", () => 0.999)).toEqual([]);
   });
 
-  it("dovrebbe poter vincere Mondiale e coppa di confederazione nello stesso ciclo (indipendenti)", () => {
-    const trophies = rollNationalTrophies(true, 95, 28, "UEFA", () => 0);
+  it("dovrebbe poter vincere Mondiale e coppa di confederazione nello stesso ciclo Express (16→19)", () => {
+    const trophies = rollNationalTrophies(true, 95, 19, "UEFA", () => 0, 16);
     expect(trophies).toHaveLength(2);
-    expect(trophies[0]).toEqual({ competition: "Mondiale", club: undefined, age: 28 });
-    expect(trophies[1]).toEqual({ competition: "Europei", club: undefined, age: 28 });
+    expect(trophies[0]).toEqual({ competition: "Mondiale", club: undefined, age: 19 });
+    expect(trophies[1]).toEqual({ competition: "Europei", club: undefined, age: 19 });
+  });
+
+  it("non dovrebbe assegnare il Mondiale fuori dagli anni 18/22/26/30/34/38", () => {
+    const trophies = rollNationalTrophies(true, 95, 22, "UEFA", () => 0, 21);
+    expect(trophies.some((t) => t.competition === "Mondiale")).toBe(false);
+    expect(trophies.some((t) => t.competition === "Europei")).toBe(true);
   });
 
   it("dovrebbe vincere solo il Mondiale se il secondo roll è sfavorevole", () => {
-    const trophies = rollNationalTrophies(true, 95, 28, "UEFA", seqRng([0, 0.999]));
-    expect(trophies).toEqual([{ competition: "Mondiale", club: undefined, age: 28 }]);
+    const trophies = rollNationalTrophies(true, 95, 19, "UEFA", seqRng([0, 0.999]), 16);
+    expect(trophies).toEqual([{ competition: "Mondiale", club: undefined, age: 19 }]);
   });
 
   it("dovrebbe vincere solo la coppa di confederazione se il primo roll è sfavorevole", () => {
-    const trophies = rollNationalTrophies(true, 95, 28, "UEFA", seqRng([0.999, 0]));
-    expect(trophies).toEqual([{ competition: "Europei", club: undefined, age: 28 }]);
+    const trophies = rollNationalTrophies(true, 95, 19, "UEFA", seqRng([0.999, 0]), 16);
+    expect(trophies).toEqual([{ competition: "Europei", club: undefined, age: 19 }]);
   });
 
   it("dovrebbe usare Copa América per confederazione CONMEBOL", () => {
-    expect(rollNationalTrophies(true, 95, 28, "CONMEBOL", seqRng([0.999, 0]))[0]?.competition).toBe(
+    expect(rollNationalTrophies(true, 95, 19, "CONMEBOL", seqRng([0.999, 0]), 16)[0]?.competition).toBe(
       "Copa América",
     );
   });
 
   it("dovrebbe usare AFC Asian Cup per confederazione AFC", () => {
-    expect(rollNationalTrophies(true, 95, 28, "AFC", seqRng([0.999, 0]))[0]?.competition).toBe(
+    expect(rollNationalTrophies(true, 95, 19, "AFC", seqRng([0.999, 0]), 16)[0]?.competition).toBe(
       "AFC Asian Cup",
     );
   });
 
   it("dovrebbe usare Africa Cup of Nations per confederazione CAF", () => {
-    expect(rollNationalTrophies(true, 95, 28, "CAF", seqRng([0.999, 0]))[0]?.competition).toBe(
+    expect(rollNationalTrophies(true, 95, 19, "CAF", seqRng([0.999, 0]), 16)[0]?.competition).toBe(
       "Africa Cup of Nations",
     );
   });
 
   it("dovrebbe usare CONCACAF Gold Cup per confederazione CONCACAF", () => {
-    expect(rollNationalTrophies(true, 95, 28, "CONCACAF", seqRng([0.999, 0]))[0]?.competition).toBe(
+    expect(rollNationalTrophies(true, 95, 19, "CONCACAF", seqRng([0.999, 0]), 16)[0]?.competition).toBe(
       "CONCACAF Gold Cup",
     );
   });

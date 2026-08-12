@@ -1,26 +1,31 @@
 import { describe, expect, it } from "vitest";
 import type { DecisionCategory, DecisionOption, Player, PlayerIdentity } from "@/types/career";
-import { getClub } from "@/data/clubs";
+import { getClub, clubs } from "@/data/clubs";
 import { createPlayer, signWithClub } from "./engine";
 import {
   clauseActivationChance,
   clauseActivationSuitorPool,
   cupUpsetWinChance,
+  decisiveMatchWinWeight,
   favorableOutcomeWeight,
   generateAcademyOffer,
+  generateAgentGreyDeal,
   generateAgentNegotiation,
   generateClauseActivationDecision,
   generateClubCrisis,
   generateClubPriority,
+  generateCoachRoleRequest,
   generateCompetitionForSpot,
   generateContinentalFinalDecision,
   generateControversialPost,
   generateControversialStatement,
   generateCupUpsetDecision,
+  generateDecisiveMatchDecision,
   generateEndOfCycle,
   generateLoanOffer,
   generateLoanReturn,
   generateNationalitySwitch,
+  generatePositionChangeDecision,
   generateRedemptionDecision,
   generateReturnHome,
   generateScandalDecision,
@@ -30,8 +35,11 @@ import {
   generateTriumphantReturn,
   generateUnexpectedProspect,
   isAgentEligible,
+  isAgentGreyDealEligible,
   isClubPriorityEligible,
+  isCoachRoleRequestEligible,
   isNationalitySwitchEligible,
+  isPhysicalDeclineReconversion,
   isReturnHomeEligible,
   isSponsorEligible,
   isTaxTroubleEligible,
@@ -42,7 +50,11 @@ import {
   penaltyScoreChance,
   pickClauseActivationSuitor,
   pickCupUpsetOpponent,
+  pickCuratedOffers,
   pickDecisionCategory,
+  categoryWeightMultiplier,
+  prospectStatusLine,
+  offerReasonHint,
   rollNationalCallup,
 } from "./decisions";
 
@@ -147,6 +159,61 @@ describe("generateTransferWindow", () => {
     expect(stay.outcomes[0].effect.traitsDelta).toEqual({ loyalty: 4 });
     expect(sign.outcomes[0].effect.traitsDelta).toEqual({ ambition: 4, loyalty: -2 });
   });
+
+  it("le offerte diverse da 'resta' dovrebbero avere un hint con un motivo", () => {
+    const player = playerAt();
+    const decision = generateTransferWindow(player, FIXED_RNG);
+    const offers = decision.options.filter((o) => o.id !== "stay");
+    expect(offers.every((o) => (o.hint?.length ?? 0) > 0)).toBe(true);
+  });
+});
+
+describe("pickCuratedOffers", () => {
+  it("dovrebbe includere un club di casa per un Bandiera quando il pool lo consente", () => {
+    const player: Player = {
+      ...playerAt(),
+      traits: { loyalty: 80, ambition: 40, showmanship: 50, discipline: 50, leadership: 50 },
+      ovr: 70,
+    };
+    const pool = clubs.filter((c) => c.id !== player.club!.id && Math.abs(c.prestige - 1) <= 1);
+    const offers = pickCuratedOffers(player, pool, 3, FIXED_RNG);
+    expect(offers.some((c) => c.country === "Italy")).toBe(true);
+  });
+
+  it("offerReasonHint dovrebbe marcare un club italiano come di casa", () => {
+    const player = playerAt();
+    const hint = offerReasonHint(player, getClub("roma")!);
+    expect(hint).toContain("Club di casa");
+  });
+});
+
+describe("prospectStatusLine", () => {
+  it("dovrebbe indicare la soglia nazionale sotto OVR 79", () => {
+    const player = { ...playerAt(), ovr: 70, releaseClauseEur: 0 };
+    expect(prospectStatusLine(player)).toContain("Nazionale da OVR 79");
+  });
+
+  it("dovrebbe indicare Blindato se la clausola è sopra il valore di mercato", () => {
+    const player = {
+      ...playerAt(),
+      ovr: 85,
+      nationalTeam: { called: true, apps: 1, goals: 0, assists: 0 },
+      marketValueEur: 10_000_000,
+      releaseClauseEur: 20_000_000,
+    };
+    expect(prospectStatusLine(player)).toBe("Blindato");
+  });
+
+  it("dovrebbe indicare Clausola conveniente se la clausola è sotto il valore di mercato", () => {
+    const player = {
+      ...playerAt(),
+      ovr: 85,
+      nationalTeam: { called: true, apps: 1, goals: 0, assists: 0 },
+      marketValueEur: 20_000_000,
+      releaseClauseEur: 10_000_000,
+    };
+    expect(prospectStatusLine(player)).toBe("Clausola conveniente");
+  });
 });
 
 describe("generateLoanOffer", () => {
@@ -154,10 +221,11 @@ describe("generateLoanOffer", () => {
     expect(() => generateLoanOffer(createPlayer(IDENTITY), FIXED_RNG)).toThrow();
   });
 
-  it("non dovrebbe mai includere un'opzione per restare al club corrente", () => {
+  it("dovrebbe includere l'opzione per restare a lottare per il posto", () => {
     const player = playerAt();
     const decision = generateLoanOffer(player, FIXED_RNG);
-    expect(decision.options.some((o) => o.id === "stay")).toBe(false);
+    const stay = decision.options.find((o) => o.id === "stay");
+    expect(stay?.club?.id).toBe(player.club!.id);
   });
 });
 
@@ -839,6 +907,57 @@ describe("pickDecisionCategory", () => {
     expect(pickDecisionCategory(categories, [], () => roll)).toBe("transfer");
     expect(pickDecisionCategory(categories, ["transfer"], () => roll)).toBe("lifestyle");
   });
+
+  it("dovrebbe ridurre il peso del prestito per un titolare affermato", () => {
+    const star = { ...playerAt(), age: 28, ovr: 88 };
+    const youth = { ...playerAt(), age: 18, ovr: 58 };
+    expect(categoryWeightMultiplier("loan", star)).toBeLessThan(categoryWeightMultiplier("loan", youth));
+  });
+
+  it("dovrebbe ridurre il peso di end-of-cycle per una stella in un top club", () => {
+    const star = { ...playerAt(), age: 26, ovr: 90, injury: null };
+    const fading = { ...playerAt(), age: 34, ovr: 72 };
+    expect(categoryWeightMultiplier("end-of-cycle", star)).toBeLessThan(
+      categoryWeightMultiplier("end-of-cycle", fading),
+    );
+  });
+
+  it("dovrebbe ridurre il peso del mercato per un Bandiera", () => {
+    const flagbearer = {
+      ...playerAt(),
+      traits: { loyalty: 80, ambition: 40, showmanship: 50, discipline: 50, leadership: 50 },
+    };
+    const mercenary = {
+      ...playerAt(),
+      traits: { loyalty: 30, ambition: 80, showmanship: 50, discipline: 50, leadership: 50 },
+    };
+    expect(categoryWeightMultiplier("transfer", flagbearer)).toBeLessThan(
+      categoryWeightMultiplier("transfer", mercenary),
+    );
+  });
+});
+
+describe("generatePositionChangeDecision / declino fisico", () => {
+  it("non dovrebbe essere una riconversione da declino per un giovane", () => {
+    const player = playerAt();
+    expect(isPhysicalDeclineReconversion(player)).toBe(false);
+    expect(generatePositionChangeDecision(player, FIXED_RNG).title).toBe("Cambio di ruolo");
+  });
+
+  it("dovrebbe proporre CAM a un attaccante in calo fisico", () => {
+    const base = playerAt();
+    if (base.attributes.kind !== "outfield") throw new Error("atteso outfield");
+    const player: Player = {
+      ...base,
+      age: 31,
+      attributes: { ...base.attributes, pace: 50, physical: 50 },
+      attributePeaks: { pace: 80, physical: 78 },
+    };
+    expect(isPhysicalDeclineReconversion(player)).toBe(true);
+    const decision = generatePositionChangeDecision(player, FIXED_RNG);
+    expect(decision.title).toBe("Riconversione di ruolo");
+    expect(decision.options.some((o) => o.newPosition === "CAM")).toBe(true);
+  });
 });
 
 describe("favorableOutcomeWeight", () => {
@@ -877,5 +996,63 @@ describe("favorableOutcomeWeight", () => {
       { weight: 55, effect: { ovrDelta: 1, savingsDelta: 10 }, resultText: "povero" },
     ]);
     expect(favorableOutcomeWeight(opt)).toBe(45);
+  });
+});
+
+describe("generateDecisiveMatchDecision", () => {
+  it("dovrebbe avere titolo Partita decisiva, 3 sistemi e pesi a 100", () => {
+    const player = playerAt();
+    const decision = generateDecisiveMatchDecision(player);
+    expect(decision.title).toBe("Partita decisiva");
+    expect(decision.category).toBe("decisive-match");
+    expect(decision.options).toHaveLength(3);
+    for (const option of decision.options) {
+      const total = option.outcomes.reduce((sum, o) => sum + o.weight, 0);
+      expect(total).toBe(100);
+      expect(option.outcomes.some((o) => o.leagueWin === true)).toBe(true);
+    }
+  });
+
+  it("dovrebbe pesare di più la vittoria se il sistema matcha lo stile del giocatore", () => {
+    const base = playerAt();
+    if (base.attributes.kind !== "outfield") throw new Error("atteso outfield");
+    const player: Player = {
+      ...base,
+      attributes: { ...base.attributes, passing: 90, pace: 40, defending: 40, physical: 40 },
+    };
+    expect(decisiveMatchWinWeight(player, "possesso")).toBeGreaterThan(
+      decisiveMatchWinWeight(player, "pressing"),
+    );
+  });
+});
+
+describe("eventi condizionati da relazioni", () => {
+  it("isCoachRoleRequestEligible dovrebbe richiedere affinità mister ≥ 1", () => {
+    const player = playerAt();
+    expect(isCoachRoleRequestEligible(player)).toBe(false);
+    const trusted = {
+      ...player,
+      relations: player.relations.map((rel) =>
+        rel.id === "coach" ? { ...rel, affinity: 1 as const } : rel,
+      ),
+    };
+    expect(isCoachRoleRequestEligible(trusted)).toBe(true);
+    const decision = generateCoachRoleRequest(trusted);
+    expect(decision.title).toContain("cambio ruolo");
+    expect(decision.options.some((o) => o.newPosition)).toBe(true);
+  });
+
+  it("isAgentGreyDealEligible dovrebbe richiedere affinità agente bassa", () => {
+    const player = playerAt();
+    expect(isAgentGreyDealEligible(player)).toBe(false);
+    const cold = {
+      ...player,
+      relations: player.relations.map((rel) =>
+        rel.id === "agent" ? { ...rel, affinity: -1 as const } : rel,
+      ),
+    };
+    expect(isAgentGreyDealEligible(cold)).toBe(true);
+    const decision = generateAgentGreyDeal(cold);
+    expect(decision.options.find((o) => o.id === "accept-grey")?.outcomes[0].effect.shadowDelta).toBe(12);
   });
 });

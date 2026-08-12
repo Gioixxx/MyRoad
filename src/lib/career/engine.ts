@@ -21,7 +21,9 @@ import {
   createAttributesForPosition,
   deriveOvrFromAttributes,
   distributeAttributeGrowth,
+  peaksFromAttributes,
 } from "./attributes";
+import { applyRelationsDelta, initialAgentRelation, relationsOnSign } from "./relations";
 
 export const STARTING_AGE = 16;
 export const STARTING_OVR = 50;
@@ -51,6 +53,7 @@ const RETIREMENT_RISK_START_AGE = 31;
 const RETIREMENT_AUTOMATIC_AGE = 40;
 
 export function createPlayer(identity: PlayerIdentity, rng: Rng = Math.random): Player {
+  const attributes = createAttributesForPosition(identity.position, rng);
   return {
     ...identity,
     age: STARTING_AGE,
@@ -81,10 +84,12 @@ export function createPlayer(identity: PlayerIdentity, rng: Rng = Math.random): 
     traits: NEUTRAL_TRAITS,
     shadow: 0,
     shadowFlags: {},
-    attributes: createAttributesForPosition(identity.position, rng),
+    attributes,
     trainingFocus: null,
     playStyles: [],
     releaseClauseEur: 0,
+    attributePeaks: peaksFromAttributes(attributes),
+    relations: [initialAgentRelation(identity.lastName, identity.nationality)],
   };
 }
 
@@ -111,6 +116,7 @@ export function signWithClub(player: Player, club: Club): Player {
     club,
     wallet,
     releaseClauseEur: computeReleaseClauseEur(player.marketValueEur, player.age, club.prestige),
+    relations: relationsOnSign(player, club, isNewClub),
   };
 }
 
@@ -196,11 +202,21 @@ export function advanceSeasons(
     ovr: nextOvr,
   };
 
+  const nextPeaks = (() => {
+    const current = peaksFromAttributes(nextAttributes);
+    const prev = player.attributePeaks ?? current;
+    return {
+      pace: Math.max(prev.pace, current.pace),
+      physical: Math.max(prev.physical, current.physical),
+    };
+  })();
+
   return {
     ...player,
     age: ageTo,
     ovr: nextOvr,
     attributes: nextAttributes,
+    attributePeaks: nextPeaks,
     marketValueEur: computeMarketValue(nextOvr, ageTo),
     career: sumStats(player.career, seasonStats),
     clubHistory: [...player.clubHistory, stint],
@@ -234,6 +250,9 @@ export function applyDelta(player: Player, delta: PlayerDelta): Player {
       ? applyAttributesDelta(player.attributes, delta.attributesDelta)
       : player.attributes,
     releaseClauseEur: delta.releaseClauseEur ?? player.releaseClauseEur,
+    relations: delta.relationsDelta
+      ? applyRelationsDelta(player.relations ?? [], delta.relationsDelta)
+      : (player.relations ?? []),
   };
 }
 

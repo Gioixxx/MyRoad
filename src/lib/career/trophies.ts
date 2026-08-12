@@ -41,11 +41,12 @@ export function rollClubTrophies(
   age: number,
   rng: Rng = Math.random,
   trophyChanceBonus = 0,
+  skipLeague = false,
 ): Trophy[] {
   const trophies: Trophy[] = [];
   const chance = clamp(clubTrophyChance(club.prestige, ovr) + trophyChanceBonus, 0, 1);
 
-  if (rng() < chance) {
+  if (!skipLeague && rng() < chance) {
     trophies.push({ competition: club.competitions.league, club, age });
   }
   if (club.competitions.cup && rng() < chance * CUP_TROPHY_RELATIVE_CHANCE) {
@@ -55,7 +56,7 @@ export function rollClubTrophies(
 }
 
 const NATIONAL_TOURNAMENT_OVR_BASELINE = 80;
-const NATIONAL_TOURNAMENT_OVR_DIVISOR = 70;
+const NATIONAL_TOURNAMENT_OVR_DIVISOR = 50;
 const NATIONAL_TOURNAMENT_CHANCE_CAP = 0.2;
 
 /** Probabilità di vincere il torneo internazionale con la nazionale in un ciclo da convocato. */
@@ -67,11 +68,32 @@ export function nationalTournamentWinChance(ovr: number): number {
   );
 }
 
+export function cycleCoversAge(
+  ageFrom: number,
+  ageTo: number,
+  predicate: (age: number) => boolean,
+): boolean {
+  for (let age = ageFrom; age < ageTo; age++) {
+    if (predicate(age)) return true;
+  }
+  return false;
+}
+
+/** Mondiale negli anni d'età 18, 22, 26, 30, 34, 38. */
+export function isWorldCupAge(age: number): boolean {
+  return age % 4 === 2;
+}
+
+/** Coppa di confederazione negli anni dispari (offset dal Mondiale). */
+export function isContinentalTournamentAge(age: number): boolean {
+  return age % 2 === 1;
+}
+
 /**
  * Estrae i trofei di nazionale vinti in un ciclo da convocato — Mondiale e coppa di
- * confederazione sono indipendenti tra loro (nell'originale non sono mai stati osservati come
- * alternativi: un giocatore può vincere entrambi nella stessa carriera, anche nello stesso
- * ciclo, vedi piano esplorazione aggiuntiva 4).
+ * confederazione sono indipendenti, ma solo se il ciclo copre un anno di calendario
+ * (Mondiale ogni 4 anni, coppa confederazione ogni 2). `ageFrom` è l'età all'inizio del
+ * ciclo (esclusa `age`/`ageTo`); se omesso si considera solo l'anno `age`.
  */
 export function rollNationalTrophies(
   called: boolean,
@@ -79,14 +101,17 @@ export function rollNationalTrophies(
   age: number,
   confederation: Confederation = "UEFA",
   rng: Rng = Math.random,
+  ageFrom?: number,
 ): Trophy[] {
   if (!called) return [];
+  const from = ageFrom ?? age;
+  const to = ageFrom === undefined ? age + 1 : age;
   const chance = nationalTournamentWinChance(ovr);
   const trophies: Trophy[] = [];
-  if (rng() < chance) {
+  if (cycleCoversAge(from, to, isWorldCupAge) && rng() < chance) {
     trophies.push({ competition: "Mondiale", club: undefined, age });
   }
-  if (rng() < chance) {
+  if (cycleCoversAge(from, to, isContinentalTournamentAge) && rng() < chance) {
     trophies.push({ competition: CONFEDERATION_TOURNAMENT[confederation], club: undefined, age });
   }
   return trophies;

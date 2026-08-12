@@ -114,6 +114,18 @@ describe("evaluateSeasonTitle", () => {
     expect(title.label).toBe("Ammazzagigante");
   });
 
+  it("dovrebbe scegliere workhorse con 32 presenze in un ciclo Intense (1 stagione)", () => {
+    expect(evaluateSeasonTitle(baseCtx({ apps: 32, seasons: 1 })).id).toBe("workhorse");
+  });
+
+  it("non dovrebbe scegliere workhorse con 32 presenze in un ciclo Express (3 stagioni)", () => {
+    expect(evaluateSeasonTitle(baseCtx({ apps: 32, seasons: 3 })).id).toBe("steady");
+  });
+
+  it("dovrebbe scegliere workhorse con 96 presenze in un ciclo Express", () => {
+    expect(evaluateSeasonTitle(baseCtx({ apps: 96, seasons: 3 })).id).toBe("workhorse");
+  });
+
   it("giantKiller dovrebbe prevalere su champion anche con altri trofei nello stesso ciclo", () => {
     const title = evaluateSeasonTitle(
       baseCtx({ cupUpsetWin: true, trophies: [{ competition: "Coppa Italia", age: 24 }] }),
@@ -196,6 +208,13 @@ describe("rollCycleObjective", () => {
     expect(objective.label.length).toBeGreaterThan(0);
     expect(objective.target).toBeGreaterThan(0);
   });
+
+  it("dovrebbe scalare i target gol/presenze per le stagioni del ciclo", () => {
+    const player = { ...signWithClub(createPlayer(IDENTITY), JUVENTUS), age: 24, ovr: 80 };
+    const intense = rollCycleObjective(player, () => 0, 1);
+    const express = rollCycleObjective(player, () => 0, 3);
+    expect(express.target).toBe(intense.target * 3);
+  });
 });
 
 describe("updatePersonalRecords", () => {
@@ -242,6 +261,28 @@ describe("updatePersonalRecords", () => {
     });
     expect(records.bestSeasonCleanSheets).toBe(12);
     expect(broken).toContain("bestSeasonCleanSheets");
+  });
+
+  it("dovrebbe registrare i record come medie per stagione", () => {
+    const { records } = updatePersonalRecords(emptyPersonalRecords(1_000_000), {
+      age: 20,
+      ovrBefore: 60,
+      ovrAfter: 65,
+      goals: 30,
+      assists: 8,
+      apps: 68,
+      trophies: [],
+      award: null,
+      newInjury: null,
+      injuryHealed: false,
+      nationalCallup: false,
+      nationalGoals: 0,
+      marketValueEur: 5_000_000,
+      wasAlreadyCalled: false,
+      seasons: 2,
+    });
+    expect(records.bestSeasonGoals).toBe(15);
+    expect(records.bestSeasonApps).toBe(34);
   });
 });
 

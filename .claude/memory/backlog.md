@@ -1,7 +1,7 @@
 ---
 type: backlog
 tags: [memory, backlog]
-updated: [2026-08-10]
+updated: [2026-08-12]
 ---
 
 # Backlog
@@ -17,6 +17,44 @@ Funzionalità e idee a lungo termine. Prioritizzato pre-sprint → confluisce in
 - **Stima:** Piccola / Media / Grande
 
 ---
+
+### Alleggerimento informazioni mobile (solo visualizzazione mobile)
+- **Priorità:** Media
+- **Tipo:** Miglioramento
+- **Area:** UI mobile, componenti in `src/components/features/career/` (viewport <lg)
+- **Descrizione:** su richiesta esplicita dell'utente (2026-08-12), semplificare/alleggerire le
+  informazioni mostrate **solo sotto il breakpoint mobile** per renderle più chiare e meno dense
+  — il layout desktop resta invariato. Nessun dettaglio implementativo ancora deciso (quali
+  schermate/quali informazioni tagliare o raggruppare), solo la direzione generale registrata.
+  Utile leggere prima [[conventions]] per la tecnica di test mobile in questo ambiente (iframe
+  390×844 iniettato) e [[tech-debt]] per il pattern `min-h-0` ricorrente sugli stessi componenti.
+- **Criteri accettazione:** da definire in una sessione dedicata con l'utente, prima di scegliere
+  quali schermate/informazioni toccare.
+- **Stima:** da definire.
+
+### Tre carriere giocabili: calciatore → allenatore → presidente
+- **Priorità:** Media
+- **Tipo:** Feature
+- **Area:** nuovo dominio "carriera multi-ruolo" — richiede probabilmente nuovi tipi (`CareerRole`),
+  nuovo motore per allenatore/presidente distinto da `lib/career/engine.ts` attuale (calciatore)
+- **Descrizione:** idea di gioco grande proposta dall'utente il 2026-08-12, **da approfondire in
+  una sessione dedicata prima di qualunque implementazione** (richiesta esplicita dell'utente di
+  non progettare a fondo la meccanica ora). Due componenti:
+  1. Scelta del tipo di carriera all'inizio del gioco — oggi solo "calciatore", da affiancare con
+     "allenatore" e "presidente" come percorsi alternativi completi.
+  2. **Continuità narrativa**: possibilità di continuare la stessa "storia" dopo il ritiro da
+     calciatore passando ad allenatore, e poi da allenatore a presidente — non 3 modalità
+     indipendenti scollegate, ma una progressione naturale sulla stessa carriera.
+  Per il ruolo presidente: le finanze personali accumulate nelle carriere precedenti (calciatore/
+  allenatore) finanziano l'acquisto e il mantenimento del club — non un budget societario separato
+  o infinito, deve attingere dal patrimonio (`Player.savingsEur`-style) già accumulato. Distinta
+  dall'idea di backlog già esistente "Rete Scouting/Vivaio... (gestione rosa/club)" (vedi sopra):
+  quella riguardava solo funzionalità aggiuntive per il calciatore (osservatori, staff come
+  mentore), questa è un intero nuovo ruolo/modalità di gioco con un proprio ciclo.
+- **Criteri accettazione:** da definire — il primo passo è la sessione di approfondimento sulla
+  meccanica richiesta esplicitamente dall'utente, non ancora fatta.
+- **Stima:** Grande — nuovo dominio di gioco, probabilmente il progetto più grande mai affrontato
+  su questo repo.
 
 ### Rete Scouting/Vivaio e Visione Tattica/Staff Tecnico (gestione rosa/club)
 - **Priorità:** Bassa
@@ -164,7 +202,7 @@ Funzionalità e idee a lungo termine. Prioritizzato pre-sprint → confluisce in
 
 ## Priorità
 - **Alta:** —
-- **Media:** pool offerte/eventi filtrati per archetipo/shadow; relazioni NPC persistenti (§2, vedi sopra); crescita non lineare estesa; declino fisico→riconversione ruolo age-based; resilienza mentale/pressione (vedi sopra, 3 dinamiche dalla sessione 2026-08-12)
+- **Media:** alleggerimento informazioni mobile (vedi sopra); tre carriere calciatore→allenatore→presidente (vedi sopra, da approfondire prima di implementare); pool offerte/eventi filtrati per archetipo/shadow; relazioni NPC persistenti (§2, vedi sopra); crescita non lineare estesa; declino fisico→riconversione ruolo age-based; resilienza mentale/pressione (vedi sopra, 3 dinamiche dalla sessione 2026-08-12)
 - **Bassa:** promozione/retrocessione estesa oltre i 4 paesi attuali; trofeo continentale di club assegnabile offscreen; nuovo evento "Sostanza misteriosa" (doping); nuovo evento "Fan backlash" (da ricercare); club per Arabia Saudita e Qatar (completare l'espansione mondo); ritiro forzato/squalifica multi-ciclo a shadow≥90 (vedi sopra); Rete Scouting/Vivaio + Staff Tecnico (gestione rosa/club, vedi sopra); Match Sharpness (esclusa per granularità, vedi sopra)
 
 ## Archiviato
