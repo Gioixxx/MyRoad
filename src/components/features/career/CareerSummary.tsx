@@ -39,9 +39,9 @@ interface CareerSummaryProps {
 
 function EmptyShowcase({ children }: { children: string }) {
   return (
-    <div className="flex flex-col items-center gap-1.5 rounded-lg border border-dashed border-(--color-border) py-4 text-center">
+    <div className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-(--color-border) px-2 py-2 text-center lg:gap-1.5 lg:py-4">
       <TrophyIcon size={18} aria-hidden="true" className="text-(--color-text-muted)/60" />
-      <p className="text-xs text-(--color-text-muted)">{children}</p>
+      <p className="text-[11px] leading-snug text-(--color-text-muted) lg:text-xs">{children}</p>
     </div>
   );
 }
@@ -326,13 +326,13 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
           )}
         </Card>
 
-        <div className="flex min-h-0 min-w-0 flex-col gap-3 lg:overflow-hidden">
-          <Card className="shrink-0 p-3 sm:p-4">
-            <h3 className="font-display mb-2 text-sm tracking-[0.15em] text-(--color-text-muted) uppercase">
+        <div className="grid min-h-0 min-w-0 grid-cols-2 gap-3 lg:flex lg:flex-col lg:overflow-hidden">
+          <Card className="flex aspect-square min-h-0 min-w-0 flex-col p-3 sm:p-4 lg:aspect-auto lg:shrink-0">
+            <h3 className="font-display mb-2 shrink-0 text-sm tracking-[0.15em] text-(--color-text-muted) uppercase">
               Nazionale
             </h3>
             {player.nationalTeam.called ? (
-              <div className="grid grid-cols-3 gap-1.5 text-center">
+              <div className="grid min-h-0 flex-1 grid-cols-3 content-center gap-1.5 text-center">
                 <div className="rounded-lg bg-(--color-surface-raised) py-1.5">
                   <p className="font-display text-base text-(--color-text)">
                     {player.nationalTeam.apps}
@@ -363,14 +363,14 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
             )}
           </Card>
 
-          <Card className="flex min-h-0 min-w-0 flex-1 flex-col p-3 sm:p-4">
+          <Card className="flex aspect-square min-h-0 min-w-0 flex-col p-3 sm:p-4 lg:aspect-auto lg:flex-1">
             <h3 className="font-display mb-2 shrink-0 text-sm tracking-[0.15em] text-(--color-text-muted) uppercase">
               Trofei e premi
             </h3>
             {trophies.length === 0 && awards.length === 0 ? (
               <EmptyShowcase>Nessun trofeo o premio vinto in carriera.</EmptyShowcase>
             ) : (
-              <ul className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto text-sm">
+              <ul className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-y-auto text-sm">
                 {trophies.map((t, i) => (
                   <li key={`trophy-${i}`} className="flex min-w-0 items-center gap-2">
                     <CompetitionBadge competition={t.competition} size={16} />
