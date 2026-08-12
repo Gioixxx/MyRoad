@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { Club } from "@/types/career";
 import { getClub } from "@/data/clubs";
 import { awardChance, clubTrophyChance, nationalTournamentWinChance, rollAward, rollClubTrophies, rollNationalTrophies } from "./trophies";
 
 const JUVENTUS = getClub("juventus")!; // prestige 3, competitions: Serie A / Coppa Italia / Champions League
-const LOW_PRESTIGE_CLUB = getClub("reggiana")!; // prestige 0, no continental
 
 describe("clubTrophyChance", () => {
   it("dovrebbe crescere con il prestigio del club", () => {
