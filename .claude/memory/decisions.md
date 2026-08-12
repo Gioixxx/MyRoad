@@ -636,3 +636,95 @@ Registro scelte tecniche con motivazioni.
   puliti. **Verificato sia su iframe 390px (ordine corretto, Storico/Ruolo non più collassati,
   trofeo leggibile) sia su una tab a piena larghezza (>1024px, layout a 3 colonne di
   `IdentityForm` invariato)** — nessuna regressione desktop.
+
+### Pass di game-feel sul motore: infortuni/save/calendario che "mentivano" al giocatore, offerte/categorie come conseguenza dello stato, partita decisiva, relazioni NPC — release v0.11.0
+- **Data:** 2026-08-12
+- **Decisione:** commit `8dac3bd` (co-autore "Cursor" — la stessa dinamica già vista altre volte
+  nel progetto di una sessione parallela sullo stesso working directory, qui per la prima volta
+  arrivata già come **commit reale su `origin/main`**, non solo come modifiche non committate
+  trovate a inizio sessione come nei casi precedenti). Trovato all'inizio di questa sessione
+  mentre si eseguiva `/session-start` per un compito distinto (rilascio di una nuova versione);
+  analizzato per intero (diff file-per-file di tutti i 28 file toccati) prima di procedere, dato
+  che il compito richiedeva sia il rilascio sia l'aggiornamento della memoria con le sue modifiche.
+  Quattro aree, tutte accomunate dal principio "il motore non deve più mentire al giocatore o
+  ignorare lo stato per generare contenuto puramente casuale":
+  1. **Bug corretti (comportamento sbagliato rispetto a quanto il giocatore vede/si aspetta)**:
+     un ciclo passato infortunato continuava a maturare per intero le statistiche del periodo
+     (presenze/gol/assist/clean sheet) — ora `scaleStatLine`/`INJURY_STATS_MULTIPLIER` (0.45) le
+     riduce coerentemente, sia per un nuovo infortunio (`applyInjuryStatCut` in `loop.ts`) sia per
+     un ciclo già infortunato in corso. Il salvataggio non persisteva la decisione mostrata a
+     schermo (`currentDecision`/`currentCategory`) — al resume veniva ri-estratta a caso,
+     potenzialmente diversa da quella lasciata; ora persistita (`STORAGE_VERSION` 11→12). I trofei
+     di nazionale (Mondiale/coppa continentale) potevano essere vinti in **ogni** ciclo da
+     convocato, senza legame con un calendario — ora `cycleCoversAge`/`isWorldCupAge`
+     (età%4===2)/`isContinentalTournamentAge` (età dispari) in `trophies.ts` richiedono che il
+     ciclo attraversi davvero l'anno del torneo, con `rollNationalTrophies` che riceve `ageFrom`
+     del ciclo per verificarlo. Obiettivi di ciclo/record personali/titoli di stagione
+     (`satisfaction.ts`) usavano soglie pensate per una singola stagione anche su cicli Express
+     (3 stagioni) — ora tutto normalizzato per-stagione via un nuovo parametro `seasons`.
+  2. **Offerte di club "curate" invece che uniformi casuali** (`pickCuratedOffers`/
+     `scoreOfferClub`/`offerReasonHint` in `decisions.ts`, sostituisce `pickClubs` in tutti e 5 i
+     flussi di offerta): pesa nazionalità/casa (specialmente per l'archetipo "Bandiera"), fit
+     tattico (riusa `tactics.ts`, 2026-08-12 sessione precedente), salto di prestigio (specialmente
+     per "Mercenario"/"Leader"), con un motivo (`offerReasonHint`) mostrato come hint sulla card.
+     Il prestito ora offre anche un'opzione esplicita "resta e lotta per il posto" (prima era
+     sempre un trasferimento forzato in alcuni flussi).
+  3. **Frequenza delle categorie di decisione come conseguenza dello stato**
+     (`categoryWeightMultiplier` in `decisions.ts`, wired in `pickDecisionCategory`): prestito
+     molto più probabile da giovani/basso OVR (×1.6) e quasi mai sopra OVR 80/età 25 (×0.08);
+     fine-ciclo (rinnovo) raro se già al top (×0.15) ma molto più frequente se in difficoltà
+     (età≥32, shadow≥28, infortunato — ×1.8); trasferimento raro per "Bandiera"/lealtà alta
+     (×0.55), frequente per "Mercenario" (×1.35); cambio ruolo ×3 se in declino fisico (vedi punto
+     4). Prima tutte le categorie pesavano allo stesso modo indipendentemente da chi fosse il
+     giocatore.
+  4. **Nuove meccaniche**: **partita decisiva di campionato** (categoria `decisive-match`, gated
+     OVR≥75/prestige club≥2/12% per ciclo) — scelta tattica reale tra 3 sistemi (possesso/pressing/
+     contropiede, riusa `tactics.ts`), la vittoria assegna un vero trofeo di campionato (con
+     `rollClubTrophies` che riceve un flag `skipLeague` per non assegnarlo due volte nello stesso
+     ciclo). **Riconversione di ruolo da declino fisico**: nuovo `Player.attributePeaks`
+     (pace/physical di picco, aggiornato ad ogni `advanceSeasons`), `isPhysicalDeclineReconversion`
+     (età≥29 e calo ≥6 punti da un picco) sostituisce l'adiacenza di ruolo standard con
+     `DECLINE_PREFERRED_TARGETS` mirati (es. ala→trequartista invece di ala→esterno) — prima
+     implementazione concreta del backlog item "declino fisico→riconversione ruolo age-based".
+     **Relazioni NPC leggere** (nuovo `lib/career/relations.ts`): mister (si azzera ad ogni cambio
+     club), agente (persistente dalla creazione), rivale (spawnato quando OVR≥78 o dopo 4+ cicli
+     nello stesso club) — affinità -2..+2 con eventi condizionati (il mister propone un cambio
+     ruolo se affinità≥1, l'agente propone un "favore in grigio" — soldi/shadow — se affinità≤-1);
+     nomi generati deterministicamente via hash FNV-1a (stessa tecnica di `tactics.ts`, non nuovi
+     dati). Prima implementazione parziale del backlog item "Relazioni NPC persistenti (§2)" —
+     un sottoinsieme leggero (3 relazioni fisse, non il modello `RelationId` esteso originariamente
+     proposto), non ancora la versione completa. **Focus di allenamento** non più un evento
+     casuale (`"training-focus"` rimosso da `availableCategories`) ma un'interazione diretta
+     (click sull'attributo in `AttributesPanel`, nuovo `setTrainingFocus` nell'hook). Nuovo
+     `VersionBadge.tsx` (badge versione+data fissato in basso a destra su ogni schermata, legge
+     `package.json` via `src/constants/app-info.ts`).
+  `STORAGE_VERSION` salita da 11 a **14** in tre migrazioni incrementali (v12: nessun campo dati,
+  solo `currentDecision`/`currentCategory` nel `SavedGame` non nel `Player`; v13: `attributePeaks`
+  retrocalcolato da `peaksFromAttributes`; v14: `relations` popolato da `ensureCoreRelations`).
+- **Perché (di questa voce di memoria):** l'utente ha chiesto esplicitamente di rilasciare una
+  nuova versione e, se possibile, aggiornare la memoria con le modifiche dell'ultimo commit — dato
+  che il commit non era mai stato documentato (arrivato da una sessione parallela), l'unico modo
+  di adempiere alla richiesta "aggiorna la memoria" era leggere per intero il diff e ricostruirne
+  il ragionamento, non solo registrare il messaggio di commit.
+- **Verifica prima del rilascio**: 501 test verdi (era 446, +55 — nessuna asserzione esistente
+  modificata secondo il diff), `tsc --noEmit` pulito. **Lint**: trovati e rimossi 2 warning
+  `no-unused-vars` residui in `trophies.test.ts` (`Club` import e `LOW_PRESTIGE_CLUB` non più
+  usati dopo il refactor calendario-gated) prima del rilascio, commit separato `5082682` insieme
+  al bump di versione — i soli 4 errori `react-hooks/set-state-in-effect` pre-esistenti restano
+  invariati. **Non verificato manualmente nel browser in questa sessione** (sessione di rilascio,
+  non di playtest) — nessuna delle nuove meccaniche RNG-gated (partita decisiva, relazioni NPC,
+  riconversione da declino fisico, favore in grigio dell'agente) è stata osservata dal vivo; solo
+  offerte curate e focus di allenamento diretto sono deterministiche e quindi a rischio più basso.
+  Vedi [[tech-debt]] per la voce corrispondente.
+- **Alternative:** nessuna — il compito era rilasciare quanto già implementato e documentarlo, non
+  rivedere le scelte di design della sessione parallela.
+- **Impatto:** 28 file (vedi diff completo per l'elenco, principalmente `lib/career/decisions.ts`
+  +364, `loop.ts` +156, nuovo `lib/career/relations.ts` +154, `storage.ts`/`types/career.ts` per la
+  migrazione, `AttributesPanel.tsx`/`PlayerCard.tsx`/`CareerGame.tsx`/`layout.tsx` per la UI).
+  `package.json`/`package-lock.json` bump 0.10.0→**0.11.0** (minor, per il volume di feature —
+  stesso criterio già usato per bundle di questa dimensione). `dist/MyRoad.exe` (FileVersion
+  0.11.0.0) e `dist/MyRoad.apk` (versionCode 1100/versionName 0.11.0, firma verificata con la
+  stessa chiave stabile del progetto via `apksigner verify --print-certs`) rigenerati e allegati
+  alla [release GitHub v0.11.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.11.0). Build
+  Android eseguita impostando `JAVA_HOME`/`ANDROID_HOME` manualmente nella sessione (stesso JBR di
+  Android Studio già documentato per v0.10.0, non persistito nell'ambiente di default).

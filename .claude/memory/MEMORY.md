@@ -8,7 +8,7 @@ updated: [2026-08-12]
 > Contesto persistente. Aggiornato da /remember. Vault Obsidian: vedi workflows/obsidian-vault.md.
 > Progetto rinominato da "Carriera" a "My Road - L'Ascesa" il 2026-08-07 — vedi [[decisions]] per il dettaglio del rename (repo GitHub, launcher/exe, UI). La cartella locale del repo resta fisicamente `C:\Dev\Carriera` (non rinominata, solo il nome logico del progetto/repo GitHub).
 
-**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso  **Aggiornamento:** 2026-08-12
+**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso  **Aggiornamento:** 2026-08-12 (v0.11.0)
 
 ## Contesto
 Clone testuale di "Copero — Simulador de carrera" (https://copero.com.ar/juegos/simulador-carrera):
@@ -65,8 +65,16 @@ o rimandate a [[backlog]] su richiesta esplicita. Vedi [[decisions]] per il dett
 Nella stessa giornata (sessione successiva): una simulazione mobile via iframe iniettato (nuova
 tecnica di test in questo ambiente, dato che `resize_window` non altera il viewport reale) ha
 trovato e corretto 3 bug di visualizzazione (Storico collassabile, ordine campo/bottone nel form
-identità, nomi trofeo troncati) — rilasciata insieme al fit tattico/agenti come v0.10.0. Vedi
-[[decisions]] e [[sprint]].
+identità, nomi trofeo troncati) — rilasciata insieme al fit tattico/agenti come v0.10.0. Nella
+stessa giornata (sessione successiva): una sessione parallela (Cursor) ha committato direttamente
+su `origin/main` un **pass di game-feel sul motore** — infortuni/salvataggio/calendario trofei
+nazionale/normalizzazione per-stagione corretti perché "mentivano" al giocatore, offerte di
+trasferimento "curate" (non più uniformi casuali), pesi di categoria come conseguenza dello stato
+del giocatore, e 3 meccaniche nuove (partita decisiva di campionato, riconversione di ruolo da
+declino fisico, relazioni NPC leggere mister/agente/rivale) — trovato e documentato in memoria
+(mai scritto dall'autore originale) durante una sessione di rilascio, poi pubblicato come
+**v0.11.0**. Nessuna delle nuove meccaniche verificata dal vivo nel browser in questa sessione.
+Vedi [[decisions]], [[sprint]] e [[tech-debt]].
 
 ## File memoria (carica su richiesta)
 > `@file.md` = import Claude · `[[file]]` = wikilink Obsidian (graph). Tieni entrambi.

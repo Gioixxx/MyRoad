@@ -1,7 +1,7 @@
 ---
 type: tech-debt
 tags: [memory, tech-debt]
-updated: [2026-08-11]
+updated: [2026-08-12]
 ---
 
 # Tech Debt
@@ -259,9 +259,37 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
   occorrenza non gated da `lg:`/altro breakpoint sia intenzionale, invece di continuare a
   scoprirli uno alla volta durante i playtest.
 
+### Pass di game-feel v0.11.0 (partita decisiva, relazioni NPC, riconversione da declino, favore in grigio) non verificato end-to-end nel browser
+- **Priorità:** Media
+- **Area:** `lib/career/relations.ts`, `lib/career/loop.ts` (decisive-match), `lib/career/decisions.ts` (riconversione da declino, favore in grigio dell'agente)
+- **Data:** 2026-08-12
+- **Descrizione:** il commit `8dac3bd` (vedi [[decisions]], "Pass di game-feel sul motore...")
+  arrivato da una sessione parallela e rilasciato come v0.11.0 in questa sessione — verificato solo
+  via 501 test automatici + `tsc`/lint, **nessuna carriera giocata a mano**. Tutte le meccaniche
+  RNG/stato-gated non sono mai state osservate renderizzate: partita decisiva di campionato
+  (OVR≥75, prestige club≥2, 12%/ciclo), il mister che propone un cambio ruolo se affinità≥1, il
+  "favore in grigio" dell'agente se affinità≤-1, il rivale che compare (OVR≥78 o 4+ cicli nello
+  stesso club), la riconversione di ruolo da declino fisico (età≥29, calo pace/physical≥6 dal
+  picco). I chip "Mister"/"Agente"/"Rivale" + affinità su `PlayerCard` e la riga "perché"
+  (`prospectStatusLine`) non sono mai stati visti a schermo. Le offerte "curate" (non-RNG-gated,
+  sempre visibili) e il focus di allenamento cliccabile sono a rischio più basso essendo
+  deterministici, ma nemmeno quelli osservati in questa sessione.
+- **Perché rimandato:** sessione di rilascio (bump versione + build exe/apk + memoria), non di
+  playtest — stessa convenzione già seguita altre volte nel progetto per sessioni di questo tipo.
+- **Impatto:** rischio medio-alto rispetto ad altre voci simili in questo file — è il primo pass
+  di game-feel scritto da una sessione **esterna** (Cursor) mai passata da una revisione umana o
+  di un altro agente prima del rilascio; un bug di wiring UI (es. un chip che non appare mai, un
+  hint che mostra il testo sbagliato) sarebbe visibile solo giocando abbastanza a lungo da
+  incontrare ciascuna meccanica.
+- **Risoluzione suggerita:** giocare una carriera forzando via `localStorage` (stesso metodo già
+  usato altre volte nel progetto) OVR≥78 in un club di prestigio ≥2 per osservare partita
+  decisiva + rivale; accumulare cicli/eventi per vedere l'affinità mister/agente muoversi nei due
+  versi e innescare gli eventi condizionati; forzare età≥29 con attributi pace/physical già calati
+  per vedere la riconversione di ruolo.
+
 ## Priorità
 - **Alta:** —
-- **Media:** — (tutti gli item precedentemente in questa fascia chiusi in blocco il 2026-08-11 su decisione utente, vedi nota in cima al file)
+- **Media:** pass di game-feel v0.11.0 non verificato nel browser (vedi sopra)
 - **Bassa:** pattern `min-h-0` non condizionato ricorrente (vedi sopra)
 
 ## Archiviato

@@ -1,7 +1,7 @@
 ---
 type: sprint
 tags: [memory, sprint]
-updated: [2026-08-10]
+updated: [2026-08-12]
 ---
 > Aggiornato da /sprint — sessione 2026-08-06: espansione mondo (12 nuovi paesi, 96 club reali su
 > CONCACAF/CAF/AFC) + nuova meccanica "Giant Killer" (sorpresa di coppa) + strumento diagnostico
@@ -610,6 +610,26 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   fallita per `JAVA_HOME` non impostato nell'ambiente della sessione — risolto puntando al JBR
   incluso in Android Studio (`C:\Program Files\Android\Android Studio\jbr`), non serve un JDK
   standalone separato su questa macchina.
+
+- [x] **Pass di game-feel sul motore (commit da sessione parallela) + release v0.11.0**
+  (2026-08-12, commit `8dac3bd` co-autore Cursor + `5082682` bump versione + tag v0.11.0): trovato
+  `8dac3bd` già pushato su `origin/main` a inizio sessione (`/session-start`) mentre l'utente
+  chiedeva di rilasciare una nuova versione e aggiornare la memoria con le modifiche dell'ultimo
+  commit — letto per intero il diff (28 file) per ricostruire il ragionamento prima di scriverlo
+  in memoria, dato che non era mai stato documentato. Contenuto: fix di infortuni/salvataggio/
+  calendario trofei nazionale/normalizzazione per-stagione che "mentivano" al giocatore, offerte
+  di trasferimento "curate" invece che uniformi casuali, pesi di categoria come conseguenza dello
+  stato del giocatore, 3 meccaniche nuove (partita decisiva di campionato, riconversione di ruolo
+  da declino fisico, relazioni NPC leggere mister/agente/rivale), focus di allenamento diretto via
+  click, badge versione in ogni schermata. Vedi [[decisions]] per il dettaglio completo.
+  `STORAGE_VERSION` 11→14. 501 test (era 446), `tsc` pulito; rimossi 2 warning `no-unused-vars`
+  residui in `trophies.test.ts` prima del rilascio. Bump `package.json`/`package-lock.json`
+  0.10.0→**0.11.0** (minor), `dist/MyRoad.exe` (FileVersion 0.11.0.0) e `dist/MyRoad.apk`
+  (versionCode 1100/versionName 0.11.0, firma verificata) rigenerati e allegati alla [release
+  GitHub v0.11.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.11.0). **Non verificato
+  manualmente nel browser** — nessuna delle meccaniche RNG/stato-gated introdotte da questo commit
+  è stata osservata a schermo in questa sessione (sessione di rilascio, non di playtest) — vedi
+  [[tech-debt]].
 
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
