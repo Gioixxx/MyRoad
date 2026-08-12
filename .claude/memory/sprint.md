@@ -587,6 +587,17 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   l'attivazione della clausola, negoziazione clausola più alta verificata all'esatto moltiplicatore
   atteso).
 
+- [x] **Simulazione mobile via iframe iniettato + 3 fix di visualizzazione** (2026-08-12, commit
+  555e7c8): su richiesta esplicita dell'utente, nuova tecnica di test mobile in questo ambiente
+  browser (iframe 390×844 iniettato, dato che `resize_window` non altera il viewport reale) — ha
+  trovato e corretto 3 bug: "Storico" collassabile a ~2px (`CareerGame.tsx`), bottone "Conferma
+  identità" prima del campo obbligatorio "Ruolo in campo" (`IdentityForm.tsx`, ha smascherato lo
+  stesso bug min-h-0 anche sul selettore ruoli), nomi trofeo/premio troncati illeggibili
+  (`CareerSummary.tsx`). Vedi [[decisions]] per il dettaglio completo. 446 test invariati, `tsc`/
+  lint puliti. Verificato sia su iframe mobile sia su viewport desktop (nessuna regressione al
+  layout a 3 colonne di `IdentityForm`). Rilasciato insieme al commit `57eb69f` (fit tattico +
+  agenti, sessione precedente non ancora taggata) come **v0.10.0**.
+
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
 - `ClubStint` ora ha un campo `ovr` (OVR del giocatore alla fine di quel ciclo) — necessario per la CareerTable, che deve mostrare l'OVR storico per riga, non quello attuale

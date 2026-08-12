@@ -581,3 +581,58 @@ Registro scelte tecniche con motivazioni.
   "clause-activation" scattato naturalmente (non forzato via localStorage) con entrambi i
   percorsi verificati (accetta trasferimento / il procuratore respinge e la clausola sale
   ×1.4), evento "agent" scattato subito dopo con "Clausola più alta" verificata ×1.3 esatto.
+
+### Simulazione mobile in browser via iframe + 3 fix di visualizzazione trovati e corretti
+- **Data:** 2026-08-12
+- **Decisione:** su richiesta esplicita dell'utente di aprire l'app "come su un dispositivo
+  mobile", scoperto che `resize_window` del tool browser non altera il viewport di rendering
+  reale in questo ambiente (`window.innerWidth` restava 1600 nonostante l'API dichiarasse
+  successo — stessa limitazione già documentata l'11/08 per `resize_window`, mai aggirata prima
+  d'ora). **Nuova tecnica di verifica**: iniettare un iframe 390×844 (`document.documentElement.innerHTML`
+  con `<iframe style="width:390px;height:844px">` puntato a `localhost:3000`) — un iframe ha un
+  proprio viewport indipendente per le media query CSS, quindi i breakpoint Tailwind rispondono
+  correttamente. Giocata una carriera reale end-to-end (creazione → offerte → decisioni →
+  ritiro forzato via `localStorage` age=39/41 per accelerare) più una carriera lunga giocata
+  manualmente dall'utente in parallelo nella stessa tab, trovando 3 problemi:
+  1. **"Storico" collassabile a ~2px** (`CareerGame.tsx:670`): `min-h-0` non condizionato a `lg:`
+     sul wrapper `overflow-y-auto` della colonna Storico — stesso identico meccanismo di
+     compressione già scoperto e risolto in altri punti del progetto in v0.7.1 (vedi
+     [[decisions-archive]]), qui dimenticato quando Storico è stato spostato in terza colonna
+     l'8/8. Riproducibile solo quando la colonna decisione è alta (es. 4 offerte) — con contenuto
+     più corto il wrapper si dimensiona correttamente, il che ne aveva probabilmente mascherato
+     la scoperta finora.
+  2. **Bottone "Conferma identità" prima del campo obbligatorio "Ruolo in campo"**
+     (`IdentityForm.tsx`): la griglia a 3 colonne (`lg:grid-cols-[auto_1fr_auto]`) collassa in
+     colonna singola sotto `lg:` seguendo l'ordine del DOM, e il bottone era annidato alla fine
+     della colonna campi (prima della colonna Ruolo). Fix: bottone spostato fuori dalla colonna
+     campi come 4° item di griglia indipendente, con posizionamento esplicito solo su desktop
+     (`lg:col-start-2 lg:row-start-2` + `lg:row-span-2` su Cartellino e Ruolo per mantenere
+     l'altezza) — **ha smascherato lo stesso bug min-h-0 al punto 1** anche sul contenitore
+     "Ruolo in campo" stesso (`flex min-h-0 min-w-0 flex-col gap-1.5 ...`): prima invisibile
+     perché era l'ultimo elemento della griglia (il contenuto "traboccava" comunque in fondo senza
+     nulla sotto da sovrapporre), ora che il bottone veniva dopo si sovrapponeva visivamente al
+     selettore ruoli. Stesso fix (`lg:min-h-0`).
+  3. **Nomi trofeo/premio troncati illeggibili** (`CareerSummary.tsx:377,389`, es. "Taça de
+     Portugal..." senza club né età): la card "Trofei e premi" usa `truncate` (una riga, ellissi)
+     su ogni voce — pensato per quando la card aveva più larghezza; con la card affiancata a
+     "Nazionale" in griglia 2 colonne (fix precedente, commit `1127b09`) lo spazio si è dimezzato
+     e anche un nome breve viene tagliato. Il contenitore `<ul>` ha già `overflow-y-auto`, quindi
+     rimuovere `truncate` (permettendo il wrap su più righe) risolve senza bisogno di altro.
+  Tutti e 3 riproducibili in modo consistente, verificati via `getBoundingClientRect()`/
+  `scrollHeight` sul DOM reale (non solo a vista) prima di considerarli confermati — stesso
+  standard di verifica già consolidato nel progetto per bug di layout mobile (vedi v0.7.1).
+- **Perché:** la scoperta della tecnica "iframe iniettato" è il punto più riutilizzabile di questa
+  sessione — sblocca la verifica mobile via breakpoint CSS reali in questo ambiente browser anche
+  senza un dispositivo fisico o un vero device emulation di DevTools, cosa che finora richiedeva
+  sempre un dispositivo Android reale via ADB. Il fatto che il bug min-h-0 sia stato trovato una
+  SECONDA volta (dopo v0.7.1) in un punto diverso del codice conferma che è un pattern facile da
+  reintrodurre per errore — ogni nuovo `min-h-0` va sempre accompagnato dal prefisso `lg:` a meno
+  di un motivo esplicito per volerlo attivo anche sotto quel breakpoint.
+- **Alternative:** nessuna — bug reali con causa isolata univocamente, un solo modo ragionevole di
+  correggerli (allineare al pattern `lg:min-h-0` già usato ovunque nel resto del file/progetto).
+- **Impatto:** `src/components/features/career/CareerGame.tsx`,
+  `src/components/features/career/IdentityForm.tsx`,
+  `src/components/features/career/CareerSummary.tsx`. 446 test invariati, `tsc --noEmit`/lint
+  puliti. **Verificato sia su iframe 390px (ordine corretto, Storico/Ruolo non più collassati,
+  trofeo leggibile) sia su una tab a piena larghezza (>1024px, layout a 3 colonne di
+  `IdentityForm` invariato)** — nessuna regressione desktop.

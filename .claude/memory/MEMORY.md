@@ -62,6 +62,11 @@ tattico col club** (sistema tattico per club derivato proceduralmente, nessun nu
 **contratti/potere degli agenti** (clausola rescissoria con trigger forzato reale, bonus alla
 firma, negoziazione col procuratore) — le altre 5 dinamiche mappate come già parzialmente coperte
 o rimandate a [[backlog]] su richiesta esplicita. Vedi [[decisions]] per il dettaglio completo.
+Nella stessa giornata (sessione successiva): una simulazione mobile via iframe iniettato (nuova
+tecnica di test in questo ambiente, dato che `resize_window` non altera il viewport reale) ha
+trovato e corretto 3 bug di visualizzazione (Storico collassabile, ordine campo/bottone nel form
+identità, nomi trofeo troncati) — rilasciata insieme al fit tattico/agenti come v0.10.0. Vedi
+[[decisions]] e [[sprint]].
 
 ## File memoria (carica su richiesta)
 > `@file.md` = import Claude · `[[file]]` = wikilink Obsidian (graph). Tieni entrambi.
