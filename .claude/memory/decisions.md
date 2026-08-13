@@ -1,7 +1,7 @@
 ---
 type: decisions
 tags: [memory, architecture]
-updated: [2026-08-12]
+updated: [2026-08-14]
 ---
 
 # Decisioni Architetturali
@@ -783,3 +783,96 @@ Registro scelte tecniche con motivazioni.
   build locale identica (`adb install -r` di una `assembleRelease` con la stessa chiave, non
   taggata né pubblicata) per farla vedere subito — questa release la allinea formalmente al
   canale pubblico/auto-updater.
+
+### Classifica globale cross-utente — prima feature di rete del progetto (Supabase) — release v0.12.0
+- **Data:** 2026-08-13/14
+- **Decisione:** su richiesta esplicita dell'utente ("possiamo fare una sorta di classifica di
+  tutti gli utenti che giocano al gioco"), implementata la prima funzionalità di rete del progetto
+  — finora il gioco era interamente locale (`localStorage`, zero `fetch`/dipendenze di rete in
+  `src/`). Sessione di piano completo con ricerca preliminare (3 agenti Explore + 1 agente Plan)
+  seguita da diverse iterazioni di correzione **durante** l'implementazione, ognuna su richiesta
+  diretta dell'utente. Decisioni chiave, in ordine cronologico:
+  1. **Backend: Supabase** (Postgres + PostgREST), scelto tra 3 opzioni proposte via
+     `AskUserQuestion` (alternative: Cloudflare Workers+D1, Firebase Firestore) — nessun server
+     custom da scrivere/mantenere, RLS al posto di un livello di validazione applicativo.
+     **Database condiviso con un'altra applicazione dell'utente** — vincolo esplicito "non
+     cancellare nulla, aggiungi solo quello che ti serve": ogni oggetto nuovo ha prefisso
+     `myroad_` per escludere collisioni di namespace nello schema `public` condiviso.
+  2. **Identità: nickname libero, nessun account/login** (scelto tra 3 opzioni) — identità
+     anonima per-dispositivo (`device_id`, `crypto.randomUUID()` generato pigramente al primo
+     uso, persistito in `carriera:leaderboard-settings`). **Reso obbligatorio in corsa** (non
+     solo opzionale in Impostazioni come pianificato inizialmente): campo richiesto anche in
+     `IdentityForm.tsx`, non si può iniziare una carriera senza — motivo dell'utente: altrimenti
+     molti giocatori non lo avrebbero mai impostato e sarebbero rimasti fuori dalla classifica,
+     vanificando lo scopo "classifica di tutti gli utenti".
+  3. **Formato: 4 categorie stile Hall of Fame** (OVR più alto/più trofei/più ricco/più popolare),
+     non un punteggio composito — riusa esattamente gli stessi 4 assi della Hall of Fame locale
+     già esistente (`computeHallOfFame` in `satisfaction.ts`), ora globale invece che per-browser.
+  4. **Pubblicazione: automatica alla fine di ogni carriera, non un bottone** — cambiato in corsa
+     su richiesta esplicita ("l'invio deve essere automatico una volta finita la carriera"),
+     ribaltando la scelta iniziale (bottone "Pubblica il tuo punteggio" con stati idle/loading/
+     done/error). Effect dedicato in `CareerGame.tsx` (guardia `useRef`, stesso pattern di
+     `archivedRef` in `useCareerGame.ts` per l'archivio locale), `CareerSummary.tsx` reso
+     puramente passivo (riceve `publishStatus`, mostra solo una riga di testo inline).
+  5. **Consolidamento per dispositivo: dominanza di Pareto, non un criterio singolo** — prima
+     versione: una sola riga per `device_id`, sostituita solo se il nuovo OVR di picco era più
+     alto. **Corretto in corsa** su segnalazione dell'utente ("come ci comportiamo se ovr basso
+     ma più patrimonio o più trofei?"): con un solo criterio, una carriera con OVR basso ma tanti
+     trofei/patrimonio non entrava mai in classifica in nessuna categoria. Sostituito con
+     dominanza di Pareto sui 4 assi (OVR/trofei/patrimonio/popolarità): un dispositivo può avere
+     fino a una riga per specialità, un insert viene scartato solo se dominato su *tutti* gli assi
+     da una carriera già salvata dello stesso dispositivo.
+  6. **Propagazione nickname per dispositivo** — problema trovato dall'utente: con la dominanza
+     di Pareto, cambiare nickname nelle Impostazioni lasciava le righe vecchie con il nome
+     precedente, facendo apparire la stessa persona come account diversi. Risolto estendendo lo
+     stesso trigger: ogni insert (anche quello scartato) sincronizza il nickname corrente su
+     *tutte* le righe esistenti dello stesso `device_id`.
+  7. **Vista pubblica senza `device_id`** — analizzando il problema precedente, trovato un rischio
+     collegato non richiesto esplicitamente: la lettura pubblica (`select=*`) esponeva `device_id`
+     a chiunque ispezionasse le richieste di rete, raccoglibile per poi spoofare quel dispositivo.
+     Confermato con l'utente (`AskUserQuestion`) di chiuderlo nello stesso giro: nuova vista
+     `myroad_leaderboard_public` (colonne senza `device_id`/`client_entry_id`), policy di lettura
+     rimossa dalla tabella base, lettura pubblica spostata sulla vista.
+  8. **Vulnerabilità reale trovata e corretta durante la verifica della vista** (non pianificata,
+     scoperta testando dal vivo contro il DB reale): la vista, creata senza `security_invoker`
+     (per bypassare intenzionalmente la RLS in lettura), bypassava la RLS **anche in scrittura** —
+     Supabase concede di default privilegi ampi (INSERT/UPDATE/DELETE) ad `anon` su ogni nuovo
+     oggetto dello schema `public`, e avere concesso solo `grant select` non revocava quel default
+     preesistente. Confermato in pratica con `PATCH`/`DELETE` diretti sull'endpoint della vista:
+     un nickname è stato riscritto da remoto e una riga di test cancellata, prima di applicare
+     `revoke insert, update, delete on ... from anon` e riverificare (401 "permission denied" su
+     tutti e tre dopo il fix). Vedi `supabase/schema.sql` per la nota di avviso lasciata nel file.
+- **Perché:** ogni correzione in corsa è nata da un problema reale sollevato dall'utente durante
+  l'implementazione (mai anticipato a priori) — coerente con l'approccio "harness/verifica prima,
+  poi correggi" già consolidato nel progetto, qui applicato per la prima volta a un sistema con
+  stato condiviso cross-utente invece che al solo bilanciamento numerico locale.
+- **Alternative:** upsert lato client con policy RLS `UPDATE` per `anon` (per il consolidamento
+  per-dispositivo) — scartata: avrebbe richiesto una policy `using (true)` troppo permissiva,
+  permettendo a chiunque di sovrascrivere la riga di un altro conoscendone il `device_id`. Preferita
+  la soluzione con trigger `SECURITY DEFINER` (`myroad_leaderboard_keep_best`), che opera sempre e
+  solo sul `device_id` della riga in inserimento, mantenendo `anon` privo di qualunque grant
+  `UPDATE`/`DELETE` diretto sulla tabella per tutta la sessione.
+- **Impatto:** `supabase/schema.sql` (nuovo — tabella, indici, RLS, vista, trigger, tutto
+  documentato con il ragionamento inline), `.env` (nuovo, committato di proposito — chiave
+  pubblicabile Supabase, pensata per essere esposta lato client), `.gitignore` (`.env` ora
+  trackabile), `src/lib/leaderboard/{types,settings,client}.ts` (+test), `src/hooks/
+  useLeaderboardSettings.ts`, `src/components/features/career/Leaderboard.tsx` (+test), `
+  CareerGame.tsx`/`CareerSummary.tsx`/`SettingsPanel.tsx`/`IdentityForm.tsx` (+test) per il
+  wiring UI. Nessuna dipendenza nuova in `package.json` (fetch nativo, non `@supabase/supabase-js`
+  — SDK sovradimensionato per 2 sole operazioni REST). 543 test verdi, `tsc`/eslint puliti (solo i
+  4 warning pre-esistenti `react-hooks/set-state-in-effect`, invariati). **Verificato
+  approfonditamente dal vivo contro il progetto Supabase reale** (non solo test automatici) prima
+  del rilascio: dominanza di Pareto, propagazione nickname, RLS su tabella base e vista, `CHECK`
+  fuori range, tutti i vettori di scrittura sulla vista (INSERT/UPDATE/DELETE) prima e dopo la
+  `revoke`, submit+fetch reali su GitHub Pages dal sito pubblicato (non solo `localhost`). Bump
+  `package.json`/`package-lock.json` 0.11.1→**0.12.0** (minor, prima feature di rete del
+  progetto), `APP_RELEASE_DATE_ISO` aggiornato in `src/constants/app-info.ts`, `dist/MyRoad.exe`
+  (FileVersion 0.12.0.0) e `dist/MyRoad.apk` (versionCode 1200/versionName 0.12.0, firma
+  verificata con la stessa chiave stabile del progetto) rigenerati e allegati alla [release
+  GitHub v0.12.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.12.0). **Non verificato**: exe
+  desktop aperto e processo avviato correttamente, ma senza conferma visiva che submit/fetch
+  funzionino da quel runtime specifico (nessuno strumento disponibile in sessione per
+  ispezionare una finestra WebView2 nativa) — rischio basso, stesso bundle statico già verificato
+  su web e già noto per non avere restrizioni di rete specifiche (vedi ricerca iniziale di questa
+  feature), ma resta un gap di verifica per una sessione futura. Tabella di produzione ripulita
+  dai dati di test dall'utente stesso via Table Editor prima del rilascio.

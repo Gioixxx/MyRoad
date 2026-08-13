@@ -1,7 +1,7 @@
 ---
 type: sprint
 tags: [memory, sprint]
-updated: [2026-08-13]
+updated: [2026-08-14]
 ---
 > Aggiornato da /sprint — sessione 2026-08-06: espansione mondo (12 nuovi paesi, 96 club reali su
 > CONCACAF/CAF/AFC) + nuova meccanica "Giant Killer" (sorpresa di coppa) + strumento diagnostico
@@ -648,6 +648,30 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   `dist/MyRoad.exe` (FileVersion 0.11.1.0) e `dist/MyRoad.apk` (versionCode 1101/versionName
   0.11.1, firma verificata) rigenerati e allegati alla [release GitHub
   v0.11.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.11.1).
+
+- [x] **Classifica globale cross-utente (Supabase) + release v0.12.0** (2026-08-13/14, commit
+  `fb2a926` feature + `c9effa6` bump versione + tag v0.12.0): prima feature di rete del progetto,
+  su richiesta esplicita dell'utente. Backend Supabase (database condiviso con un'altra
+  applicazione, tutti gli oggetti nuovi con prefisso `myroad_`), nickname obbligatorio per
+  iniziare una carriera, pubblicazione automatica al ritiro, 4 categorie stile Hall of Fame
+  tenute per dispositivo con dominanza di Pareto (non un criterio singolo) e nickname
+  sincronizzato su tutte le righe dello stesso dispositivo. Diverse correzioni fatte in corsa su
+  segnalazione dell'utente durante l'implementazione stessa (identità obbligatoria, dominanza di
+  Pareto al posto del solo OVR, propagazione nickname, vista pubblica senza `device_id`) — e una
+  vulnerabilità reale trovata e corretta durante la verifica finale (la vista bypassava la RLS
+  anche in scrittura, non solo in lettura). Vedi [[decisions]] per il dettaglio completo di ogni
+  correzione e del ragionamento di sicurezza. 543 test verdi, `tsc`/eslint puliti (solo i 4
+  warning pre-esistenti, invariati). **Verificato in modo insolitamente approfondito prima del
+  rilascio** (non solo test automatici): decine di chiamate dirette contro il progetto Supabase
+  reale per verificare RLS/CHECK/trigger/vista prima e dopo ogni fix, submit+fetch reali
+  confermati sia su `localhost` sia sul sito GitHub Pages pubblicato dopo il deploy automatico.
+  Bump `package.json`/`package-lock.json` 0.11.1→**0.12.0** (minor), `APP_RELEASE_DATE_ISO`
+  aggiornato, `dist/MyRoad.exe` (FileVersion 0.12.0.0) e `dist/MyRoad.apk` (versionCode
+  1200/versionName 0.12.0, firma verificata) rigenerati e allegati alla [release GitHub
+  v0.12.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.12.0). **Non verificato**: submit/
+  fetch reali dall'eseguibile desktop (avviato con successo, ma nessuno strumento disponibile in
+  sessione per ispezionare la finestra WebView2 nativa) — rischio basso, stesso bundle statico già
+  verificato su web, ma resta un gap per una sessione futura.
 
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo

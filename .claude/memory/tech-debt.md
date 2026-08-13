@@ -1,7 +1,7 @@
 ---
 type: tech-debt
 tags: [memory, tech-debt]
-updated: [2026-08-12]
+updated: [2026-08-14]
 ---
 
 # Tech Debt
@@ -287,10 +287,32 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
   versi e innescare gli eventi condizionati; forzare età≥29 con attributi pace/physical già calati
   per vedere la riconversione di ruolo.
 
+### Classifica globale v0.12.0 non verificata dall'eseguibile desktop
+- **Priorità:** Bassa
+- **Area:** `launcher/MyRoadLauncher/` (WebView2), `src/lib/leaderboard/client.ts`
+- **Data:** 2026-08-14
+- **Descrizione:** la classifica globale (vedi [[decisions]], "Classifica globale cross-utente")
+  è stata verificata approfonditamente su `localhost` e sul sito GitHub Pages pubblicato (submit
+  reali + fetch reali contro il progetto Supabase). L'eseguibile desktop è stato avviato con
+  successo (processo partito, titolo finestra corretto) ma **senza conferma visiva** che
+  submit/fetch funzionino da quella finestra WebView2 nativa — nessuno strumento disponibile in
+  sessione per ispezionarla (non è un tab Chrome).
+- **Perché rimandato:** rischio basso — è lo stesso identico bundle statico già verificato
+  funzionante su web, e la ricerca iniziale di questa feature aveva già confermato che il loopback
+  server del launcher (`EmbeddedStaticServer.cs`) non ha CSP/restrizioni di rete che potrebbero
+  bloccare un `fetch()` esterno.
+- **Impatto:** minimo — se ci fosse un problema specifico al runtime WebView2, si scoprirebbe alla
+  prima carriera giocata sull'exe da un utente reale (comportamento identico su web/Android già
+  verificato, nessun codice diverso per piattaforma).
+- **Risoluzione suggerita:** in una futura sessione, aprire `dist/MyRoad.exe`, giocare una
+  carriera fino al ritiro e verificare a schermo lo stato "Punteggio pubblicato ✓", poi controllare
+  la schermata Classifica.
+
 ## Priorità
 - **Alta:** —
 - **Media:** pass di game-feel v0.11.0 non verificato nel browser (vedi sopra)
-- **Bassa:** pattern `min-h-0` non condizionato ricorrente (vedi sopra)
+- **Bassa:** pattern `min-h-0` non condizionato ricorrente; classifica globale non verificata
+  dall'eseguibile desktop (vedi sopra)
 
 ## Archiviato
 - **Convocazione in nazionale salita da ~25% a ~37% come effetto collaterale della Fase 5 (soglie PlayStyle)** — risolto 2026-08-12: nella sessione di confronto plausibilità gioco-vs-realtà (vedi [[decisions]]), `TARGETMAN_CALLUP_BONUS` in `playstyles.ts` dimezzato prima a 0.04 (misurato 31.8%, ancora leggermente sopra la fascia target 20-30%) poi affinato a 0.03, misurato **28.4%** con `npm run simulate` — dentro la fascia 20-30% e vicino al ~25-28% tarato deliberatamente prima della deriva. Trofeo di club (82.1%) e trofeo di nazionale (5.5%) invariati nella stessa run, a conferma che il fix è isolato alla sola convocazione. 399 test verdi, `tsc` pulito.

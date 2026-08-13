@@ -1,14 +1,14 @@
 ---
 type: memory
 tags: [memory, index]
-updated: [2026-08-13]
+updated: [2026-08-14]
 ---
 
 # My Road - L'Ascesa — Next.js
 > Contesto persistente. Aggiornato da /remember. Vault Obsidian: vedi workflows/obsidian-vault.md.
 > Progetto rinominato da "Carriera" a "My Road - L'Ascesa" il 2026-08-07 — vedi [[decisions]] per il dettaglio del rename (repo GitHub, launcher/exe, UI). La cartella locale del repo resta fisicamente `C:\Dev\Carriera` (non rinominata, solo il nome logico del progetto/repo GitHub).
 
-**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso  **Aggiornamento:** 2026-08-13 (v0.11.1 — cartellino mobile richiudibile)
+**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android) · Supabase (classifica)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso  **Aggiornamento:** 2026-08-14 (v0.12.0 — classifica globale)
 
 ## Contesto
 Clone testuale di "Copero — Simulador de carrera" (https://copero.com.ar/juegos/simulador-carrera):
@@ -88,6 +88,18 @@ Vedi [[decisions]], [[sprint]] e [[tech-debt]].
 - @adr.md — [[adr]] — ADR formali
 
 ## Segnalibri critici
+- **Classifica globale (2026-08-13/14) su un progetto Supabase CONDIVISO con un'altra
+  applicazione dell'utente** (`https://jltfsljuysbipihnjkpn.supabase.co`) — qualunque futura
+  modifica allo schema deve usare il prefisso `myroad_` e non toccare mai oggetti senza quel
+  prefisso. `supabase/schema.sql` è il riferimento canonico ma **non va rieseguito per intero**
+  su un DB che ce l'ha già in parte (fallirebbe su `create table`) — solo blocchi incrementali
+  mirati, come fatto 3 volte in questa sessione. `device_id` (identità anonima per-dispositivo)
+  **non deve mai essere esposto in lettura pubblica** — vive solo nella tabella base, mai nella
+  vista `myroad_leaderboard_public`. **Attenzione se si crea una nuova vista pubblica su Supabase**:
+  concedere solo `grant select` non basta, serve sempre anche `revoke insert, update, delete ...
+  from anon` esplicito — Supabase concede privilegi ampi di default su ogni nuovo oggetto, e una
+  vista senza `security_invoker` bypassa la RLS della tabella sottostante anche in scrittura, non
+  solo in lettura (vulnerabilità reale trovata e corretta in questa sessione, vedi [[decisions]]).
 - **Rinominato "Carriera" → "My Road - L'Ascesa" (2026-08-07)**: repo GitHub `Gioixxx/Carriera` → `Gioixxx/MyRoad` (con redirect automatico di GitHub), launcher .NET `launcher/MyRoadLauncher/` (era `CarrieraLauncher`), eseguibile `dist/MyRoad.exe` (era `Carriera.exe`), `package.json` name `my-road`, titolo browser/wordmark in-game "My Road - L'Ascesa" — vedi [[decisions]] per l'elenco completo dei file toccati. **La cartella locale resta `C:\Dev\Carriera`** (non rinominata sul filesystem).
 - **Repo pubblica dal 2026-08-05** (era privata) — da qui in poi ogni nuovo asset/scelta (immagini, exe in `dist/`, licenze) va valutato assumendo visibilità pubblica, non più "solo io la vedo".
 - Il piano di implementazione dettagliato vive FUORI dal repo, in `C:\Users\Gioix\.claude\plans\piped-bouncing-cocke.md` — leggerlo prima di riprendere lo sviluppo, contiene le meccaniche osservate su 10+ carriere giocate sul sito originale.
