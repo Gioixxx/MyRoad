@@ -1,7 +1,7 @@
 ---
 type: sprint
 tags: [memory, sprint]
-updated: [2026-08-12]
+updated: [2026-08-13]
 ---
 > Aggiornato da /sprint — sessione 2026-08-06: espansione mondo (12 nuovi paesi, 96 club reali su
 > CONCACAF/CAF/AFC) + nuova meccanica "Giant Killer" (sorpresa di coppa) + strumento diagnostico
@@ -630,6 +630,24 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   manualmente nel browser** — nessuna delle meccaniche RNG/stato-gated introdotte da questo commit
   è stata osservata a schermo in questa sessione (sessione di rilascio, non di playtest) — vedi
   [[tech-debt]].
+
+- [x] **Cartellino mobile richiudibile + release v0.11.1** (2026-08-13, commit `9ae4776` +
+  `e5af013` + `8bbdbae` bump versione + tag v0.11.1): su segnalazione diretta dell'utente
+  ("mostriamo un botto di informazioni... dobbiamo rendere più semplice") dopo aver aperto il
+  gioco in un iframe mobile 390×844 e giocato alcuni cicli reali, collassato in `PlayerCard.tsx`
+  tutto il contenuto secondario del cartellino (valore/patrimonio/clausola/popolarità/attributi/
+  record/trofei-premi) dietro un toggle "Dettagli" chiuso di default sotto `lg:` — restano sempre
+  visibili solo nome/club/età/OVR/potenziale/obiettivo. A `lg:`+ (desktop) invariato. Ampiezza
+  scelta dall'utente tra 4 proposte (`AskUserQuestion`) — Storico e card di offerta/decisione
+  restano da alleggerire in un giro futuro, vedi [[backlog]]. Vedi [[decisions]] per il dettaglio
+  tecnico completo. 517 test invariati, `tsc`/eslint/prettier puliti. **Verificato dal vivo**
+  nell'iframe mobile (collassato/espanso, nessuna regressione desktop) — prima ancora del commit,
+  installata anche una build locale identica sul tablet fisico dell'utente via `adb install -r`
+  su richiesta esplicita ("aggiorna la versione al tablet per vedere le modifiche"). Bump
+  `package.json`/`package-lock.json` 0.11.0→**0.11.1** (patch, fix mirato a un solo componente),
+  `dist/MyRoad.exe` (FileVersion 0.11.1.0) e `dist/MyRoad.apk` (versionCode 1101/versionName
+  0.11.1, firma verificata) rigenerati e allegati alla [release GitHub
+  v0.11.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.11.1).
 
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo

@@ -773,3 +773,13 @@ Registro scelte tecniche con motivazioni.
   comportamento resti identico a prima (tutto sempre visibile, nessun bottone toggle) — nessuna
   regressione desktop. Storico e card di offerta/decisione **non toccate** in questo giro — vedi
   [[backlog]], restano le prossime candidate se l'utente vuole proseguire l'alleggerimento.
+- **Aggiornamento stesso giorno — rilasciato come v0.11.1**: bump `package.json`/
+  `package-lock.json` 0.11.0→0.11.1 (patch: fix mirato a un solo componente, coerente col
+  criterio già usato per interventi di questa dimensione). `dist/MyRoad.exe` (FileVersion
+  0.11.1.0) e `dist/MyRoad.apk` (versionCode 1101/versionName 0.11.1, firma verificata con
+  `apksigner verify --print-certs` — stessa chiave stabile del progetto) rigenerati e allegati
+  alla [release GitHub v0.11.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.11.1). Prima di
+  questo giro, l'app installata sul tablet fisico dell'utente era già stata aggiornata con una
+  build locale identica (`adb install -r` di una `assembleRelease` con la stessa chiave, non
+  taggata né pubblicata) per farla vedere subito — questa release la allinea formalmente al
+  canale pubblico/auto-updater.
