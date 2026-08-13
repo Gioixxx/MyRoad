@@ -18,19 +18,25 @@ Funzionalità e idee a lungo termine. Prioritizzato pre-sprint → confluisce in
 
 ---
 
-### Alleggerimento informazioni mobile (solo visualizzazione mobile)
+### Alleggerimento informazioni mobile — Storico richiudibile + card decisione/offerta ridotte
 - **Priorità:** Media
 - **Tipo:** Miglioramento
-- **Area:** UI mobile, componenti in `src/components/features/career/` (viewport <lg)
-- **Descrizione:** su richiesta esplicita dell'utente (2026-08-12), semplificare/alleggerire le
-  informazioni mostrate **solo sotto il breakpoint mobile** per renderle più chiare e meno dense
-  — il layout desktop resta invariato. Nessun dettaglio implementativo ancora deciso (quali
-  schermate/quali informazioni tagliare o raggruppare), solo la direzione generale registrata.
-  Utile leggere prima [[conventions]] per la tecnica di test mobile in questo ambiente (iframe
-  390×844 iniettato) e [[tech-debt]] per il pattern `min-h-0` ricorrente sugli stessi componenti.
-- **Criteri accettazione:** da definire in una sessione dedicata con l'utente, prima di scegliere
-  quali schermate/informazioni toccare.
-- **Stima:** da definire.
+- **Area:** UI mobile, `src/components/features/career/CareerGame.tsx` (Storico), `DecisionPanel.tsx`/`OfferPanel.tsx`
+- **Descrizione:** primo pezzo di questo item (il cartellino, vedi [[decisions]] "Cartellino
+  mobile richiudibile", 2026-08-13) è **fatto**: su schermi sotto `lg:` il cartellino mostra solo
+  nome/club/età/OVR/potenziale/Obiettivo, il resto (valore/patrimonio/clausola/popolarità/
+  attributi/record/trofei) è dietro un toggle "Dettagli". Restano le altre 2 ampiezze proposte
+  all'utente e non scelte in quel giro (aveva optato per l'intervento più mirato): **Storico**
+  come sezione richiudibile (chiusa di default) invece di stare sempre disteso sotto la decisione
+  — su una carriera lunga è la sezione che cresce di più; **card di decisione/offerta ridotte**
+  (nome club + paese/lega sempre visibili, badge "Fit tattico" e motivazione (`offerReasonHint`)
+  mostrati solo al tocco invece che sempre stampati su ogni card).
+- **Criteri accettazione:** stesso standard già usato per il cartellino — verificare dal vivo
+  nell'iframe mobile 390×844 (vedi [[conventions]]) che il comportamento a `lg:`+ resti identico
+  a oggi (nessuna regressione desktop), test automatici invariati.
+- **Stima:** Piccola per lo Storico (stesso pattern toggle già scritto in `PlayerCard.tsx`,
+  riusabile), Piccola-media per le card decisione/offerta (tocca 2 componenti condivisi da più
+  categorie di decisione).
 
 ### Tre carriere giocabili: calciatore → allenatore → presidente
 - **Priorità:** Media

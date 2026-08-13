@@ -728,3 +728,48 @@ Registro scelte tecniche con motivazioni.
   alla [release GitHub v0.11.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.11.0). Build
   Android eseguita impostando `JAVA_HOME`/`ANDROID_HOME` manualmente nella sessione (stesso JBR di
   Android Studio già documentato per v0.10.0, non persistito nell'ambiente di default).
+
+### Cartellino mobile richiudibile — primo pezzo del backlog "alleggerimento informazioni mobile"
+- **Data:** 2026-08-13
+- **Decisione:** su segnalazione diretta dell'utente ("mostriamo un botto di informazioni...
+  dobbiamo rendere più semplice") dopo aver aperto il gioco in un iframe mobile 390×844 (stessa
+  tecnica di [[decisions-archive]], sessione 2026-08-12) e giocato alcuni cicli reali — confermato
+  che già la primissima schermata (offerta settore giovanile) impila timeline + cartellino
+  completo (OVR, potenziale, valore, patrimonio, clausola, popolarità, 5 barre attributi,
+  trofei/premi) + decisione, tutto senza gerarchia visiva. Proposte 4 ampiezze di intervento
+  all'utente (`AskUserQuestion`); scelta la più mirata: **solo il cartellino**. In `PlayerCard.tsx`
+  (usato con `compact` **solo** dal loop di gioco in `CareerGame.tsx`, nessun altro call site):
+  restano sempre visibili maglia/nome/club/età/OVR/potenziale + box Obiettivo; tutto il resto
+  (Valore/Patrimonio/Clausola/Popolarità, `AttributesPanel`, record di stagione, statistiche
+  presenze/gol/assist, contatore trofei/premi) è ora dentro un unico wrapper `<div>` richiudibile,
+  chiuso di default, dietro un bottone toggle "▾ Dettagli" con stato `detailsOpen` (`useState`).
+  Pattern CSS invece di rendering condizionale: `!showDetails ? "hidden lg:flex" : "flex"` sul
+  wrapper — a `lg:` (dove il loop passa al layout desktop a 3 colonne) resta **sempre** espanso e
+  il bottone toggle è nascosto (`lg:hidden`), esattamente come il comportamento preesistente;
+  sotto `lg:` (mobile **e** tablet, non solo telefono) parte chiuso. Rimossi in passaggio i vecchi
+  micro-toggle incoerenti che usavano la soglia `sm:` invece di `lg:` su `AttributesPanel`/record
+  grid/stats grid (create per un motivo diverso, la riga condensata valore+P·G·A ora ridondante
+  col nuovo toggle — eliminata) — tutta la sezione secondaria ora si apre/chiude come un blocco
+  unico invece di avere 3 soglie di breakpoint diverse e incoerenti tra loro.
+- **Perché:** `AttributesPanel` deve restare **interattivo** (click per impostare il focus di
+  allenamento, meccanica aggiunta nel pass di game-feel v0.11.0) anche su mobile — non poteva
+  essere semplicemente nascosto in permanenza sotto `lg:` come le altre sezioni, da qui la scelta
+  di un toggle esplicito invece di un CSS puro `hidden lg:flex` senza via di accesso su schermi
+  piccoli. Le altre 3 ampiezze proposte (Storico richiudibile, badge decisione/offerta ridotti al
+  tocco) restano deliberatamente fuori scope in questo giro — l'utente ha scelto l'intervento più
+  mirato, coerente con l'item di backlog già aperto ("da definire in una sessione dedicata...quali
+  schermate/informazioni toccare").
+- **Alternative:** rendering condizionale (`{showDetails ? <>...</> : null}`) invece di CSS
+  `hidden`/`flex` — scartato: smonterebbe/rimonterebbe `AttributesPanel` ad ogni toggle, perdendo
+  eventuali stati interni e rifacendo il lavoro di `useCountUp` sulle statistiche non necessario;
+  il pattern CSS-only (`hidden lg:flex`) è lo stesso già consolidato nel progetto per la
+  distinzione mobile/desktop (`lg:min-h-0`, `lg:grid-cols-[...]`), qui semplicemente combinato con
+  uno stato locale per il toggle sotto `lg:`.
+- **Impatto:** `src/components/features/career/PlayerCard.tsx` (unico file toccato). 517 test
+  invariati, `tsc --noEmit`/eslint/prettier puliti. **Verificato dal vivo** nell'iframe mobile
+  390px: cartellino ridotto da ~2 schermate a ~320px (nome/club/età/OVR/potenziale/Obiettivo),
+  toggle "Dettagli" apre/chiude correttamente tutta la sezione secondaria con la freccia che
+  ruota; verificato anche a piena larghezza (>1024px, layout desktop a 3 colonne) che il
+  comportamento resti identico a prima (tutto sempre visibile, nessun bottone toggle) — nessuna
+  regressione desktop. Storico e card di offerta/decisione **non toccate** in questo giro — vedi
+  [[backlog]], restano le prossime candidate se l'utente vuole proseguire l'alleggerimento.
