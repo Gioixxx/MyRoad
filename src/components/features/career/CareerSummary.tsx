@@ -3,11 +3,15 @@ import type { ArchivedCareer, Player } from "@/types/career";
 import { AWARD_LABELS } from "@/lib/career/award-labels";
 import { hallOfFameWinsFor, pickBestCareerTitle } from "@/lib/career/satisfaction";
 import { deriveShadowTitle } from "@/lib/career/shadow";
+import { buildArchiveEntry } from "@/lib/career/storage";
 import { peakOvr, summarizeClubHistory } from "@/lib/career/summary";
 import { ARCHETYPE_LABELS, deriveArchetype } from "@/lib/career/traits";
 import { PLAY_STYLE_LABELS } from "@/lib/career/playstyles";
+import { isLeaderboardConfigured } from "@/lib/leaderboard/client";
+import type { PublishStatus } from "@/lib/leaderboard/types";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { cn } from "@/lib/utils";
 import { AwardBadge } from "./AwardBadge";
 import { ClubCrest } from "./ClubCrest";
 import { CompetitionBadge } from "./CompetitionBadge";
@@ -35,7 +39,16 @@ interface CareerSummaryProps {
   player: Player;
   onRestart: () => void;
   archive?: ArchivedCareer[];
+  /** Pubblicazione automatica in classifica alla fine della carriera — vedi CareerGame.tsx. */
+  publishStatus: PublishStatus;
 }
+
+const PUBLISH_STATUS_TEXT: Partial<Record<PublishStatus, string>> = {
+  loading: "Pubblico il tuo punteggio in classifica…",
+  done: "Punteggio pubblicato in classifica ✓",
+  error: "Impossibile pubblicare il punteggio in classifica.",
+  "skipped-no-nickname": "Imposta un nickname nelle Impostazioni per comparire in classifica.",
+};
 
 function EmptyShowcase({ children }: { children: string }) {
   return (
@@ -46,7 +59,12 @@ function EmptyShowcase({ children }: { children: string }) {
   );
 }
 
-export function CareerSummary({ player, onRestart, archive = [] }: CareerSummaryProps) {
+export function CareerSummary({
+  player,
+  onRestart,
+  archive = [],
+  publishStatus,
+}: CareerSummaryProps) {
   const isGoalkeeper = player.position === "GK";
   const clubs = summarizeClubHistory(player.clubHistory);
   const trophies = [...player.trophies].sort((a, b) => a.age - b.age);
@@ -63,24 +81,9 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
     highlightAwards.length > 0 ||
     player.nationalTeam.called;
 
-  const provisionalEntry: ArchivedCareer = {
-    id: "__current__",
-    lastName: player.lastName,
-    nationality: player.nationality,
-    position: player.position,
-    peakOvr: peakOvr(player),
-    trophyCount: player.trophies.length,
-    awardCount: player.awards.length,
-    retiredAge: player.age,
-    retiredAtIso: new Date().toISOString(),
-    careerApps: player.career.apps,
-    careerGoals: player.career.goals,
-    careerAssists: player.career.assists,
-    finalSavingsEur: player.wallet.savingsEur,
-    finalPopularity: player.popularity,
-    careerTitle: bestTitle,
-  };
+  const provisionalEntry: ArchivedCareer = buildArchiveEntry(player);
   const hofWins = hallOfFameWinsFor(provisionalEntry, archive);
+  const publishStatusText = isLeaderboardConfigured() ? PUBLISH_STATUS_TEXT[publishStatus] : undefined;
 
   return (
     <div className="animate-step-in flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto lg:overflow-hidden">
@@ -130,9 +133,21 @@ export function CareerSummary({ player, onRestart, archive = [] }: CareerSummary
           </div>
         </div>
 
-        <Button variant="secondary" onClick={onRestart} className="shrink-0 self-center sm:self-auto">
-          Gioca ancora
-        </Button>
+        <div className="flex shrink-0 flex-col items-center gap-1.5 sm:self-auto">
+          <Button variant="secondary" onClick={onRestart}>
+            Gioca ancora
+          </Button>
+          {publishStatusText ? (
+            <p
+              className={cn(
+                "text-[11px]",
+                publishStatus === "error" ? "text-(--color-error)" : "text-(--color-text-muted)",
+              )}
+            >
+              {publishStatusText}
+            </p>
+          ) : null}
+        </div>
       </Card>
 
       <div className="flex shrink-0 flex-wrap items-center gap-3 text-xs text-(--color-text-muted)">

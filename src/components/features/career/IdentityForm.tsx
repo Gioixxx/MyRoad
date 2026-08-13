@@ -7,12 +7,17 @@ import { Field } from "@/components/ui/Field";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { countries } from "@/data/countries";
 import { loadLastIdentity } from "@/lib/last-identity";
+import { isLeaderboardConfigured } from "@/lib/leaderboard/client";
+import { isValidNickname } from "@/lib/leaderboard/settings";
 import { JerseyCard } from "./JerseyCard";
 import { NationalitySelect } from "./NationalitySelect";
 import { PositionPicker } from "./PositionPicker";
 
 interface IdentityFormProps {
   onSubmit: (identity: PlayerIdentity) => void;
+  /** Nickname per la classifica globale — obbligatorio se la classifica è configurata. */
+  nickname: string;
+  onNicknameChange: (nickname: string) => void;
 }
 
 interface FormErrors {
@@ -20,9 +25,10 @@ interface FormErrors {
   number?: string;
   nationality?: string;
   position?: string;
+  nickname?: string;
 }
 
-export function IdentityForm({ onSubmit }: IdentityFormProps) {
+export function IdentityForm({ onSubmit, nickname, onNicknameChange }: IdentityFormProps) {
   const [lastIdentity] = useState(() => loadLastIdentity());
   const [lastName, setLastName] = useState(lastIdentity?.lastName ?? "");
   const [number, setNumber] = useState<number | null>(lastIdentity?.number ?? 10);
@@ -41,6 +47,9 @@ export function IdentityForm({ onSubmit }: IdentityFormProps) {
     }
     if (!nationality) nextErrors.nationality = "Seleziona una nazionalità.";
     if (!position) nextErrors.position = "Seleziona un ruolo in campo.";
+    if (isLeaderboardConfigured() && !isValidNickname(nickname)) {
+      nextErrors.nickname = "Inserisci un nickname (2-20 caratteri) per la classifica globale.";
+    }
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -102,6 +111,19 @@ export function IdentityForm({ onSubmit }: IdentityFormProps) {
           <Field label="Nazionalità" htmlFor="nationality" error={errors.nationality}>
             <NationalitySelect id="nationality" value={nationality} onChange={setNationality} />
           </Field>
+
+          {isLeaderboardConfigured() ? (
+            <Field label="Nickname (classifica globale)" htmlFor="nickname" error={errors.nickname}>
+              <input
+                id="nickname"
+                value={nickname}
+                onChange={(e) => onNicknameChange(e.target.value)}
+                maxLength={20}
+                placeholder="Es. Fenomeno99"
+                className="input-recessed rounded-md px-3 py-2 text-sm"
+              />
+            </Field>
+          ) : null}
         </div>
 
         <Field

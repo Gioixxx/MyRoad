@@ -30,8 +30,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files — .env e' committato di proposito: contiene solo la chiave
+# pubblica Supabase (anon/publishable), pensata per essere esposta lato
+# client — la vera barriera e' RLS, non la segretezza (vedi supabase/schema.sql).
+# Solo override/segreti locali restano ignorati.
+.env.local
+.env.*.local
 
 # vercel
 .vercel

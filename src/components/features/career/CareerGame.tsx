@@ -5,9 +5,13 @@ import { TrendingDown, TrendingUp } from "lucide-react";
 import type { ArchivedCareer, GameSpeed, PlayerIdentity } from "@/types/career";
 import { useCareerGame, type CycleOutcomeSummary } from "@/hooks/useCareerGame";
 import { useBackgroundMusic } from "@/hooks/useBackgroundMusic";
+import { useLeaderboardSettings } from "@/hooks/useLeaderboardSettings";
 import { usePrefersReducedMotion } from "@/hooks/useMotion";
 import { AWARD_LABELS } from "@/lib/career/award-labels";
-import { loadArchive } from "@/lib/career/storage";
+import { buildArchiveEntry, loadArchive } from "@/lib/career/storage";
+import { submitLeaderboardEntry } from "@/lib/leaderboard/client";
+import { isValidNickname } from "@/lib/leaderboard/settings";
+import type { PublishStatus } from "@/lib/leaderboard/types";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -20,6 +24,7 @@ import { CareerTimeline } from "./CareerTimeline";
 import { CompetitionBadge } from "./CompetitionBadge";
 import { DecisionPanel } from "./DecisionPanel";
 import { IdentityForm } from "./IdentityForm";
+import { Leaderboard } from "./Leaderboard";
 import { MainMenu } from "./MainMenu";
 import { buildCareerMoments, MomentOverlay, type CareerMoment } from "./MomentOverlay";
 import { OfferPanel } from "./OfferPanel";
@@ -29,7 +34,7 @@ import { SettingsPanel } from "./SettingsPanel";
 import { SpeedSelect } from "./SpeedSelect";
 import { ClubCrest } from "./ClubCrest";
 
-type Step = "menu" | "speed" | "identity" | "archive" | "settings";
+type Step = "menu" | "speed" | "identity" | "archive" | "leaderboard" | "settings";
 type ResolvePhase = "season" | "moments" | "outcome" | null;
 
 const DECISION_EXIT_MS = 320;
@@ -314,6 +319,9 @@ export function CareerGame() {
   const { state, startCareer, chooseOption, setTrainingFocus, restart, isResuming } = useCareerGame();
   const prefersReducedMotion = usePrefersReducedMotion();
   const { audioRef, volume, muted, setVolume, setMuted } = useBackgroundMusic();
+  const { nickname, deviceId, setNickname } = useLeaderboardSettings();
+  const [publishStatus, setPublishStatus] = useState<PublishStatus>("idle");
+  const autoPublishRef = useRef(false);
 
   // Letto in un effect (non lazy initializer) per lo stesso motivo di useCareerGame: window non
   // esiste in SSR, evita un hydration mismatch tra il render server e il primo render client.
@@ -333,6 +341,26 @@ export function CareerGame() {
   const showPlaying = state !== null;
   const isRetired = state?.retired ?? false;
   const awaitingResolve = resolvePhase !== null || decisionExiting;
+
+  // Pubblicazione automatica in classifica non appena la carriera si ritira (una sola volta per
+  // carriera, stesso guard-via-ref di `archivedRef` in useCareerGame.ts per l'archivio locale) —
+  // nessun bottone: l'utente ha chiesto invio automatico, non un'azione esplicita.
+  useEffect(() => {
+    if (!state?.retired || autoPublishRef.current) return;
+    autoPublishRef.current = true;
+
+    if (!isValidNickname(nickname)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- invio automatico, vedi sopra
+      setPublishStatus("skipped-no-nickname");
+      return;
+    }
+
+    setPublishStatus("loading");
+    const entry = buildArchiveEntry(state.player);
+    submitLeaderboardEntry(entry, nickname, deviceId).then((result) => {
+      setPublishStatus(result.ok ? "done" : "error");
+    });
+  }, [state?.retired, state?.player, nickname, deviceId]);
 
   useEffect(() => {
     return () => {
@@ -385,6 +413,8 @@ export function CareerGame() {
   const handleIdentitySubmitted = useCallback(
     (identity: PlayerIdentity) => {
       if (!speed) return;
+      autoPublishRef.current = false;
+      setPublishStatus("idle");
       startCareer(identity, speed);
     },
     [speed, startCareer],
@@ -411,6 +441,10 @@ export function CareerGame() {
 
   const handleBackFromArchive = useCallback(() => {
     setStep("speed");
+  }, []);
+
+  const handleShowLeaderboard = useCallback(() => {
+    setStep("leaderboard");
   }, []);
 
   const handleGoMenu = useCallback(() => {
@@ -475,6 +509,7 @@ export function CareerGame() {
   const isMenu = isSetup && step === "menu";
   const isIdentity = isSetup && step === "identity";
   const isArchive = isSetup && step === "archive";
+  const isLeaderboard = isSetup && step === "leaderboard";
   const isSettings = isSetup && step === "settings";
   const outcomeKey = state?.lastOutcome
     ? `${state.player.age}-${state.lastOutcome.optionLabel}-${state.lastOutcome.outcomeText}`
@@ -529,9 +564,11 @@ export function CareerGame() {
                 ? "Crea la tua identità"
                 : isArchive
                   ? "Le mie carriere"
-                  : isSettings
-                    ? "Impostazioni"
-                    : "Costruisci la tua carriera da calciatore"}
+                  : isLeaderboard
+                    ? "Classifica"
+                    : isSettings
+                      ? "Impostazioni"
+                      : "Costruisci la tua carriera da calciatore"}
             </h1>
             {isIdentity ? (
               <p className="mt-0.5 font-display text-sm tracking-[0.2em] gold-metal-text">
@@ -568,6 +605,8 @@ export function CareerGame() {
                 muted={muted}
                 onVolumeChange={setVolume}
                 onMutedChange={setMuted}
+                nickname={nickname}
+                onNicknameChange={setNickname}
                 onBack={handleGoMenu}
               />
             </Card>
@@ -576,11 +615,16 @@ export function CareerGame() {
           {!showPlaying && step === "speed" ? (
             <Card key="step-speed" className="animate-step-in flex flex-col gap-4 p-5 sm:p-7">
               <SpeedSelect onSelect={handleSpeedSelected} />
-              {archiveEntries.length > 0 ? (
-                <Button variant="ghost" onClick={handleShowArchive} className="self-center text-xs">
-                  Le mie carriere
+              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
+                {archiveEntries.length > 0 ? (
+                  <Button variant="ghost" onClick={handleShowArchive} className="self-center text-xs">
+                    Le mie carriere
+                  </Button>
+                ) : null}
+                <Button variant="ghost" onClick={handleShowLeaderboard} className="self-center text-xs">
+                  Classifica
                 </Button>
-              ) : null}
+              </div>
             </Card>
           ) : null}
 
@@ -589,13 +633,23 @@ export function CareerGame() {
               key="step-identity"
               className="animate-step-in flex min-h-0 flex-1 flex-col overflow-y-auto p-3 sm:p-5 lg:overflow-hidden"
             >
-              <IdentityForm onSubmit={handleIdentitySubmitted} />
+              <IdentityForm
+                onSubmit={handleIdentitySubmitted}
+                nickname={nickname}
+                onNicknameChange={setNickname}
+              />
             </Card>
           ) : null}
 
           {!showPlaying && step === "archive" ? (
             <Card key="step-archive" className="animate-step-in p-5 sm:p-7">
               <CareerArchive entries={archiveEntries} onBack={handleBackFromArchive} />
+            </Card>
+          ) : null}
+
+          {!showPlaying && step === "leaderboard" ? (
+            <Card key="step-leaderboard" className="animate-step-in p-5 sm:p-7">
+              <Leaderboard onBack={handleBackFromArchive} />
             </Card>
           ) : null}
 
@@ -690,6 +744,7 @@ export function CareerGame() {
               player={state.player}
               onRestart={handleRestart}
               archive={loadArchive()}
+              publishStatus={publishStatus}
             />
           ) : null}
         </>

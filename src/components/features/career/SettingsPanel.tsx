@@ -1,7 +1,10 @@
 "use client";
 
 import { Volume2, VolumeX } from "lucide-react";
+import { isLeaderboardConfigured } from "@/lib/leaderboard/client";
+import { isValidNickname } from "@/lib/leaderboard/settings";
 import { Button } from "@/components/ui/Button";
+import { Field } from "@/components/ui/Field";
 import { cn } from "@/lib/utils";
 
 interface SettingsPanelProps {
@@ -9,6 +12,8 @@ interface SettingsPanelProps {
   muted: boolean;
   onVolumeChange: (volume: number) => void;
   onMutedChange: (muted: boolean) => void;
+  nickname: string;
+  onNicknameChange: (nickname: string) => void;
   onBack: () => void;
 }
 
@@ -17,8 +22,14 @@ export function SettingsPanel({
   muted,
   onVolumeChange,
   onMutedChange,
+  nickname,
+  onNicknameChange,
   onBack,
 }: SettingsPanelProps) {
+  const nicknameError =
+    nickname.length > 0 && !isValidNickname(nickname)
+      ? "2-20 caratteri, solo lettere/numeri/spazi/. _ -"
+      : undefined;
   return (
     <div className="flex w-full flex-col gap-6">
       <div>
@@ -56,6 +67,26 @@ export function SettingsPanel({
           {muted ? "Off" : `${Math.round(volume * 100)}%`}
         </span>
       </div>
+
+      {isLeaderboardConfigured() ? (
+        <div>
+          <p className="font-display text-sm tracking-[0.2em] gold-metal-text">Classifica</p>
+          <h2 className="font-display text-xl text-(--color-text)">Nickname</h2>
+          <p className="mt-1 text-xs text-(--color-text-muted)">
+            Usato per pubblicare i tuoi punteggi nella classifica globale.
+          </p>
+          <Field label="Nickname" htmlFor="leaderboard-nickname" error={nicknameError} className="mt-3">
+            <input
+              id="leaderboard-nickname"
+              value={nickname}
+              onChange={(e) => onNicknameChange(e.target.value)}
+              maxLength={20}
+              placeholder="Es. Fenomeno99"
+              className="input-recessed rounded-md px-3 py-2 text-sm"
+            />
+          </Field>
+        </div>
+      ) : null}
 
       <Button variant="secondary" onClick={onBack} className="self-center">
         Torna al menu
