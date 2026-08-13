@@ -199,6 +199,20 @@ function withHint(option: DecisionOption, hint: string): DecisionOption {
   return { ...option, hint };
 }
 
+function isPlayingTimeBrief(player: Player): boolean {
+  const kind = player.currentObjective?.kind;
+  return kind === "goals" || kind === "apps";
+}
+
+function stayBriefHint(player: Player, fallback: string): string {
+  return isPlayingTimeBrief(player) ? "Insegui il brief del mister" : fallback;
+}
+
+function leaveBriefHint(player: Player, fallback: string): string {
+  if (!isPlayingTimeBrief(player)) return fallback;
+  return fallback.length > 0 ? `${fallback} · Lasci il brief del mister` : "Lasci il brief del mister";
+}
+
 /**
  * Peso (%) dell'outcome più favorevole di un'opzione, per mostrare una probabilità reale
  * accanto all'hint testuale. `null` se l'opzione è deterministica (un solo outcome) — non c'è
@@ -489,14 +503,14 @@ export function generateTransferWindow(player: Player, rng: Rng = Math.random): 
           signOption(`sign-${c.id}`, `Firma per ${c.name}`, c, `Ti trasferisci al ${c.name}.`, {
             traitsDelta: { ambition: 4, loyalty: -2 },
           }),
-          offerReasonHint(player, c),
+          leaveBriefHint(player, offerReasonHint(player, c)),
         ),
       ),
       withHint(
         signOption("stay", `Resta al ${currentClub.name}`, currentClub, `Resti al ${currentClub.name}.`, {
           traitsDelta: { loyalty: 4 },
         }),
-        "Continuità",
+        stayBriefHint(player, "Continuità"),
       ),
     ],
   };
@@ -586,7 +600,7 @@ export function generateClubCrisis(player: Player, rng: Rng = Math.random): Deci
         id: "stay-and-fight",
         label: `Resta e lotta al ${player.club.name}`,
         club: player.club,
-        hint: "Lealtà · calo OVR",
+        hint: stayBriefHint(player, "Lealtà · calo OVR"),
         outcomes: [
           outcome(100, "Meno possibilità di vincere qualcosa quest'anno.", -2, {
             traitsDelta: { leadership: 9, loyalty: 4 },
@@ -601,7 +615,7 @@ export function generateClubCrisis(player: Player, rng: Rng = Math.random): Deci
           shadowFlags: { fanBetrayed: true },
           relationsDelta: { coach: -1 },
         }),
-        offerReasonHint(player, alternative),
+        leaveBriefHint(player, offerReasonHint(player, alternative)),
       ),
     ],
   };
@@ -622,7 +636,7 @@ export function generateCompetitionForSpot(player: Player, rng: Rng = Math.rando
         id: "compete",
         label: "Fatti valere",
         club: player.club,
-        hint: "Possibile crescita · rischio panchina",
+        hint: stayBriefHint(player, "Possibile crescita · rischio panchina"),
         outcomes: [
           outcome(50, "Ti guadagni il posto da titolare.", 1),
           outcome(50, "Finisci in panchina, giochi meno.", -2),
@@ -630,7 +644,7 @@ export function generateCompetitionForSpot(player: Player, rng: Rng = Math.rando
       },
       withHint(
         signOption("leave", `Firma per ${alternative.name}`, alternative, `Lasci subito per il ${alternative.name}.`),
-        "Trasferimento immediato",
+        leaveBriefHint(player, "Trasferimento immediato"),
       ),
     ],
   };
@@ -771,8 +785,21 @@ export function generateEndOfCycle(player: Player, rng: Rng = Math.random): Deci
 
 // ---------- Eventi condizionati dal contesto (paese del club / nazionalità) ----------
 
+const TAX_TROUBLE_MIN_AGE = 21;
+/** In patria l'Agenzia delle Entrate ti nota solo con un patrimonio già visibile. */
+const TAX_TROUBLE_HOME_SAVINGS_EUR = 500_000;
+
+/**
+ * Grane fiscali: una tantum, non a inizio carriera. All'estero basta il contratto in un altro
+ * paese; in patria serve un patrimonio alto — altrimenti `narrative` resta aperta per tutta
+ * la carriera (club !== null) e l'evento diventa rumore di fondo.
+ */
 export function isTaxTroubleEligible(player: Player): boolean {
-  return player.club !== null;
+  if (!player.club) return false;
+  if (player.age < TAX_TROUBLE_MIN_AGE) return false;
+  if (player.shadowFlags?.taxEvaded || player.shadowFlags?.taxTroubleOccurred) return false;
+  if (player.club.country !== player.nationality) return true;
+  return player.wallet.savingsEur >= TAX_TROUBLE_HOME_SAVINGS_EUR;
 }
 
 export function generateTaxTrouble(player: Player, rng: Rng = Math.random): Decision {
@@ -796,10 +823,15 @@ export function generateTaxTrouble(player: Player, rng: Rng = Math.random): Deci
         label: `Resta al ${player.club.name}`,
         club: player.club,
         outcomes: [
-          outcome(100, "La distrazione ti pesa addosso.", -3, { shadowDelta: 21, shadowFlags: { taxEvaded: true } }),
+          outcome(100, "La distrazione ti pesa addosso.", -3, {
+            shadowDelta: 21,
+            shadowFlags: { taxEvaded: true, taxTroubleOccurred: true },
+          }),
         ],
       },
-      signOption("leave", `Vai al ${alternative.name}`, alternative, `Lasci per il ${alternative.name}.`),
+      signOption("leave", `Vai al ${alternative.name}`, alternative, `Lasci per il ${alternative.name}.`, {
+        shadowFlags: { taxTroubleOccurred: true },
+      }),
     ],
   };
 }
@@ -1185,11 +1217,15 @@ export function generateDecisiveMatchDecision(player: Player): Decision {
     throw new Error("Serve un club corrente per generare una partita decisiva");
   }
   const league = player.club.competitions.league;
+  const trophyBrief =
+    player.currentObjective?.kind === "trophy"
+      ? " Il mister ha chiesto un trofeo: questa partita può chiudere il brief."
+      : "";
   return {
     id: `decisive-match-${player.age}`,
     category: "decisive-match",
     title: "Partita decisiva",
-    description: `Ultima giornata: il ${player.club.name} si gioca ${league}. Il mister ti chiede come affrontare la partita.`,
+    description: `Ultima giornata: il ${player.club.name} si gioca ${league}. Il mister ti chiede come affrontare la partita.${trophyBrief}`,
     options: DECISIVE_MATCH_SYSTEMS.map((system) => {
       const win = decisiveMatchWinWeight(player, system);
       return {
@@ -1710,32 +1746,49 @@ const BASE_CATEGORY_WEIGHTS: Partial<Record<DecisionCategory, number>> = {
 
 const DEFAULT_CATEGORY_WEIGHT = 5;
 const REPEAT_PENALTY = 0.15;
+const OBJECTIVE_MISS_CRISIS_MULTIPLIER = 1.4;
+const OBJECTIVE_MISS_END_CYCLE_MULTIPLIER = 1.3;
+const OBJECTIVE_MET_TRANSFER_MULTIPLIER = 0.75;
+
+/** Pressione del brief del mister sul ciclo successivo (campi di LoopContext, niente import circolare). */
+export interface ObjectivePressure {
+  lastObjectiveMet?: boolean;
+  objectiveMissStreak?: number;
+}
 
 /** Moltiplicatore di peso in base allo stato del giocatore — prestito/rinnovo/mercato come conseguenze. */
-export function categoryWeightMultiplier(category: DecisionCategory, player?: Player): number {
-  if (!player) return 1;
-  if (category === "loan") {
-    if (player.age <= 21 && player.ovr < 70) return 1.6;
-    if (player.ovr >= 80 || player.age >= 25) return 0.08;
-    return 0.5;
+export function categoryWeightMultiplier(
+  category: DecisionCategory,
+  player?: Player,
+  pressure?: ObjectivePressure,
+): number {
+  let multiplier = 1;
+  if (player) {
+    if (category === "loan") {
+      if (player.age <= 21 && player.ovr < 70) multiplier = 1.6;
+      else if (player.ovr >= 80 || player.age >= 25) multiplier = 0.08;
+      else multiplier = 0.5;
+    } else if (category === "end-of-cycle") {
+      const prestige = player.club?.prestige ?? 0;
+      if (player.ovr >= 82 && prestige >= 2 && !player.injury) multiplier = 0.15;
+      else if (player.age >= 32 || player.shadow >= 28 || player.injury) multiplier = 1.8;
+      else if (player.ovr < 60) multiplier = 1.4;
+      else multiplier = 0.6;
+    } else if (category === "transfer") {
+      const archetype = deriveArchetype(player.traits, player.shadow).primary;
+      if (archetype === "flagbearer" || player.traits.loyalty >= 58) multiplier = 0.55;
+      else if (archetype === "mercenary") multiplier = 1.35;
+    } else if (category === "position-change") {
+      multiplier = isPhysicalDeclineReconversion(player) ? 3 : 1;
+    }
   }
-  if (category === "end-of-cycle") {
-    const prestige = player.club?.prestige ?? 0;
-    if (player.ovr >= 82 && prestige >= 2 && !player.injury) return 0.15;
-    if (player.age >= 32 || player.shadow >= 28 || player.injury) return 1.8;
-    if (player.ovr < 60) return 1.4;
-    return 0.6;
+  const streak = pressure?.objectiveMissStreak ?? 0;
+  if (category === "club-crisis" && streak >= 1) multiplier *= OBJECTIVE_MISS_CRISIS_MULTIPLIER;
+  if (category === "end-of-cycle" && streak >= 2) multiplier *= OBJECTIVE_MISS_END_CYCLE_MULTIPLIER;
+  if (category === "transfer" && pressure?.lastObjectiveMet === true) {
+    multiplier *= OBJECTIVE_MET_TRANSFER_MULTIPLIER;
   }
-  if (category === "transfer") {
-    const archetype = deriveArchetype(player.traits, player.shadow).primary;
-    if (archetype === "flagbearer" || player.traits.loyalty >= 58) return 0.55;
-    if (archetype === "mercenary") return 1.35;
-    return 1;
-  }
-  if (category === "position-change") {
-    return isPhysicalDeclineReconversion(player) ? 3 : 1;
-  }
-  return 1;
+  return multiplier;
 }
 
 export function pickDecisionCategory(
@@ -1743,13 +1796,15 @@ export function pickDecisionCategory(
   recentCategories: DecisionCategory[],
   rng: Rng = Math.random,
   player?: Player,
+  pressure?: ObjectivePressure,
 ): DecisionCategory {
   if (availableCategories.length === 0) {
     throw new Error("Serve almeno una categoria disponibile per scegliere una decisione");
   }
   const weighted = availableCategories.map((category) => {
     const base =
-      (BASE_CATEGORY_WEIGHTS[category] ?? DEFAULT_CATEGORY_WEIGHT) * categoryWeightMultiplier(category, player);
+      (BASE_CATEGORY_WEIGHTS[category] ?? DEFAULT_CATEGORY_WEIGHT) *
+      categoryWeightMultiplier(category, player, pressure);
     const weight = recentCategories.includes(category) ? base * REPEAT_PENALTY : base;
     return { category, weight };
   });

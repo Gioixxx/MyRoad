@@ -197,6 +197,8 @@ export interface ShadowFlags {
   doped?: boolean;
   leakedTactics?: boolean;
   taxEvaded?: boolean;
+  /** Bookkeeping: le grane fiscali sono già uscite in questa carriera (anche se si è partiti). */
+  taxTroubleOccurred?: boolean;
   fanBetrayed?: boolean;
   /** Bookkeeping interno per l'eleggibilità alla redenzione — non narrativo. */
   scandalOccurred?: boolean;

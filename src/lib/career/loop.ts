@@ -10,6 +10,7 @@ import type {
   PlayStyleId,
   SeasonTitleEntry,
   Trophy,
+  CycleObjectiveKind,
 } from "@/types/career";
 import {
   applyDelta,
@@ -34,6 +35,7 @@ import {
   pushSeasonTitle,
   rollCycleObjective,
   updatePersonalRecords,
+  CLUB_ASKED_OBJECTIVE_KINDS,
   type CycleSatisfactionContext,
 } from "./satisfaction";
 import { accrueSalary, applyPopularityDelta, popularityDeltaForCycle } from "./wallet";
@@ -88,7 +90,7 @@ import { isRedemptionEligible, shouldTriggerScandal } from "./shadow";
 import { applyTraitsDelta } from "./traits";
 import { applyPotentialDelta, evaluatePotentialGrowth } from "./potential";
 import { detectNewPlayStyles, playStyleInjuryMultiplier, playStyleTrophyBonus } from "./playstyles";
-import { maybeSpawnRival, ensureCoreRelations } from "./relations";
+import { maybeSpawnRival, ensureCoreRelations, getRelation } from "./relations";
 import { getCountry } from "@/data/countries";
 
 /** Convocazione in nazionale come fonte di leadership (vedi §1: "capitano, difesa compagni, nazionale"). */
@@ -107,6 +109,10 @@ export interface LoopContext {
    * forza questa categoria ad ogni ciclo finché loanParentClub è valorizzato).
    */
   loanReturnBounces?: number;
+  /** Esito dell'obiettivo del ciclo appena chiuso — influenza i pesi della prossima categoria. */
+  lastObjectiveMet?: boolean;
+  /** Miss consecutivi sui brief chiesti dal club (gol/presenze/trofeo). */
+  objectiveMissStreak?: number;
 }
 
 export const INITIAL_LOOP_CONTEXT: LoopContext = { loanParentClub: null };
@@ -140,10 +146,15 @@ interface PickedDecision {
 }
 
 /** Sceglie tra generatori penalizzando (non escludendo) quelli scelti di recente — stesso principio di pickDecisionCategory, applicato al singolo evento invece che alla categoria. */
-function pickWeightedByKind(items: KindedGenerator[], recentDecisionIds: string[], rng: Rng): PickedDecision {
+function pickWeightedByKind(
+  items: KindedGenerator[],
+  recentDecisionIds: string[],
+  rng: Rng,
+  kindMultiplier: (kind: string) => number = () => 1,
+): PickedDecision {
   const weighted = items.map((item) => ({
     item,
-    weight: recentDecisionIds.includes(item.kind) ? EVENT_REPEAT_PENALTY : 1,
+    weight: (recentDecisionIds.includes(item.kind) ? EVENT_REPEAT_PENALTY : 1) * kindMultiplier(item.kind),
   }));
   const totalWeight = weighted.reduce((sum, w) => sum + w.weight, 0);
   let roll = rng() * totalWeight;
@@ -246,8 +257,21 @@ export function shouldTriggerClauseActivation(
   return rng() < clauseActivationChance(player);
 }
 
+const RISKY_LIFESTYLE_KINDS = new Set(["double-sessions", "extra-camp", "mysterious-substance"]);
+const RISKY_LIFESTYLE_WEIGHT = 0.2;
+
+function applyInjuryBriefHints(decision: Decision): Decision {
+  return {
+    ...decision,
+    options: decision.options.map((option) => {
+      if (!option.outcomes.some((outcome) => outcome.effect.injury)) return option;
+      return { ...option, hint: "Tradisce il brief · infortunio" };
+    }),
+  };
+}
+
 /** "Finish high school" ha senso solo a inizio carriera — unico evento del pool con un gate d'età. */
-function pickStaticDecision(
+export function pickStaticDecision(
   category: DecisionCategory,
   player: Player,
   recentDecisionIds: string[],
@@ -259,7 +283,14 @@ function pickStaticDecision(
     return true;
   });
   const items: KindedGenerator[] = pool.map((d) => ({ kind: d.id, build: () => d }));
-  return pickWeightedByKind(items, recentDecisionIds, rng);
+  const injuryBrief = player.currentObjective?.kind === "no-injury";
+  const picked = pickWeightedByKind(items, recentDecisionIds, rng, (kind) =>
+    injuryBrief && RISKY_LIFESTYLE_KINDS.has(kind) ? RISKY_LIFESTYLE_WEIGHT : 1,
+  );
+  if (injuryBrief && RISKY_LIFESTYLE_KINDS.has(picked.kind)) {
+    return { decision: applyInjuryBriefHints(picked.decision), kind: picked.kind };
+  }
+  return picked;
 }
 
 function pickClubCrisisDecision(player: Player, recentDecisionIds: string[], rng: Rng): PickedDecision {
@@ -360,7 +391,7 @@ export function pickNextDecision(
   }
 
   const categories = availableCategories(player, context);
-  const category = pickDecisionCategory(categories, recentCategories, rng, player);
+  const category = pickDecisionCategory(categories, recentCategories, rng, player, context);
   const recentDecisionIds = context.recentDecisionIds ?? [];
 
   switch (category) {
@@ -422,24 +453,42 @@ export function nextLoopContext(
 ): LoopContext {
   if (category === "loan") {
     if (option.id === "stay") {
-      return { loanParentClub: null };
+      return { ...context, loanParentClub: null };
     }
-    return { loanParentClub: playerBeforeChange.club };
+    return { ...context, loanParentClub: playerBeforeChange.club };
   }
   if (category === "loan-return") {
     if (option.id === "sign-permanent") {
-      return { loanParentClub: null };
+      return { ...context, loanParentClub: null };
     }
     const bounces = context.loanReturnBounces ?? 0;
     if (bounces >= MAX_LOAN_RETURN_BOUNCES) {
-      return { loanParentClub: null };
+      return { ...context, loanParentClub: null };
     }
     return { ...context, loanReturnBounces: bounces + 1 };
   }
   if (option.club) {
-    return { loanParentClub: null };
+    return { ...context, loanParentClub: null };
   }
   return context;
+}
+
+function applyObjectivePressure(
+  context: LoopContext,
+  met: boolean,
+  kind: CycleObjectiveKind,
+  transferred: boolean,
+): LoopContext {
+  if (transferred) {
+    return { ...context, lastObjectiveMet: met, objectiveMissStreak: 0 };
+  }
+  let streak = context.objectiveMissStreak ?? 0;
+  if (met) {
+    streak = 0;
+  } else if (CLUB_ASKED_OBJECTIVE_KINDS.includes(kind)) {
+    streak += 1;
+  }
+  return { ...context, lastObjectiveMet: met, objectiveMissStreak: streak };
 }
 
 export interface CycleResult {
@@ -606,7 +655,7 @@ export function resolveCycle(
     nextPlayer = { ...nextPlayer, trainingFocus: option.trainingFocus };
   }
 
-  const nextContext = nextLoopContext(category, option, player, context);
+  let nextContext = nextLoopContext(category, option, player, context);
   const stintType = nextContext.loanParentClub ? "loan" : "permanent";
   const seasons = SEASONS_PER_CYCLE[speed];
   nextPlayer = advanceSeasons(nextPlayer, seasons, rng, stintType);
@@ -774,7 +823,13 @@ export function resolveCycle(
     const firstTime = evaluated.met && !alreadyCelebrated;
     objectiveResult = { label: pendingObjective.label, met: evaluated.met, firstTime };
     if (evaluated.met) {
-      nextPlayer = applyDelta(nextPlayer, evaluated.reward);
+      const reward = getRelation(nextPlayer, "coach")
+        ? {
+            ...evaluated.reward,
+            relationsDelta: { ...evaluated.reward.relationsDelta, coach: 1 },
+          }
+        : evaluated.reward;
+      nextPlayer = applyDelta(nextPlayer, reward);
       if (firstTime) {
         nextPlayer = {
           ...nextPlayer,
@@ -782,6 +837,8 @@ export function resolveCycle(
         };
       }
     }
+    const transferred = Boolean(option.club && option.club.id !== player.club?.id);
+    nextContext = applyObjectivePressure(nextContext, evaluated.met, pendingObjective.kind, transferred);
   }
 
   const seasonTitle = evaluateSeasonTitle({
@@ -829,7 +886,10 @@ export function resolveCycle(
   }
 
   if (!nextPlayer.retired) {
-    nextPlayer = { ...nextPlayer, currentObjective: rollCycleObjective(nextPlayer, rng, seasons) };
+    nextPlayer = {
+      ...nextPlayer,
+      currentObjective: rollCycleObjective(nextPlayer, rng, seasons, pendingObjective?.kind),
+    };
   } else {
     nextPlayer = { ...nextPlayer, currentObjective: null };
   }

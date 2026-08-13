@@ -166,6 +166,17 @@ describe("generateTransferWindow", () => {
     const offers = decision.options.filter((o) => o.id !== "stay");
     expect(offers.every((o) => (o.hint?.length ?? 0) > 0)).toBe(true);
   });
+
+  it("dovrebbe colorare resta/lascia sul brief gol o presenze", () => {
+    const player: Player = {
+      ...playerAt(),
+      currentObjective: { id: "g", label: "Il mister chiede: almeno 10 gol", kind: "goals", target: 10 },
+    };
+    const decision = generateTransferWindow(player, FIXED_RNG);
+    expect(decision.options.find((o) => o.id === "stay")?.hint).toBe("Insegui il brief del mister");
+    const leave = decision.options.find((o) => o.id !== "stay");
+    expect(leave?.hint).toContain("Lasci il brief del mister");
+  });
 });
 
 describe("pickCuratedOffers", () => {
@@ -263,6 +274,16 @@ describe("generateClubCrisis", () => {
     expect(leave.outcomes[0].effect.shadowDelta).toBe(19);
     expect(leave.outcomes[0].effect.shadowFlags).toEqual({ fanBetrayed: true });
   });
+
+  it("dovrebbe colorare resta/lascia sul brief gol o presenze", () => {
+    const player: Player = {
+      ...playerAt(),
+      currentObjective: { id: "a", label: "Il mister chiede: almeno 20 presenze", kind: "apps", target: 20 },
+    };
+    const decision = generateClubCrisis(player, FIXED_RNG);
+    expect(decision.options.find((o) => o.id === "stay-and-fight")?.hint).toBe("Insegui il brief del mister");
+    expect(decision.options.find((o) => o.id === "leave")?.hint).toContain("Lasci il brief del mister");
+  });
 });
 
 describe("generateCompetitionForSpot e generateControversialStatement", () => {
@@ -271,6 +292,16 @@ describe("generateCompetitionForSpot e generateControversialStatement", () => {
     const decision = generateCompetitionForSpot(player, FIXED_RNG);
     const compete = decision.options.find((o) => o.id === "compete");
     expect(compete?.outcomes.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("generateCompetitionForSpot dovrebbe colorare resta/lascia sul brief gol o presenze", () => {
+    const player: Player = {
+      ...playerAt(),
+      currentObjective: { id: "g", label: "Il mister chiede: almeno 10 gol", kind: "goals", target: 10 },
+    };
+    const decision = generateCompetitionForSpot(player, FIXED_RNG);
+    expect(decision.options.find((o) => o.id === "compete")?.hint).toBe("Insegui il brief del mister");
+    expect(decision.options.find((o) => o.id === "leave")?.hint).toContain("Lasci il brief del mister");
   });
 
   it("generateControversialStatement dovrebbe offrire scuse (minutaggio ridotto) o firma per un club più debole", () => {
@@ -486,9 +517,29 @@ describe("generateEndOfCycle", () => {
 });
 
 describe("eventi condizionati dal contesto", () => {
-  it("isTaxTroubleEligible dovrebbe essere vero quando il giocatore ha un club", () => {
-    expect(isTaxTroubleEligible(playerAt())).toBe(true);
+  it("isTaxTroubleEligible dovrebbe essere falso senza club, da giovani in patria, o se è già successo", () => {
     expect(isTaxTroubleEligible(createPlayer(IDENTITY))).toBe(false);
+    expect(isTaxTroubleEligible(playerAt())).toBe(false);
+    const youngAbroad: Player = { ...playerAt(), nationality: "Brazil", age: 18 };
+    expect(isTaxTroubleEligible(youngAbroad)).toBe(false);
+    const already: Player = {
+      ...playerAt(),
+      nationality: "Brazil",
+      age: 24,
+      shadowFlags: { taxTroubleOccurred: true },
+    };
+    expect(isTaxTroubleEligible(already)).toBe(false);
+  });
+
+  it("isTaxTroubleEligible dovrebbe essere vero all'estero da adulto, o in patria con patrimonio alto", () => {
+    const abroad: Player = { ...playerAt(), nationality: "Brazil", age: 24 };
+    expect(isTaxTroubleEligible(abroad)).toBe(true);
+    const richAtHome: Player = {
+      ...playerAt(),
+      age: 24,
+      wallet: { ...playerAt().wallet, savingsEur: 500_000 },
+    };
+    expect(isTaxTroubleEligible(richAtHome)).toBe(true);
   });
 
   it("generateTaxTrouble dovrebbe proporre un club estero come alternativa", () => {
@@ -503,7 +554,9 @@ describe("eventi condizionati dal contesto", () => {
     const decision = generateTaxTrouble(player, FIXED_RNG);
     const stay = decision.options.find((o) => o.id === "stay")!;
     expect(stay.outcomes[0].effect.shadowDelta).toBe(21);
-    expect(stay.outcomes[0].effect.shadowFlags).toEqual({ taxEvaded: true });
+    expect(stay.outcomes[0].effect.shadowFlags).toEqual({ taxEvaded: true, taxTroubleOccurred: true });
+    const leave = decision.options.find((o) => o.id === "leave")!;
+    expect(leave.outcomes[0].effect.shadowFlags).toEqual({ taxTroubleOccurred: true });
   });
 
   it("isReturnHomeEligible dovrebbe essere falso se il club è già nel paese di nazionalità", () => {
@@ -935,6 +988,20 @@ describe("pickDecisionCategory", () => {
       categoryWeightMultiplier("transfer", mercenary),
     );
   });
+
+  it("dovrebbe alzare crisis e fine ciclo dopo miss del brief, senza toccare il prestito", () => {
+    const player = playerAt();
+    const baseCrisis = categoryWeightMultiplier("club-crisis", player);
+    const baseEnd = categoryWeightMultiplier("end-of-cycle", player);
+    const baseLoan = categoryWeightMultiplier("loan", player);
+    const baseTransfer = categoryWeightMultiplier("transfer", player);
+
+    expect(categoryWeightMultiplier("club-crisis", player, { objectiveMissStreak: 1 })).toBeCloseTo(baseCrisis * 1.4);
+    expect(categoryWeightMultiplier("end-of-cycle", player, { objectiveMissStreak: 1 })).toBe(baseEnd);
+    expect(categoryWeightMultiplier("end-of-cycle", player, { objectiveMissStreak: 2 })).toBeCloseTo(baseEnd * 1.3);
+    expect(categoryWeightMultiplier("loan", player, { objectiveMissStreak: 2 })).toBe(baseLoan);
+    expect(categoryWeightMultiplier("transfer", player, { lastObjectiveMet: true })).toBeCloseTo(baseTransfer * 0.75);
+  });
 });
 
 describe("generatePositionChangeDecision / declino fisico", () => {
@@ -1023,6 +1090,17 @@ describe("generateDecisiveMatchDecision", () => {
     expect(decisiveMatchWinWeight(player, "possesso")).toBeGreaterThan(
       decisiveMatchWinWeight(player, "pressing"),
     );
+  });
+
+  it("dovrebbe menzionare il brief trofeo nella descrizione senza cambiare i pesi di vittoria", () => {
+    const base = playerAt();
+    const player: Player = {
+      ...base,
+      currentObjective: { id: "t", label: "Il mister chiede: vinci un trofeo", kind: "trophy", target: 1 },
+    };
+    const decision = generateDecisiveMatchDecision(player);
+    expect(decision.description).toContain("Il mister ha chiesto un trofeo");
+    expect(decisiveMatchWinWeight(player, "possesso")).toBe(decisiveMatchWinWeight(base, "possesso"));
   });
 });
 

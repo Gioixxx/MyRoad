@@ -13,6 +13,7 @@ import type {
   Trophy,
 } from "@/types/career";
 import type { Rng } from "./progression";
+import { deriveArchetype } from "./traits";
 
 export const OVR_MILESTONES = [60, 70, 80, 85, 90] as const;
 
@@ -212,9 +213,67 @@ function isObjectiveMet(objective: CycleObjective, ctx: CycleSatisfactionContext
   }
 }
 
+/** Kind che il mister può “chiedere” e su cui un miss alza la pressione sul ciclo dopo. */
+export const CLUB_ASKED_OBJECTIVE_KINDS: CycleObjectiveKind[] = ["goals", "apps", "trophy"];
+
+const OBJECTIVE_YOUTH_MAX_AGE = 20;
+const OBJECTIVE_LOW_PRESTIGE = 1;
+const OBJECTIVE_TROPHY_MIN_PRESTIGE = 2;
+const OBJECTIVE_TROPHY_MIN_OVR = 75;
+const OBJECTIVE_CALLUP_MIN_OVR = 70;
+const OBJECTIVE_NO_INJURY_AGE = 29;
+const OBJECTIVE_OVR_GAIN_YOUNG_AGE = 22;
+const OBJECTIVE_LOYALTY_FLAGBEARER = 58;
+
+const BASE_OBJECTIVE_WEIGHTS: Record<CycleObjectiveKind, number> = {
+  goals: 30,
+  apps: 22,
+  trophy: 18,
+  "no-injury": 15,
+  callup: 12,
+  "ovr-gain": 20,
+};
+
+function weightForObjectiveKind(kind: CycleObjectiveKind, player: Player): number {
+  let weight = BASE_OBJECTIVE_WEIGHTS[kind];
+  const prestige = player.club?.prestige ?? 0;
+  const archetype = deriveArchetype(player.traits, player.shadow).primary;
+
+  if (kind === "trophy") {
+    if (player.age <= OBJECTIVE_YOUTH_MAX_AGE && prestige <= OBJECTIVE_LOW_PRESTIGE) return 0;
+    if (prestige >= OBJECTIVE_TROPHY_MIN_PRESTIGE && player.ovr >= OBJECTIVE_TROPHY_MIN_OVR) weight *= 2.5;
+  }
+  if ((kind === "goals" || kind === "apps") && player.age <= OBJECTIVE_YOUTH_MAX_AGE && prestige <= OBJECTIVE_LOW_PRESTIGE) {
+    weight *= kind === "apps" ? 2 : 1.8;
+  }
+  if (kind === "callup" && !player.nationalTeam.called && player.ovr >= OBJECTIVE_CALLUP_MIN_OVR) {
+    weight *= 2;
+  }
+  if (kind === "no-injury" && (player.age >= OBJECTIVE_NO_INJURY_AGE || player.injury)) {
+    weight *= 2.5;
+  }
+  if (kind === "ovr-gain" && player.age < OBJECTIVE_OVR_GAIN_YOUNG_AGE) {
+    weight *= 1.8;
+  }
+  if (archetype === "flagbearer" || player.traits.loyalty >= OBJECTIVE_LOYALTY_FLAGBEARER) {
+    if (kind === "apps" || kind === "trophy") weight *= 1.5;
+    if (kind === "goals") weight *= 0.7;
+  }
+  if (archetype === "mercenary" && kind === "goals") {
+    weight *= 1.4;
+  }
+  return weight;
+}
+
 /** Genera l'obiettivo del ciclo successivo in base allo stato del giocatore.
- * `seasons` scala i target gol/presenze (valori Intense × stagioni del ciclo). */
-export function rollCycleObjective(player: Player, rng: Rng = Math.random, seasons = 1): CycleObjective {
+ * `seasons` scala i target gol/presenze (valori Intense × stagioni del ciclo).
+ * `excludeKind` evita di ripetere il brief appena chiuso, se resta un'alternativa. */
+export function rollCycleObjective(
+  player: Player,
+  rng: Rng = Math.random,
+  seasons = 1,
+  excludeKind?: CycleObjectiveKind,
+): CycleObjective {
   const seasonCount = Math.max(seasons, 1);
   const candidates: { kind: CycleObjectiveKind; weight: number; build: () => CycleObjective }[] = [];
 
@@ -223,12 +282,12 @@ export function rollCycleObjective(player: Player, rng: Rng = Math.random, seaso
     if (goalTarget > 0) {
       candidates.push({
         kind: "goals",
-        weight: 30,
+        weight: weightForObjectiveKind("goals", player),
         build: () => ({
           id: `goals-${goalTarget}`,
           kind: "goals",
           target: goalTarget,
-          label: `Segna almeno ${goalTarget} gol`,
+          label: `Il mister chiede: almeno ${goalTarget} gol`,
         }),
       });
     }
@@ -236,24 +295,24 @@ export function rollCycleObjective(player: Player, rng: Rng = Math.random, seaso
     const appsTarget = (player.age < 20 ? 20 : 30) * seasonCount;
     candidates.push({
       kind: "apps",
-      weight: 22,
+      weight: weightForObjectiveKind("apps", player),
       build: () => ({
         id: `apps-${appsTarget}`,
         kind: "apps",
         target: appsTarget,
-        label: `Raggiungi ${appsTarget} presenze`,
+        label: `Il mister chiede: almeno ${appsTarget} presenze`,
       }),
     });
 
     if (player.club.prestige >= 1) {
       candidates.push({
         kind: "trophy",
-        weight: 18,
+        weight: weightForObjectiveKind("trophy", player),
         build: () => ({
           id: "trophy-1",
           kind: "trophy",
           target: 1,
-          label: "Vinci un trofeo",
+          label: "Il mister chiede: vinci un trofeo",
         }),
       });
     }
@@ -261,54 +320,61 @@ export function rollCycleObjective(player: Player, rng: Rng = Math.random, seaso
 
   candidates.push({
     kind: "no-injury",
-    weight: 15,
+    weight: weightForObjectiveKind("no-injury", player),
     build: () => ({
       id: "no-injury",
       kind: "no-injury",
       target: 1,
-      label: "Resta sano per tutto il ciclo",
+      label: "Il mister chiede: resta sano per tutto il ciclo",
     }),
   });
 
-  if (!player.nationalTeam.called && player.ovr >= 70) {
+  if (!player.nationalTeam.called && player.ovr >= OBJECTIVE_CALLUP_MIN_OVR) {
     candidates.push({
       kind: "callup",
-      weight: 12,
+      weight: weightForObjectiveKind("callup", player),
       build: () => ({
         id: "callup",
         kind: "callup",
         target: 1,
-        label: "Ottieni una convocazione in nazionale",
+        label: "Il mister chiede: una convocazione in nazionale",
       }),
     });
   }
 
   if (player.age < 31) {
-    const ovrTarget = player.age < 22 ? 3 : 2;
+    const ovrTarget = player.age < OBJECTIVE_OVR_GAIN_YOUNG_AGE ? 3 : 2;
     candidates.push({
       kind: "ovr-gain",
-      weight: 20,
+      weight: weightForObjectiveKind("ovr-gain", player),
       build: () => ({
         id: `ovr-${ovrTarget}`,
         kind: "ovr-gain",
         target: ovrTarget,
-        label: `Guadagna almeno +${ovrTarget} OVR`,
+        label: `Il mister chiede: almeno +${ovrTarget} OVR`,
       }),
     });
   }
 
-  const pool = candidates.length > 0 ? candidates : [
-    {
-      kind: "no-injury" as const,
-      weight: 1,
-      build: () => ({
-        id: "no-injury",
-        kind: "no-injury" as const,
-        target: 1,
-        label: "Resta sano per tutto il ciclo",
-      }),
-    },
-  ];
+  const positive = candidates.filter((c) => c.weight > 0);
+  const withoutRepeat = excludeKind ? positive.filter((c) => c.kind !== excludeKind) : positive;
+  const pool =
+    withoutRepeat.length > 0
+      ? withoutRepeat
+      : positive.length > 0
+        ? positive
+        : [
+            {
+              kind: "no-injury" as const,
+              weight: 1,
+              build: () => ({
+                id: "no-injury",
+                kind: "no-injury" as const,
+                target: 1,
+                label: "Il mister chiede: resta sano per tutto il ciclo",
+              }),
+            },
+          ];
 
   const total = pool.reduce((sum, c) => sum + c.weight, 0);
   let roll = rng() * total;

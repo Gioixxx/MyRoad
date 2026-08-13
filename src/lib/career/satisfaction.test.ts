@@ -215,6 +215,34 @@ describe("rollCycleObjective", () => {
     const express = rollCycleObjective(player, () => 0, 3);
     expect(express.target).toBe(intense.target * 3);
   });
+
+  it("dovrebbe preferire un trofeo per una stella in un top club rispetto a un giovane in B", () => {
+    const star = { ...signWithClub(createPlayer(IDENTITY), JUVENTUS), age: 24, ovr: 80 };
+    const youth = { ...signWithClub(createPlayer(IDENTITY), getClub("sampdoria")!), age: 18, ovr: 55 };
+    const n = 200;
+    const countTrophy = (player: typeof star) => {
+      let hits = 0;
+      for (let i = 0; i < n; i++) {
+        if (rollCycleObjective(player, () => (i + 0.5) / n, 1).kind === "trophy") hits += 1;
+      }
+      return hits;
+    };
+    expect(countTrophy(star)).toBeGreaterThan(countTrophy(youth));
+    expect(countTrophy(youth)).toBe(0);
+  });
+
+  it("non dovrebbe ripetere il kind appena chiuso se esiste un'alternativa", () => {
+    const player = { ...signWithClub(createPlayer(IDENTITY), JUVENTUS), age: 24, ovr: 80 };
+    for (let i = 0; i < 40; i++) {
+      expect(rollCycleObjective(player, () => (i + 0.5) / 40, 1, "trophy").kind).not.toBe("trophy");
+    }
+  });
+
+  it("dovrebbe usare il tono del brief del mister", () => {
+    const player = signWithClub(createPlayer(IDENTITY), JUVENTUS);
+    const objective = rollCycleObjective(player, () => 0);
+    expect(objective.label.startsWith("Il mister chiede:")).toBe(true);
+  });
 });
 
 describe("updatePersonalRecords", () => {

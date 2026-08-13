@@ -7,6 +7,7 @@ import {
   INITIAL_LOOP_CONTEXT,
   nextLoopContext,
   pickNextDecision,
+  pickStaticDecision,
   pushRecentCategory,
   resolveCycle,
   shouldTriggerClauseActivation,
@@ -15,6 +16,7 @@ import {
   shouldTriggerDecisiveMatch,
   type LoopContext,
 } from "./loop";
+import { getRelation } from "./relations";
 
 const IDENTITY: PlayerIdentity = {
   lastName: "Rossi",
@@ -52,6 +54,7 @@ describe("availableCategories", () => {
       expect.arrayContaining(["transfer", "loan", "lifestyle", "position-change", "club-crisis", "end-of-cycle"]),
     );
     expect(categories).not.toContain("training-focus");
+    expect(categories).not.toContain("narrative");
   });
 
   it("dovrebbe includere sponsor solo sopra la soglia di popolarità", () => {
@@ -63,6 +66,11 @@ describe("availableCategories", () => {
 
   it("dovrebbe includere agent per un giocatore con club (clausola già impostata alla firma)", () => {
     expect(availableCategories(playerAt(), INITIAL_LOOP_CONTEXT)).toContain("agent");
+  });
+
+  it("dovrebbe includere narrative per un straniero adulto (grane fiscali)", () => {
+    const abroad: Player = { ...playerAt(), nationality: "Brazil", age: 24 };
+    expect(availableCategories(abroad, INITIAL_LOOP_CONTEXT)).toContain("narrative");
   });
 
   it("dovrebbe includere narrative per un giovane in un club a basso prestigio (unexpected-prospect)", () => {
@@ -85,7 +93,7 @@ describe("availableCategories", () => {
   it("dovrebbe includere narrative per un giocatore eleggibile alla redenzione", () => {
     const redeemable: Player = {
       ...playerAt(),
-      shadow: 20,
+      shadow: 10,
       shadowFlags: { scandalOccurred: true },
     };
     expect(availableCategories(redeemable, INITIAL_LOOP_CONTEXT)).toContain("narrative");
@@ -694,6 +702,136 @@ describe("resolveCycle — objectiveResult.firstTime per tipo di obiettivo", () 
 
     expect(result.objectiveResult).toEqual({ label: "Raggiungi 10 presenze", met: true, firstTime: true });
     expect(result.player.objectiveKindsCelebrated).toEqual(["goals", "apps"]);
+  });
+});
+
+describe("resolveCycle — pressione del brief sul ciclo dopo", () => {
+  const stay = { id: "stay", label: "Resta", outcomes: [{ weight: 100, effect: {}, resultText: "Resti." }] };
+
+  it("dovrebbe alzare lo streak su due miss di gol e rendere crisis più pesante", () => {
+    const player = {
+      ...playerAt(),
+      currentObjective: { id: "g", label: "Il mister chiede: almeno 999 gol", kind: "goals" as const, target: 999 },
+    };
+    const first = resolveCycle(player, INITIAL_LOOP_CONTEXT, "lifestyle", stay, "normal", () => 0.99);
+    expect(first.objectiveResult?.met).toBe(false);
+    expect(first.context.lastObjectiveMet).toBe(false);
+    expect(first.context.objectiveMissStreak).toBe(1);
+
+    const second = resolveCycle(
+      { ...first.player, currentObjective: player.currentObjective },
+      first.context,
+      "lifestyle",
+      stay,
+      "normal",
+      () => 0.99,
+    );
+    expect(second.context.objectiveMissStreak).toBe(2);
+  });
+
+  it("non dovrebbe alzare lo streak se si manca un brief no-injury", () => {
+    const player = {
+      ...playerAt(),
+      currentObjective: {
+        id: "ni",
+        label: "Il mister chiede: resta sano per tutto il ciclo",
+        kind: "no-injury" as const,
+        target: 1,
+      },
+    };
+    const option = {
+      id: "risk",
+      label: "Rischia",
+      outcomes: [
+        {
+          weight: 100,
+          effect: { injury: { label: "Distorsione alla caviglia", turnsRemaining: 2, ovrPenalty: 4 } },
+          resultText: "Infortunio.",
+        },
+      ],
+    };
+    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "lifestyle", option, "normal", () => 0.99);
+    expect(result.objectiveResult?.met).toBe(false);
+    expect(result.context.lastObjectiveMet).toBe(false);
+    expect(result.context.objectiveMissStreak ?? 0).toBe(0);
+  });
+
+  it("dovrebbe azzerare lo streak e alzare l'affinità del mister se il brief è raggiunto", () => {
+    const player = {
+      ...playerAt(),
+      currentObjective: { id: "g", label: "Il mister chiede: almeno 0 gol", kind: "goals" as const, target: 0 },
+    };
+    const before = getRelation(player, "coach")?.affinity ?? 0;
+    const context: LoopContext = { ...INITIAL_LOOP_CONTEXT, objectiveMissStreak: 2, lastObjectiveMet: false };
+    const result = resolveCycle(player, context, "lifestyle", stay, "normal", () => 0.5);
+    expect(result.objectiveResult?.met).toBe(true);
+    expect(result.context.lastObjectiveMet).toBe(true);
+    expect(result.context.objectiveMissStreak).toBe(0);
+    expect(getRelation(result.player, "coach")?.affinity).toBe(before + 1);
+  });
+
+  it("dovrebbe azzerare lo streak su trasferimento anche dopo un miss", () => {
+    const player = {
+      ...playerAt(),
+      currentObjective: { id: "g", label: "Il mister chiede: almeno 999 gol", kind: "goals" as const, target: 999 },
+    };
+    const context: LoopContext = { ...INITIAL_LOOP_CONTEXT, objectiveMissStreak: 2, lastObjectiveMet: false };
+    const option = {
+      id: "sign",
+      label: "Firma per Sevilla",
+      club: SEVILLA,
+      outcomes: [{ weight: 100, effect: {}, resultText: "Firmato." }],
+    };
+    const result = resolveCycle(player, context, "transfer", option, "normal", () => 0.99);
+    expect(result.objectiveResult?.met).toBe(false);
+    expect(result.context.objectiveMissStreak).toBe(0);
+    expect(result.player.club?.id).toBe(SEVILLA.id);
+  });
+});
+
+describe("pickStaticDecision — brief no-injury", () => {
+  const RISKY = new Set(["double-sessions", "extra-camp", "mysterious-substance"]);
+
+  function withNoInjuryBrief(player: ReturnType<typeof playerAt>) {
+    return {
+      ...player,
+      currentObjective: {
+        id: "ni",
+        label: "Il mister chiede: resta sano per tutto il ciclo",
+        kind: "no-injury" as const,
+        target: 1,
+      },
+    };
+  }
+
+  it("dovrebbe downweightare le carte rischiose senza nasconderle", () => {
+    const base = playerAt();
+    const brief = withNoInjuryBrief(base);
+    const countRisky = (player: typeof base) => {
+      let hits = 0;
+      for (let i = 0; i < 200; i++) {
+        const picked = pickStaticDecision("lifestyle", player, [], () => (i + 0.5) / 200);
+        if (RISKY.has(picked.kind)) hits += 1;
+      }
+      return hits;
+    };
+    const withBrief = countRisky(brief);
+    const without = countRisky(base);
+    expect(withBrief).toBeGreaterThan(0);
+    expect(withBrief).toBeLessThan(without);
+  });
+
+  it("dovrebbe marcare l'opzione rischiosa come tradimento del brief", () => {
+    const player = withNoInjuryBrief(playerAt());
+    let found = false;
+    for (let i = 0; i < 200; i++) {
+      const picked = pickStaticDecision("lifestyle", player, [], () => (i + 0.5) / 200);
+      if (!RISKY.has(picked.kind)) continue;
+      expect(picked.decision.options.some((o) => o.hint === "Tradisce il brief · infortunio")).toBe(true);
+      found = true;
+      break;
+    }
+    expect(found).toBe(true);
   });
 });
 
