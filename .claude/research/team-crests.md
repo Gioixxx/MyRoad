@@ -67,6 +67,16 @@ Colonna "TSDB idTeam" = id squadra su TheSportsDB (utile per richieste future, e
 | lazio | Lazio | 133668 | https://r2.thesportsdb.com/images/media/team/badge/rwqyvs1448806608.png |
 | bologna | Bologna | 134781 | https://r2.thesportsdb.com/images/media/team/badge/2qi1u31655592366.png |
 | torino | Torino | 133687 | https://r2.thesportsdb.com/images/media/team/badge/xxprty1448806802.png |
+| como | Como | 134243 | https://r2.thesportsdb.com/images/media/team/badge/02x81t1627405841.png |
+| genoa | Genoa | 133675 | https://r2.thesportsdb.com/images/media/team/badge/52s8dn1655553600.png |
+| udinese | Udinese | 133679 | https://r2.thesportsdb.com/images/media/team/badge/vwvstr1448806811.png |
+| sassuolo | Sassuolo | 133701 | https://r2.thesportsdb.com/images/media/team/badge/xystvp1448806138.png |
+| parma | Parma | 135728 | https://r2.thesportsdb.com/images/media/team/badge/6yiaxs1627406063.png |
+| cagliari | Cagliari | 134783 | https://r2.thesportsdb.com/images/media/team/badge/wvsvxt1447534471.png |
+| lecce | Lecce | 133678 | https://r2.thesportsdb.com/images/media/team/badge/j4vznr1567365249.png |
+| monza | Monza | 134270 | https://r2.thesportsdb.com/images/media/team/badge/bxearg1603170113.png |
+| venezia | Venezia | 134234 | https://r2.thesportsdb.com/images/media/team/badge/vbiget1781026964.png |
+| frosinone | Frosinone | 133818 | https://r2.thesportsdb.com/images/media/team/badge/a7xa151603170120.png |
 
 ### Italia — Serie B
 
@@ -81,7 +91,7 @@ Colonna "TSDB idTeam" = id squadra su TheSportsDB (utile per richieste future, e
 | cremonese | Cremonese | 134224 | https://r2.thesportsdb.com/images/media/team/badge/6ng2vy1579708291.png |
 | catanzaro | Catanzaro | 134223 | https://r2.thesportsdb.com/images/media/team/badge/byrc5e1691995858.png |
 | carrarese | Carrarese | 134666 | https://r2.thesportsdb.com/images/media/team/badge/njh6tl1651779724.png |
-| frosinone | Frosinone | 133818 | https://r2.thesportsdb.com/images/media/team/badge/a7xa151603170120.png |
+| pisa-sc | Pisa | 133859 | https://r2.thesportsdb.com/images/media/team/badge/2eso9w1579708309.png |
 
 ### Italia — Serie C
 
@@ -90,7 +100,6 @@ Colonna "TSDB idTeam" = id squadra su TheSportsDB (utile per richieste future, e
 | padova | Padova | 135950 | https://r2.thesportsdb.com/images/media/team/badge/hklo0i1579724992.png |
 | pescara | Pescara | 133685 | https://r2.thesportsdb.com/images/media/team/badge/uywyxr1426869511.png |
 | virtus-entella | Virtus Entella | 134633 | https://r2.thesportsdb.com/images/media/team/badge/c7yb5u1693457662.png |
-| pisa-sc | Pisa | 133859 | https://r2.thesportsdb.com/images/media/team/badge/2eso9w1579708309.png |
 | gubbio | Gubbio | 133698 | https://r2.thesportsdb.com/images/media/team/badge/el7zx61680802664.png |
 | pontedera | Pontedera | 134675 | https://r2.thesportsdb.com/images/media/team/badge/emkgc41651779179.png |
 | novara | Novara | 133673 | https://r2.thesportsdb.com/images/media/team/badge/urbkrr1675352937.png |
@@ -109,22 +118,29 @@ Colonna "TSDB idTeam" = id squadra su TheSportsDB (utile per richieste future, e
 | newcastle | Newcastle United | 134777 | https://r2.thesportsdb.com/images/media/team/badge/lhwuiz1621593302.png |
 | aston-villa | Aston Villa | 133601 | https://www.thesportsdb.com/images/media/team/badge/97mehy1784645865.png |
 | brighton | Brighton & Hove Albion | 133619 | https://r2.thesportsdb.com/images/media/team/badge/ywypts1448810904.png |
-| west-ham | West Ham United | 133636 | https://r2.thesportsdb.com/images/media/team/badge/yutyxs1467459956.png |
 | everton | Everton | 133615 | https://r2.thesportsdb.com/images/media/team/badge/eqayrf1523184794.png |
-| wolves | Wolverhampton Wanderers | 133599 | https://r2.thesportsdb.com/images/media/team/badge/u9qr031621593327.png |
+| sunderland | Sunderland | 133603 | https://r2.thesportsdb.com/images/media/team/badge/tprtus1448813498.png |
+| leeds-united | Leeds United | 133635 | https://r2.thesportsdb.com/images/media/team/badge/jcgrml1756649030.png |
+| coventry-city | Coventry City | 133625 | https://r2.thesportsdb.com/images/media/team/badge/uxyqys1424033798.png |
+| crystal-palace | Crystal Palace | 133632 | https://r2.thesportsdb.com/images/media/team/badge/ia6i3m1656014992.png |
+| fulham | Fulham | 133600 | https://r2.thesportsdb.com/images/media/team/badge/xwwvyt1448811086.png |
+| nottingham-forest | Nottingham Forest | 133720 | https://r2.thesportsdb.com/images/media/team/badge/sar2y41781740886.png |
+| bournemouth | Bournemouth | 134301 | https://r2.thesportsdb.com/images/media/team/badge/y08nak1534071116.png |
+| brentford | Brentford | 134355 | https://r2.thesportsdb.com/images/media/team/badge/grv1aw1546453779.png |
+| hull-city | Hull City | 133617 | https://r2.thesportsdb.com/images/media/team/badge/fbqqda1601726113.png |
+| ipswich-town | Ipswich Town | 133622 | https://r2.thesportsdb.com/images/media/team/badge/mdj1ey1634670785.png |
 
 ### Inghilterra — Championship
 
 | id club | Nome | TSDB idTeam | URL stemma |
 |---|---|---|---|
-| sunderland | Sunderland | 133603 | https://r2.thesportsdb.com/images/media/team/badge/tprtus1448813498.png |
 | southampton | Southampton | 134778 | https://r2.thesportsdb.com/images/media/team/badge/ggqtd01621593274.png |
-| leeds-united | Leeds United | 133635 | https://r2.thesportsdb.com/images/media/team/badge/jcgrml1756649030.png |
 | norwich-city | Norwich City | 133608 | https://r2.thesportsdb.com/images/media/team/badge/pabczm1679951464.png |
 | west-brom | West Bromwich Albion | 133611 | https://r2.thesportsdb.com/images/media/team/badge/rsvuxw1448813527.png |
 | preston | Preston North End | 133809 | https://r2.thesportsdb.com/images/media/team/badge/wqtwvw1448811512.png |
 | middlesbrough | Middlesbrough | 133628 | https://r2.thesportsdb.com/images/media/team/badge/advjg71780068902.png |
-| coventry-city | Coventry City | 133625 | https://r2.thesportsdb.com/images/media/team/badge/uxyqys1424033798.png |
+| west-ham | West Ham United | 133636 | https://r2.thesportsdb.com/images/media/team/badge/yutyxs1467459956.png |
+| wolves | Wolverhampton Wanderers | 133599 | https://r2.thesportsdb.com/images/media/team/badge/u9qr031621593327.png |
 
 ### Spagna — La Liga
 
@@ -139,7 +155,17 @@ Colonna "TSDB idTeam" = id squadra su TheSportsDB (utile per richieste future, e
 | villarreal | Villarreal | 133740 | https://r2.thesportsdb.com/images/media/team/badge/vrypqy1473503073.png |
 | athletic-bilbao | Athletic Bilbao | 133727 | https://r2.thesportsdb.com/images/media/team/badge/68w7fe1639408210.png |
 | valencia | Valencia | 133725 | https://r2.thesportsdb.com/images/media/team/badge/dm8l6o1655594864.png |
-| girona | Girona | 134700 | https://r2.thesportsdb.com/images/media/team/badge/kfu7zu1659897499.png |
+| levante | Levante | 133732 | https://r2.thesportsdb.com/images/media/team/badge/xwtxsx1473503739.png |
+| malaga | Málaga | 133736 | https://r2.thesportsdb.com/images/media/team/badge/upqyvr1473502952.png |
+| racing-santander | Racing Santander | 133726 | https://r2.thesportsdb.com/images/media/team/badge/97kkiq1536575158.png |
+| celta-vigo | Celta Vigo | 133937 | https://r2.thesportsdb.com/images/media/team/badge/xfjtku1690436219.png |
+| espanyol | Espanyol | 133734 | https://r2.thesportsdb.com/images/media/team/badge/867nzz1681703222.png |
+| osasuna | Osasuna | 133730 | https://r2.thesportsdb.com/images/media/team/badge/rvspvt1473502960.png |
+| alaves | Alavés | 134221 | https://r2.thesportsdb.com/images/media/team/badge/mfn99h1734673842.png |
+| deportivo-la-coruna | Deportivo La Coruña | 133816 | https://www.thesportsdb.com/images/media/team/badge/62bvwv1783013156.png |
+| elche | Elche | 134384 | https://r2.thesportsdb.com/images/media/team/badge/e4vaw51655594332.png |
+| getafe | Getafe | 133731 | https://r2.thesportsdb.com/images/media/team/badge/eyh2891655594452.png |
+| rayo-vallecano | Rayo Vallecano | 133728 | https://r2.thesportsdb.com/images/media/team/badge/nzhu941655595465.png |
 
 ### Spagna — LaLiga 2
 
@@ -147,12 +173,10 @@ Colonna "TSDB idTeam" = id squadra su TheSportsDB (utile per richieste future, e
 |---|---|---|---|
 | las-palmas | Las Palmas | 134259 | https://r2.thesportsdb.com/images/media/team/badge/mmhyb11616443601.png |
 | real-oviedo | Real Oviedo | 135455 | https://r2.thesportsdb.com/images/media/team/badge/yuwqus1447590681.png |
-| racing-santander | Racing Santander | 133726 | https://r2.thesportsdb.com/images/media/team/badge/97kkiq1536575158.png |
 | sporting-gijon | Sporting Gijón | 133723 | https://r2.thesportsdb.com/images/media/team/badge/xxrtqx1473503054.png |
-| malaga | Málaga | 133736 | https://r2.thesportsdb.com/images/media/team/badge/upqyvr1473502952.png |
 | eibar | Eibar | 134626 | https://r2.thesportsdb.com/images/media/team/badge/hccive1680933599.png |
-| levante | Levante | 133732 | https://r2.thesportsdb.com/images/media/team/badge/xwtxsx1473503739.png |
 | albacete | Albacete | 134232 | https://r2.thesportsdb.com/images/media/team/badge/17oqja1616436316.png |
+| girona | Girona | 134700 | https://r2.thesportsdb.com/images/media/team/badge/kfu7zu1659897499.png |
 
 > Nota: cercando "Sporting Gijon" senza accento, TheSportsDB restituiva prima "Sporting Atlético"
 > (la squadra riserve/B del club) invece del club principale. Risolto cercando "Sporting de Gijón",
@@ -518,6 +542,50 @@ piramidale) — confermata via TheSportsDB (`lookupleague.php?id=5180`).
 `crestUrl` e badge lega/coppa verificati live su TheSportsDB il 2026-08-06 (badge lega/coppa
 verificati con una richiesta HTTP diretta dall'orchestratore di sessione, non dall'agente di
 ricerca — l'agente aveva verificato solo i crest club per Corea del Sud/Australia).
+
+### Big 5 — espansione roster 2026/27 (44 club nuovi)
+
+Ricerca 2026-08-14. Stemmi verificati HTTP 200 individualmente (HEAD, `image/png`).
+`searchteams.php?t=` ha fallito o ha matchato il club sbagliato in 5 casi — risolti via
+`lookupteam.php?id=` o query disambiguata:
+
+- Nottingham Forest: `searchteams.php?t=Nottingham Forest` restituisce solo il club di netball;
+  prima squadra soccer = idTeam **133720**.
+- Deportivo La Coruña: "Deportivo La Coruna" matcha Deportivo Fabril (squadra B); prima squadra
+  = idTeam **133816** (`Deportivo de A Coruña`).
+- Alavés: "Alaves" matcha Alavés Gloriosas (Liga F); query `Deportivo Alaves` → idTeam **134221**.
+- Hamburger SV: "Hamburger SV" matcha solo l'hockey; query `Hamburg` → idTeam **133651**.
+- Mainz 05: "Mainz 05" matcha Mainz 05 Women; query `FSV Mainz` → idTeam **133665**.
+
+### Germania — Bundesliga (club aggiunti 2026/27)
+
+| id club | Nome | TSDB idTeam | URL stemma |
+|---|---|---|---|
+| schalke-04 | Schalke 04 | 133661 | https://r2.thesportsdb.com/images/media/team/badge/hnci291621593978.png |
+| hamburger-sv | Hamburger SV | 133651 | https://r2.thesportsdb.com/images/media/team/badge/tvtppt1473453296.png |
+| freiburg | SC Freiburg | 133653 | https://r2.thesportsdb.com/images/media/team/badge/urwtup1473453288.png |
+| koln | 1. FC Köln | 133654 | https://r2.thesportsdb.com/images/media/team/badge/2j1sc91566049407.png |
+| augsburg | Augsburg | 133652 | https://r2.thesportsdb.com/images/media/team/badge/xqyyvq1473453233.png |
+| union-berlin | Union Berlin | 134690 | https://r2.thesportsdb.com/images/media/team/badge/q0o5001599679795.png |
+| elversberg | Elversberg | 138411 | https://r2.thesportsdb.com/images/media/team/badge/z079go1677573926.png |
+| hoffenheim | Hoffenheim | 133657 | https://r2.thesportsdb.com/images/media/team/badge/9hwvb21621593919.png |
+| mainz-05 | Mainz 05 | 133665 | https://r2.thesportsdb.com/images/media/team/badge/fhm9v51552134916.png |
+| paderborn | Paderborn | 134551 | https://r2.thesportsdb.com/images/media/team/badge/kddvva1566048058.png |
+
+### Francia — Ligue 1 (club aggiunti 2026/27)
+
+| id club | Nome | TSDB idTeam | URL stemma |
+|---|---|---|---|
+| strasbourg | Strasbourg | 133882 | https://r2.thesportsdb.com/images/media/team/badge/b8k77w1766625501.png |
+| toulouse | Toulouse | 133703 | https://r2.thesportsdb.com/images/media/team/badge/17eqox1688449282.png |
+| angers | Angers | 134709 | https://r2.thesportsdb.com/images/media/team/badge/ix6q4w1678808069.png |
+| auxerre | Auxerre | 134788 | https://r2.thesportsdb.com/images/media/team/badge/lzdtbf1658753355.png |
+| brest | Brest | 133704 | https://r2.thesportsdb.com/images/media/team/badge/z69be41598797026.png |
+| le-havre | Le Havre | 133862 | https://r2.thesportsdb.com/images/media/team/badge/aikowk1546475003.png |
+| le-mans | Le Mans | 133848 | https://r2.thesportsdb.com/images/media/team/badge/wjhziv1700145026.png |
+| lorient | Lorient | 133715 | https://r2.thesportsdb.com/images/media/team/badge/sxsttw1473504748.png |
+| paris-fc | Paris FC | 135465 | https://r2.thesportsdb.com/images/media/team/badge/yuvtsy1447594254.png |
+| troyes | Troyes | 134789 | https://r2.thesportsdb.com/images/media/team/badge/sl5kzg1766617559.png |
 
 ## 3. Competizioni — URL badge
 

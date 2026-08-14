@@ -93,4 +93,19 @@ describe("clubs", () => {
     expect(serieA.length).toBeGreaterThan(0);
     expect(serieA.every((c) => c.country === "Italy" && c.tier === 1)).toBe(true);
   });
+
+  it("i Big 5 hanno il roster reale 2026/27", () => {
+    expect(clubsByTier("Italy", 1)).toHaveLength(20);
+    expect(clubsByTier("England", 1)).toHaveLength(20);
+    expect(clubsByTier("Spain", 1)).toHaveLength(20);
+    expect(clubsByTier("Germany", 1)).toHaveLength(18);
+    expect(clubsByTier("France", 1)).toHaveLength(18);
+  });
+
+  it("Francia e Germania hanno almeno 4 club con prestige <= 1 per l'offerta giovanile", () => {
+    for (const country of ["France", "Germany"]) {
+      const academyPool = clubsByCountry(country).filter((c) => c.prestige <= 1);
+      expect(academyPool.length).toBeGreaterThanOrEqual(4);
+    }
+  });
 });
