@@ -125,8 +125,24 @@ describe("leaderboard/client — rete (env stubbate, modulo reimportato)", () =>
 
       const [url] = fetchMock.mock.calls[0];
       expect(url).toBe(
-        "https://test.supabase.co/rest/v1/myroad_leaderboard_public?select=*&order=trophy_count.desc,created_at.desc&limit=10",
+        "https://test.supabase.co/rest/v1/myroad_leaderboard_by_trophies?select=*&order=trophy_count.desc,created_at.desc&limit=10",
       );
+    });
+
+    it("fetchLeaderboardCategory punta alla vista per-dispositivo della categoria, non al dump pubblico", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const mod = await import("./client");
+      await mod.fetchLeaderboardCategory("highestOvr");
+      await mod.fetchLeaderboardCategory("richest");
+      await mod.fetchLeaderboardCategory("mostPopular");
+
+      const urls = fetchMock.mock.calls.map(([url]) => url as string);
+      expect(urls[0]).toContain("/rest/v1/myroad_leaderboard_by_ovr?");
+      expect(urls[1]).toContain("/rest/v1/myroad_leaderboard_by_savings?");
+      expect(urls[2]).toContain("/rest/v1/myroad_leaderboard_by_popularity?");
+      expect(urls.every((url) => !url.includes("myroad_leaderboard_public"))).toBe(true);
     });
 
     it("fetchLeaderboardCategory mappa le righe raw in LeaderboardListItem", async () => {

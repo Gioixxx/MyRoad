@@ -83,11 +83,23 @@ create index myroad_leaderboard_trophy_idx     on public.myroad_leaderboard_entr
 create index myroad_leaderboard_savings_idx    on public.myroad_leaderboard_entries (final_savings_eur desc, created_at desc);
 create index myroad_leaderboard_popularity_idx on public.myroad_leaderboard_entries (final_popularity desc, created_at desc);
 
+-- Indici per DISTINCT ON (device_id) nelle viste per-categoria sotto:
+-- una riga per dispositivo, la migliore su quell'asse.
+create index myroad_leaderboard_device_ovr_idx
+  on public.myroad_leaderboard_entries (device_id, peak_ovr desc, created_at desc);
+create index myroad_leaderboard_device_trophy_idx
+  on public.myroad_leaderboard_entries (device_id, trophy_count desc, created_at desc);
+create index myroad_leaderboard_device_savings_idx
+  on public.myroad_leaderboard_entries (device_id, final_savings_eur desc, created_at desc);
+create index myroad_leaderboard_device_popularity_idx
+  on public.myroad_leaderboard_entries (device_id, final_popularity desc, created_at desc);
+
 alter table public.myroad_leaderboard_entries enable row level security;
 
 -- NESSUNA policy di lettura pubblica sulla tabella base: device_id/client_entry_id non devono
--- mai essere leggibili da anon (vedi la vista pubblica piu' sotto, che li esclude). La lettura
--- pubblica della classifica passa SOLO da quella vista.
+-- mai essere leggibili da anon (vedi le viste pubbliche piu' sotto, che li escludono). La
+-- lettura pubblica della classifica passa dalle viste per-categoria; myroad_leaderboard_public
+-- resta un dump non filtrato (utile in dashboard, non usato dal client).
 
 -- Scrittura pubblica (anche anonima): nessun login, per design. I CHECK
 -- sopra sono l'unico filtro; nessuna validazione server-authoritative e'
@@ -104,9 +116,10 @@ create policy "myroad_leaderboard_public_insert"
 -- Supabase con la service_role key.
 
 -- =====================================================================
--- Vista pubblica di sola lettura: esclude device_id/client_entry_id, mai
--- utili al client e altrimenti raccoglibili da chiunque ispezioni le
--- risposte dell'endpoint REST (verificato: nessun codice UI li legge).
+-- Vista di sola lettura di tutte le righe (nessun filtro per dispositivo).
+-- Il client NON la usa piu': la classifica passa dalle viste per-categoria
+-- sotto. Resta disponibile in dashboard / debug; stesse colonne pubbliche
+-- (niente device_id/client_entry_id).
 -- Una vista Postgres senza `security_invoker` (default) esegue con i
 -- permessi del proprietario — bypassa la RLS della tabella sottostante a
 -- prescindere da chi la interroga, quindi anon puo' leggere tutte le righe
@@ -133,6 +146,76 @@ from public.myroad_leaderboard_entries;
 
 grant select on public.myroad_leaderboard_public to anon;
 revoke insert, update, delete on public.myroad_leaderboard_public from anon;
+
+-- =====================================================================
+-- Viste per-categoria: una riga per dispositivo (la migliore su quell'asse).
+-- La tabella puo' tenere piu' carriere Pareto-incomparabili dello stesso
+-- device_id (vedi trigger sotto); in UI pero' ogni tab deve mostrare al
+-- massimo una voce per persona, altrimenti lo stesso nickname compare
+-- due volte in "OVR piu' alto" con punteggi diversi.
+--
+-- DISTINCT ON (device_id) avviene qui, internamente: le viste espongono
+-- le stesse colonne di myroad_leaderboard_public (niente device_id).
+-- Stesso avviso della vista sopra: revoke esplicita di INSERT/UPDATE/DELETE
+-- su anon, altrimenti Supabase lascia i privilegi ampi di default.
+-- =====================================================================
+
+create or replace view public.myroad_leaderboard_by_ovr as
+select
+  id, nickname, app_version, last_name, nationality, position,
+  peak_ovr, trophy_count, award_count, retired_age, retired_at_iso,
+  career_apps, career_goals, career_assists, final_savings_eur,
+  final_popularity, career_title, archetype_id, shadow_title, created_at
+from (
+  select distinct on (device_id) *
+  from public.myroad_leaderboard_entries
+  order by device_id, peak_ovr desc, created_at desc
+) t;
+
+create or replace view public.myroad_leaderboard_by_trophies as
+select
+  id, nickname, app_version, last_name, nationality, position,
+  peak_ovr, trophy_count, award_count, retired_age, retired_at_iso,
+  career_apps, career_goals, career_assists, final_savings_eur,
+  final_popularity, career_title, archetype_id, shadow_title, created_at
+from (
+  select distinct on (device_id) *
+  from public.myroad_leaderboard_entries
+  order by device_id, trophy_count desc, created_at desc
+) t;
+
+create or replace view public.myroad_leaderboard_by_savings as
+select
+  id, nickname, app_version, last_name, nationality, position,
+  peak_ovr, trophy_count, award_count, retired_age, retired_at_iso,
+  career_apps, career_goals, career_assists, final_savings_eur,
+  final_popularity, career_title, archetype_id, shadow_title, created_at
+from (
+  select distinct on (device_id) *
+  from public.myroad_leaderboard_entries
+  order by device_id, final_savings_eur desc, created_at desc
+) t;
+
+create or replace view public.myroad_leaderboard_by_popularity as
+select
+  id, nickname, app_version, last_name, nationality, position,
+  peak_ovr, trophy_count, award_count, retired_age, retired_at_iso,
+  career_apps, career_goals, career_assists, final_savings_eur,
+  final_popularity, career_title, archetype_id, shadow_title, created_at
+from (
+  select distinct on (device_id) *
+  from public.myroad_leaderboard_entries
+  order by device_id, final_popularity desc, created_at desc
+) t;
+
+grant select on public.myroad_leaderboard_by_ovr to anon;
+grant select on public.myroad_leaderboard_by_trophies to anon;
+grant select on public.myroad_leaderboard_by_savings to anon;
+grant select on public.myroad_leaderboard_by_popularity to anon;
+revoke insert, update, delete on public.myroad_leaderboard_by_ovr from anon;
+revoke insert, update, delete on public.myroad_leaderboard_by_trophies from anon;
+revoke insert, update, delete on public.myroad_leaderboard_by_savings from anon;
+revoke insert, update, delete on public.myroad_leaderboard_by_popularity from anon;
 
 -- =====================================================================
 -- Per utente: tiene solo le carriere che sono un record su almeno un asse

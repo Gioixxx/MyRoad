@@ -2,6 +2,7 @@ import type { ArchivedCareer } from "@/types/career";
 import { APP_VERSION } from "@/constants/app-info";
 import {
   LEADERBOARD_CATEGORY_COLUMN,
+  LEADERBOARD_CATEGORY_VIEW,
   toLeaderboardListItem,
   type LeaderboardCategory,
   type LeaderboardEntryRow,
@@ -11,9 +12,6 @@ import {
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const TABLE = "myroad_leaderboard_entries";
-// Vista pubblica di sola lettura: esclude device_id/client_entry_id (mai usati dalla UI, mai da
-// esporre a chi legge la classifica). Le insert restano sulla tabella base (TABLE).
-const READ_VIEW = "myroad_leaderboard_public";
 const DEFAULT_LIMIT = 20;
 
 export type LeaderboardResult<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -84,8 +82,10 @@ export async function fetchLeaderboardCategory(
 ): Promise<LeaderboardResult<LeaderboardListItem[]>> {
   if (!isLeaderboardConfigured()) return { ok: false, error: "not-configured" };
 
+  // Vista per-categoria: DISTINCT ON (device_id) lato SQL, senza esporre device_id.
+  const view = LEADERBOARD_CATEGORY_VIEW[category];
   const column = LEADERBOARD_CATEGORY_COLUMN[category];
-  const url = `${SUPABASE_URL}/rest/v1/${READ_VIEW}?select=*&order=${column}.desc,created_at.desc&limit=${limit}`;
+  const url = `${SUPABASE_URL}/rest/v1/${view}?select=*&order=${column}.desc,created_at.desc&limit=${limit}`;
 
   try {
     const res = await fetch(url, { headers: headers() });

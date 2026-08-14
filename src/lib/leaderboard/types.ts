@@ -15,6 +15,15 @@ export const LEADERBOARD_CATEGORY_COLUMN: Record<LeaderboardCategory, string> = 
   mostPopular: "final_popularity",
 };
 
+/** Vista pubblica per categoria: una riga per dispositivo (la migliore su quell'asse).
+ * Il DISTINCT ON (device_id) vive in SQL, così device_id non esce mai al client. */
+export const LEADERBOARD_CATEGORY_VIEW: Record<LeaderboardCategory, string> = {
+  highestOvr: "myroad_leaderboard_by_ovr",
+  mostTrophies: "myroad_leaderboard_by_trophies",
+  richest: "myroad_leaderboard_by_savings",
+  mostPopular: "myroad_leaderboard_by_popularity",
+};
+
 export const LEADERBOARD_CATEGORY_LABELS: Record<LeaderboardCategory, string> = {
   highestOvr: "OVR più alto",
   mostTrophies: "Più trofei",
@@ -22,8 +31,8 @@ export const LEADERBOARD_CATEGORY_LABELS: Record<LeaderboardCategory, string> = 
   mostPopular: "Più popolare",
 };
 
-/** Riga raw così come torna da PostgREST (snake_case) dalla vista pubblica
- * `myroad_leaderboard_public` (supabase/schema.sql) — non dalla tabella base: niente
+/** Riga raw così come torna da PostgREST (snake_case) dalle viste per-categoria
+ * `myroad_leaderboard_by_*` (supabase/schema.sql) — non dalla tabella base: niente
  * device_id/client_entry_id, mai esposti in lettura pubblica. */
 export interface LeaderboardEntryRow {
   id: string;
