@@ -684,6 +684,20 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   0.12.1.0) e `dist/MyRoad.apk` (versionCode 1201/versionName 0.12.1, firma verificata) rigenerati
   e allegati alla [release GitHub v0.12.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.12.1).
 
+- [x] **Fix voci duplicate in classifica + release v0.12.2** (2026-08-14, commit `78c6f7d` fix +
+  `61fc0f7` bump versione + tag v0.12.2): modifiche fatte dall'utente fuori sessione a
+  `schema.sql`/`types.ts`/`client.ts`/`client.test.ts` (4 nuove viste per-categoria con
+  `distinct on (device_id)`, una riga per dispositivo invece del dump grezzo che poteva mostrare
+  lo stesso nickname più volte nella stessa tab). Verifica bloccante prima del rilascio: le 4
+  nuove viste non esistevano ancora sul DB Supabase live (migrazione scritta ma non eseguita) —
+  rilascio sospeso finché l'utente non ha eseguito `supabase/one-row-per-device.sql`, poi
+  riverificato dal vivo (viste raggiungibili, non scrivibili da anon, nessuna duplicazione residua
+  in app). Vedi [[decisions]] per il dettaglio completo. 544 test (era 543, +1), `tsc`/eslint
+  puliti. Bump `package.json`/`package-lock.json` 0.12.1→**0.12.2** (patch), `dist/MyRoad.exe`
+  (FileVersion 0.12.2.0) e `dist/MyRoad.apk` (versionCode 1202/versionName 0.12.2, firma
+  verificata) rigenerati e allegati alla [release GitHub
+  v0.12.2](https://github.com/Gioixxx/MyRoad/releases/tag/v0.12.2).
+
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
 - `ClubStint` ora ha un campo `ovr` (OVR del giocatore alla fine di quel ciclo) — necessario per la CareerTable, che deve mostrare l'OVR storico per riga, non quello attuale

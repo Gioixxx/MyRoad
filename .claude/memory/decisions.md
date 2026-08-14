@@ -910,3 +910,50 @@ Registro scelte tecniche con motivazioni.
   (FileVersion 0.12.1.0) e `dist/MyRoad.apk` (versionCode 1201/versionName 0.12.1, firma verificata
   con `apksigner verify --print-certs` — stessa chiave stabile del progetto) rigenerati e allegati
   alla [release GitHub v0.12.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.12.1).
+
+### Una sola riga per dispositivo in ogni tab della classifica — viste per-categoria con DISTINCT ON
+- **Data:** 2026-08-14
+- **Decisione:** l'utente ha modificato direttamente `supabase/schema.sql` e i file client della
+  classifica (`types.ts`/`client.ts`/`client.test.ts`) fuori da questa sessione ("ho aggiornato dei
+  file"), chiedendo poi di committare e rilasciare. Il cambiamento: la tabella base
+  `myroad_leaderboard_entries` tiene volutamente più carriere Pareto-incomparabili dello stesso
+  `device_id` (dominanza di Pareto su 4 assi, vedi voce "Classifica globale cross-utente" sopra —
+  per non nascondere un record vero su un asse solo perché un'altra carriera dello stesso
+  dispositivo è più forte su un asse diverso). Il client però leggeva quel dump grezzo
+  (`myroad_leaderboard_public`) per **ogni** tab, quindi lo stesso nickname poteva comparire più
+  volte nella stessa categoria con punteggi diversi (osservato dal vivo: "Fetti" 2 volte nella tab
+  "OVR più alto"). Fix: 4 nuove viste (`myroad_leaderboard_by_ovr`/`_trophies`/`_savings`/
+  `_popularity`) con `distinct on (device_id) ... order by device_id, <asse> desc, created_at desc`
+  lato SQL — una riga per dispositivo, la migliore su quell'asse specifico — stesse colonne
+  pubbliche della vista precedente (niente `device_id`/`client_entry_id`). Il client ora punta a
+  `LEADERBOARD_CATEGORY_VIEW[category]` invece del dump unico. `myroad_leaderboard_public` resta
+  nello schema (dashboard/debug), il client non la usa più.
+  - **Verifica bloccante prima del rilascio**: una richiesta REST diretta contro il progetto
+    Supabase reale ha trovato le 4 viste **non ancora presenti** (`404 PGRST205`) — le modifiche a
+    `schema.sql`/`one-row-per-device.sql` (la migrazione incrementale, stesso pattern già seguito
+    per questa feature — mai rieseguire `schema.sql` per intero su un DB che ce l'ha già in parte)
+    erano scritte ma non ancora eseguite sul DB live. Rilasciare in quello stato avrebbe rotto la
+    classifica per tutti gli utenti (404 su ogni tab). Bloccato il rilascio finché l'utente non ha
+    eseguito `one-row-per-device.sql` nell'SQL Editor di Supabase; poi riverificato dal vivo: tutte
+    e 4 le viste raggiungibili (200), non scrivibili da `anon` (PATCH/DELETE/POST → 500 "Views that
+    do not select from a single table or view are not automatically updatable" — sono viste con
+    subquery, strutturalmente non aggiornabili da Postgres a prescindere dai grant, quindi nessuna
+    ripetizione della vulnerabilità RLS-bypass trovata sulla vista precedente), nessun `device_id`
+    nel payload. Verificato anche end-to-end nell'app reale (dev server): tab "OVR più alto" passata
+    da 3 righe (con "Fetti" duplicato) a 2, tab "Più trofei" corretta allo stesso modo.
+- **Perché:** conferma diretta del principio già consolidato nel progetto ("verificare sempre dal
+  vivo contro Supabase reale prima di rilasciare, non fidarsi che lo script/la migrazione sia stata
+  eseguita solo perché il codice è stato scritto") — qui il gap non era nel codice ma tra codice e
+  stato del DB, invisibile a `tsc`/test/lint che non toccano la rete.
+- **Alternative:** nessuna — la duplicazione era un bug reale con una causa isolata univocamente
+  (lettura dal dump grezzo invece che da una vista deduplicata), un solo modo ragionevole di
+  correggerlo lato SQL (DISTINCT ON, coerente con lo stile già usato per la vista pubblica e per il
+  trigger di dominanza di Pareto).
+- **Impatto:** `supabase/schema.sql`, `supabase/one-row-per-device.sql` (nuovo, migrazione
+  incrementale — primo file di questo tipo lasciato nel repo invece di essere applicato e
+  scartato, utile come documentazione di cosa gira realmente sul DB live), `src/lib/leaderboard/
+  types.ts` (+`LEADERBOARD_CATEGORY_VIEW`), `client.ts` (+1 test in `client.test.ts`, 544 totali).
+  `tsc --noEmit`/eslint puliti. Rilasciato come **v0.12.2** (patch), `dist/MyRoad.exe` (FileVersion
+  0.12.2.0) e `dist/MyRoad.apk` (versionCode 1202/versionName 0.12.2, firma verificata — stesso
+  SHA-256 certificato delle release precedenti) rigenerati e allegati alla [release GitHub
+  v0.12.2](https://github.com/Gioixxx/MyRoad/releases/tag/v0.12.2).
