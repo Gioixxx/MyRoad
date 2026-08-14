@@ -673,6 +673,17 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   sessione per ispezionare la finestra WebView2 nativa) — rischio basso, stesso bundle statico già
   verificato su web, ma resta un gap per una sessione futura.
 
+- [x] **Fix nickname classifica illeggibile su mobile + release v0.12.1** (2026-08-14, commit
+  `ccc46c4` fix + `5933a2c` bump versione + tag v0.12.1): su segnalazione diretta dell'utente,
+  diagnosticato via browser (iframe mobile 390×844) che la riga identità di ogni voce in
+  `Leaderboard.tsx` non era mai stata resa responsive — nickname schiacciato a 3-4 caratteri sotto
+  ~390px. Fix: riga identità `flex-col` sotto `sm:`/`flex-row` invariato da `sm:` in su. Vedi
+  [[decisions]] per il dettaglio completo. 543 test invariati, `tsc`/eslint puliti. **Verificato
+  dal vivo nel browser** sia mobile (iframe) sia desktop (nessuna regressione). Bump
+  `package.json`/`package-lock.json` 0.12.0→**0.12.1** (patch), `dist/MyRoad.exe` (FileVersion
+  0.12.1.0) e `dist/MyRoad.apk` (versionCode 1201/versionName 0.12.1, firma verificata) rigenerati
+  e allegati alla [release GitHub v0.12.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.12.1).
+
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
 - `ClubStint` ora ha un campo `ovr` (OVR del giocatore alla fine di quel ciclo) — necessario per la CareerTable, che deve mostrare l'OVR storico per riga, non quello attuale

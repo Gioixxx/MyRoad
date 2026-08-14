@@ -876,3 +876,37 @@ Registro scelte tecniche con motivazioni.
   su web e già noto per non avere restrizioni di rete specifiche (vedi ricerca iniziale di questa
   feature), ma resta un gap di verifica per una sessione futura. Tabella di produzione ripulita
   dai dati di test dall'utente stesso via Table Editor prima del rilascio.
+
+### Nickname della classifica illeggibile su mobile — riga identità mai stata responsive
+- **Data:** 2026-08-14
+- **Decisione:** su segnalazione diretta dell'utente ("quando vedo la classifica da cellulare non
+  si vede bene"), diagnosticato nel browser (tecnica iframe 390×844, vedi [[conventions]]) che la
+  riga identità di ogni voce in `Leaderboard.tsx` (introdotta con la classifica globale v0.12.0,
+  vedi voce sopra) era un `flex items-center gap-2` **mai reso responsive**: rank, bandiera,
+  nickname, cognome, badge ruolo, `OvrBadge` (44×44px) e badge archetipo competevano tutti per lo
+  spazio su un'unica riga, con `truncate` solo sul nickname — su un telefono reale (~390px) il
+  nickname, l'unico dato realmente identificativo della voce, veniva schiacciato a 3-4 caratteri
+  ("Gio…", "F..."), mentre gli altri elementi `shrink-0` restavano interi. A larghezza desktop
+  (pannello ~845px) il problema è invisibile per pura abbondanza di spazio, motivo per cui non era
+  mai stato notato prima nonostante fosse presente fin dal primo commit della feature. Fix: la riga
+  identità è ora `flex-col` sotto `sm:` (nickname da solo sulla prima riga, con `flex-1 truncate`
+  per prendersi tutto lo spazio disponibile) e `sm:flex-row` invariato da `sm:` in su — cognome,
+  badge ruolo, `OvrBadge` e badge archetipo si spostano su una seconda riga con `flex-wrap` solo
+  sotto `sm:`, nessuna riduzione di informazione mostrata, solo redistribuita su due righe quando
+  lo spazio è stretto.
+- **Perché:** stesso principio già consolidato nel progetto (bug "silenzioso" che si manifesta solo
+  sotto un vincolo di spazio specifico, invisibile a chi sviluppa/verifica solo su desktop) — qui
+  la causa è diversa dal pattern `min-h-0` già documentato altrove (quello comprime verticalmente
+  un contenitore, questo affollava orizzontalmente una riga con troppi elementi `shrink-0` e un
+  solo `truncate`), non è quindi un'istanza dello stesso item di tech-debt aperto su `min-h-0`.
+- **Alternative:** nessuna — bug con causa isolata univocamente (una riga flex non responsive), un
+  solo modo ragionevole di correggerlo (spezzarla su due righe sotto `sm:`, stesso pattern già
+  usato altrove nel file per l'outer `<li>`).
+- **Impatto:** `src/components/features/career/Leaderboard.tsx` (unico file toccato). 543 test
+  invariati, `tsc --noEmit`/eslint puliti. **Verificato dal vivo nel browser**: iframe mobile
+  390×844 su entrambe le categorie testate (OVR/trofei) con nickname ora sempre leggibile per
+  intero, e a piena larghezza desktop confermato pixel-identico a prima (nessuna regressione).
+  Rilasciato come **v0.12.1** (patch, fix mirato a un solo componente), `dist/MyRoad.exe`
+  (FileVersion 0.12.1.0) e `dist/MyRoad.apk` (versionCode 1201/versionName 0.12.1, firma verificata
+  con `apksigner verify --print-certs` — stessa chiave stabile del progetto) rigenerati e allegati
+  alla [release GitHub v0.12.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.12.1).
