@@ -10,6 +10,13 @@ import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
 import { NationalitySelect } from "@/components/features/career/NationalitySelect";
 import { ClubCrest } from "@/components/features/career/ClubCrest";
+import { CompetitionBadge } from "@/components/features/career/CompetitionBadge";
+import type { CoachAwardType } from "@/types/coach";
+
+const COACH_AWARD_LABELS: Record<CoachAwardType, string> = {
+  "manager-of-the-season": "Allenatore della stagione",
+  "manager-of-the-year": "Allenatore dell'anno",
+};
 
 interface CoachCareerGameProps {
   onBack: () => void;
@@ -140,6 +147,32 @@ function CoachOutcomeBanner({ outcome, onContinue }: { outcome: CoachCycleOutcom
         </p>
 
         {outcome.sacked ? <p className="text-sm font-semibold text-(--color-error)">Sei stato esonerato.</p> : null}
+
+        {outcome.clubTierChange ? (
+          <p
+            className={cn(
+              "text-sm font-medium",
+              outcome.clubTierChange === "promoted" ? "text-(--color-success)" : "text-(--color-error)",
+            )}
+          >
+            {outcome.clubTierChange === "promoted" ? "Il club è stato promosso!" : "Il club è retrocesso."}
+          </p>
+        ) : null}
+
+        {outcome.newTrophies.length > 0 ? (
+          <ul className="flex flex-col gap-1.5">
+            {outcome.newTrophies.map((trophy, i) => (
+              <li key={i} className="flex items-center gap-2 text-sm font-medium text-(--color-ovr-gold)">
+                <CompetitionBadge competition={trophy.competition} size={18} />
+                <span>Vinci: {trophy.competition}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {outcome.newAward ? (
+          <p className="text-sm font-medium text-(--color-ovr-gold)">{COACH_AWARD_LABELS[outcome.newAward.type]}</p>
+        ) : null}
 
         {outcome.objectiveResult ? (
           <p

@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { GameSpeed } from "@/types/career";
-import type { Coach, CoachDecision, CoachDecisionCategory, CoachIdentity, CoachSeasonTitleEntry } from "@/types/coach";
+import type { GameSpeed, Trophy } from "@/types/career";
+import type { Coach, CoachAward, CoachDecision, CoachDecisionCategory, CoachIdentity, CoachSeasonTitleEntry } from "@/types/coach";
 import { createCoach } from "@/lib/coach-career/engine";
 import { generateJobOffers } from "@/lib/coach-career/decisions";
 import {
@@ -33,6 +33,9 @@ export interface CoachCycleOutcomeSummary {
   objectiveResult: { label: string; met: boolean; firstTime: boolean } | null;
   brokenRecords: string[];
   sacked: boolean;
+  newTrophies: Trophy[];
+  newAward: CoachAward | null;
+  clubTierChange: "promoted" | "relegated" | null;
 }
 
 interface CoachCareerGameState {
@@ -153,6 +156,9 @@ export function useCoachCareerGame(): UseCoachCareerGame {
         objectiveResult: result.objectiveResult,
         brokenRecords: result.brokenRecords,
         sacked: result.sacked,
+        newTrophies: result.newTrophies,
+        newAward: result.newAward,
+        clubTierChange: result.clubTierChange,
       };
 
       if (result.retired) {

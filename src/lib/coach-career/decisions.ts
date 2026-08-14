@@ -180,3 +180,230 @@ export function generateTacticalIdentityDecision(coach: Coach): CoachDecision {
     options,
   };
 }
+
+// ---------- Fase B: pressione societaria, varietà, coppe, scandalo ----------
+
+/**
+ * Crisi societaria — **forzata** quando `boardConfidence` scende sotto la soglia d'allarme (vedi
+ * `shouldTriggerBoardCrisis` in loop.ts). L'esonero (`sacked: true`) è applicato genericamente da
+ * `resolveCoachCycle`, stesso principio dei flag `retire`/`club`/`newSystem` sulle altre opzioni.
+ */
+export function generateBoardCrisisDecision(coach: Coach): CoachDecision {
+  return {
+    id: `board-crisis-${coach.age}`,
+    category: "board-crisis",
+    title: "Crisi societaria",
+    description: "La fiducia della società è ai minimi termini.",
+    options: [
+      {
+        id: "ask-for-time",
+        label: "Chiedi tempo alla società",
+        hint: "Rischio di esonero moderato",
+        outcomes: [
+          outcome(60, "La società ti concede un'ultima chance.", { boardConfidenceDelta: 15 }),
+          outcome(40, "La pazienza è finita: sei stato esonerato.", { sacked: true }),
+        ],
+      },
+      {
+        id: "resign",
+        label: "Offri le dimissioni",
+        hint: "Esci con dignità",
+        outcomes: [
+          outcome(100, "Ti dimetti prima che sia la società a esonerarti.", { sacked: true, popularityDelta: 5 }),
+        ],
+      },
+      {
+        id: "all-in",
+        label: "Punta tutto sulla prossima gara",
+        hint: "Tutto o niente",
+        outcomes: [
+          outcome(30, "Una vittoria pesante ti salva la panchina.", { boardConfidenceDelta: 30, reputationDelta: 2 }),
+          outcome(70, "Il rischio non paga: sei stato esonerato.", { sacked: true }),
+        ],
+      },
+    ],
+  };
+}
+
+/** Conferenza stampa — categoria ordinaria (non forzata), mirror di "controversial-statement". */
+export function generatePressConferenceDecision(coach: Coach): CoachDecision {
+  return {
+    id: `press-conference-${coach.age}`,
+    category: "press-conference",
+    title: "Conferenza stampa",
+    description: "I giornalisti aspettano una tua dichiarazione sulla stagione in corso.",
+    options: [
+      {
+        id: "speak-freely",
+        label: "Parla senza filtri",
+        hint: "Rischio mediatico",
+        outcomes: [
+          outcome(60, "Le tue parole dirette conquistano tifosi e stampa.", { popularityDelta: 4 }),
+          outcome(40, "Una frase di troppo finisce in prima pagina.", { shadowDelta: 8, popularityDelta: -3 }),
+        ],
+      },
+      {
+        id: "stay-vague",
+        label: "Resta sul vago",
+        hint: "Nessun rischio, nessun guadagno",
+        outcomes: [outcome(100, "Una conferenza stampa anonima, senza scossoni.", { popularityDelta: -1 })],
+      },
+    ],
+  };
+}
+
+/** Confronto col capitano — mirror concettuale di "coach-role-request" calciatore, invertito
+ * (qui è il capitano a rivolgersi all'allenatore). */
+export function generateCaptainRelationsDecision(coach: Coach): CoachDecision {
+  return {
+    id: `captain-relations-${coach.age}`,
+    category: "captain-relations",
+    title: "Il capitano chiede un confronto",
+    description: "Il capitano porta a te le richieste dello spogliatoio.",
+    options: [
+      {
+        id: "listen",
+        label: "Ascolta le sue richieste",
+        hint: "Rapporto più solido con lo spogliatoio",
+        outcomes: [
+          outcome(100, "Accogli le richieste del capitano: il gruppo si compatta.", {
+            relationsDelta: { captain: 1 },
+            reputationDelta: 1,
+          }),
+        ],
+      },
+      {
+        id: "assert-authority",
+        label: "Fai valere la tua autorità",
+        hint: "La società apprezza il polso fermo",
+        outcomes: [
+          outcome(100, "Tieni la linea: qualcuno nello spogliatoio storce il naso.", {
+            relationsDelta: { captain: -1 },
+            boardConfidenceDelta: 3,
+          }),
+        ],
+      },
+    ],
+  };
+}
+
+/** Sessione di mercato astratta — mai una vera rosa, solo una scelta di tier di spesa con un
+ * effetto immediato (non un mercato di trasferimento simulato). */
+export function generateTransferBudgetDecision(coach: Coach): CoachDecision {
+  return {
+    id: `transfer-budget-${coach.age}`,
+    category: "transfer-window-budget",
+    title: "Sessione di mercato",
+    description: "La società ti chiede come orientare il budget per la rosa.",
+    options: [
+      {
+        id: "invest-youth",
+        label: "Investi sui giovani",
+        hint: "Costruisci per il futuro",
+        outcomes: [outcome(100, "Punti su un progetto a lungo termine.", { popularityDelta: 1 })],
+      },
+      {
+        id: "marquee-signing",
+        label: "Un colpo ad effetto",
+        hint: "Spesa alta, aspettative alte",
+        outcomes: [
+          outcome(100, "Un acquisto di richiamo accende l'entusiasmo dei tifosi.", {
+            popularityDelta: 3,
+            savingsDelta: -20_000,
+            boardConfidenceDelta: -3,
+          }),
+        ],
+      },
+      {
+        id: "balance-books",
+        label: "Tieni i conti in ordine",
+        hint: "La società apprezza la prudenza",
+        outcomes: [
+          outcome(100, "Gestisci il budget con prudenza.", { savingsDelta: 15_000, boardConfidenceDelta: 3 }),
+        ],
+      },
+    ],
+  };
+}
+
+/** Scelta tattica pre-corsa in coppa/campagna continentale — condivisa dai due generatori sotto,
+ * `outcomeBonus` nudge il roll della stagione corrente (vedi `advanceSeasons`), mai una vera
+ * rosa/mercato simulato. */
+const CUP_RUN_APPROACHES: { id: string; label: string; hint: string; bonus: number }[] = [
+  { id: "attack", label: "Gioco d'attacco", hint: "Rischio alto, spinta massima", bonus: 1.15 },
+  { id: "balance", label: "Equilibrio tattico", hint: "Approccio bilanciato", bonus: 1.08 },
+  { id: "low-block", label: "Blocco basso", hint: "Difendi il risultato", bonus: 1.03 },
+];
+
+function buildRunApproachOptions(): CoachDecisionOption[] {
+  return CUP_RUN_APPROACHES.map((a) => ({
+    id: a.id,
+    label: a.label,
+    hint: a.hint,
+    outcomeBonus: a.bonus,
+    outcomes: [outcome(100, `Prepari la squadra puntando su: ${a.label.toLowerCase()}.`)],
+  }));
+}
+
+/** Corsa in coppa nazionale — **forzata** quando il club ha una coppa nazionale (vedi
+ * `shouldTriggerCupRun` in loop.ts). L'esito reale (quanto si va avanti) resta deciso da
+ * `rollCoachSeasonOutcome` nello stesso ciclo — questa decisione ne nudge solo la probabilità. */
+export function generateCupRunDecision(coach: Coach): CoachDecision {
+  return {
+    id: `cup-run-${coach.age}`,
+    category: "cup-run",
+    title: "Corsa in coppa",
+    description: "Il club è in corsa per la coppa nazionale: come vuoi approcciare la stagione?",
+    options: buildRunApproachOptions(),
+  };
+}
+
+/** Campagna continentale — **forzata**, stesso principio di `generateCupRunDecision`. */
+export function generateContinentalCampaignDecision(coach: Coach): CoachDecision {
+  return {
+    id: `continental-campaign-${coach.age}`,
+    category: "continental-campaign",
+    title: "Campagna continentale",
+    description: "Il club è atteso da una campagna europea: come vuoi impostarla?",
+    options: buildRunApproachOptions(),
+  };
+}
+
+/** Scandalo mediatico — **forzata**, riusa interamente le soglie di `lib/career/shadow.ts` senza
+ * modifiche (solo il testo è allenatore-flavored: tattiche vendute alla stampa, liti nello
+ * spogliatoio, invece di doping/tradimenti da giocatore). */
+export function generateCoachScandalDecision(coach: Coach): CoachDecision {
+  return {
+    id: `scandal-${coach.age}`,
+    category: "scandal",
+    title: "Scandalo mediatico",
+    description:
+      "Voci su presunte tattiche vendute alla stampa e liti nello spogliatoio esplodono sui media.",
+    options: [
+      {
+        id: "come-clean",
+        label: "Gestisci con trasparenza",
+        hint: "Ripulisci la tua immagine · popolarità in calo",
+        outcomes: [
+          outcome(100, "Affronti la stampa a viso aperto: la vicenda si sgonfia lentamente.", {
+            shadowDelta: -12,
+            popularityDelta: -5,
+            shadowFlags: { scandalOccurred: true },
+          }),
+        ],
+      },
+      {
+        id: "deny-everything",
+        label: "Nega tutto",
+        hint: "Nessuna ammissione · il caso resta aperto",
+        outcomes: [
+          outcome(100, "Neghi ogni accusa, ma la stampa non molla la presa.", {
+            shadowDelta: 5,
+            popularityDelta: -10,
+            shadowFlags: { scandalOccurred: true },
+          }),
+        ],
+      },
+    ],
+  };
+}

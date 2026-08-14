@@ -161,6 +161,9 @@ export interface CoachDecisionOption {
   club?: Club;
   retire?: boolean;
   newSystem?: TacticalSystem;
+  /** Moltiplicatore temporaneo (default 1) applicato al roll della stagione corrente — usato
+   * dalle scelte tattiche pre-corsa in coppa/campagna continentale (Fase B). */
+  outcomeBonus?: number;
   outcomes: CoachDecisionOutcome[];
 }
 

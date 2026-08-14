@@ -156,7 +156,15 @@ export function boardConfidenceDeltaForSeason(outcome: CoachSeasonOutcome, prest
  * calciatore (`ClubStint` è "una riga per ciclo", il roll trofeo non si ripete per ogni stagione
  * dentro un ciclo Express da 3).
  */
-export function advanceSeasons(coach: Coach, seasons: number, rng: Rng = Math.random): Coach {
+export function advanceSeasons(
+  coach: Coach,
+  seasons: number,
+  rng: Rng = Math.random,
+  /** Moltiplicatore aggiuntivo temporaneo (es. scelta tattica pre-corsa in coppa, vedi
+   * `CoachDecisionOption.outcomeBonus` in Fase B) — 1 = nessun bonus, stesso ruolo di
+   * `trophyChanceBonus` in `rollClubTrophies` calciatore. */
+  outcomeBonusMultiplier = 1,
+): Coach {
   if (!coach.club) {
     throw new Error("L'allenatore deve avere un club per accumulare stagioni");
   }
@@ -168,7 +176,7 @@ export function advanceSeasons(coach: Coach, seasons: number, rng: Rng = Math.ra
   const ageFrom = coach.age;
   const ageTo = ageFrom + seasons;
 
-  const fitMultiplier = tacticalFitMultiplier(coachTacticalFit(coach, club));
+  const fitMultiplier = tacticalFitMultiplier(coachTacticalFit(coach, club)) * outcomeBonusMultiplier;
   const outcome = rollCoachSeasonOutcome(club, coach.reputation, fitMultiplier, rng);
 
   const repDelta = reputationDeltaForSeason(outcome, club.prestige, ageTo, rng);

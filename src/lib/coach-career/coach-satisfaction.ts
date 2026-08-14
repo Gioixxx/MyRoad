@@ -1,5 +1,6 @@
 import type { Club } from "@/types/career";
 import type {
+  CoachAwardType,
   CoachCycleObjective,
   CoachCycleObjectiveKind,
   CoachPersonalRecords,
@@ -8,6 +9,7 @@ import type {
   CoachSeasonTitleId,
   LeagueFinish,
 } from "@/types/coach";
+import { clamp, type Rng } from "@/lib/career/progression";
 import { expectedLeagueFinishRank, LEAGUE_FINISH_RANK } from "./season-outcome";
 
 export const COACH_SEASON_TITLE_LABELS: Record<CoachSeasonTitleId, string> = {
@@ -147,4 +149,35 @@ export function updateCoachPersonalRecords(
   }
 
   return { records: next, broken };
+}
+
+const COACH_AWARD_CHANCE_CAP = 0.5;
+const COACH_AWARD_REPUTATION_BASELINE = 60;
+const COACH_AWARD_REPUTATION_DIVISOR = 60;
+const MANAGER_OF_YEAR_MIN_REPUTATION = 85;
+const MANAGER_OF_YEAR_ROLL_CHANCE = 0.25;
+
+/**
+ * Premio individuale del ciclo — rollato solo su una stagione già di per sé notevole (piazzamento
+ * almeno da qualificazione europea, o un trofeo/coppa vinti), stessa forma di `awardChance`
+ * calciatore ma con soglie proprie sulla reputazione (che parte da 35, non da 50 come l'OVR).
+ */
+export function rollCoachAward(
+  reputation: number,
+  outcome: CoachSeasonOutcome,
+  rng: Rng = Math.random,
+): CoachAwardType | null {
+  const notableSeason =
+    LEAGUE_FINISH_RANK[outcome.leagueFinish] >= LEAGUE_FINISH_RANK["continental-qualification"] ||
+    outcome.cupRun === "won" ||
+    outcome.continentalRun === "won";
+  if (!notableSeason) return null;
+
+  const chance = clamp((reputation - COACH_AWARD_REPUTATION_BASELINE) / COACH_AWARD_REPUTATION_DIVISOR, 0, COACH_AWARD_CHANCE_CAP);
+  if (rng() >= chance) return null;
+
+  if (reputation >= MANAGER_OF_YEAR_MIN_REPUTATION && outcome.leagueFinish === "title" && rng() < MANAGER_OF_YEAR_ROLL_CHANCE) {
+    return "manager-of-the-year";
+  }
+  return "manager-of-the-season";
 }

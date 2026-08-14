@@ -19,7 +19,7 @@ export interface ClubTierMovementResult {
   change: "promoted" | "relegated" | null;
 }
 
-function rebuildClubForLeague(club: Club, league: League): Club {
+export function rebuildClubForLeague(club: Club, league: League): Club {
   return {
     ...club,
     tier: league.tier,
