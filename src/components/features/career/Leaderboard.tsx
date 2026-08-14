@@ -124,33 +124,37 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                       key={entry.id}
                       className="flex flex-col gap-2 px-3 py-2.5 odd:bg-(--color-surface-raised)/40 sm:flex-row sm:items-center sm:justify-between"
                     >
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="w-5 shrink-0 text-right text-xs font-semibold text-(--color-text-muted) tabular-nums">
-                          {i + 1}
-                        </span>
-                        {country ? (
-                          <CountryFlag
-                            code={country.code}
-                            name={country.name}
-                            fallbackEmoji={country.flag}
-                            size={16}
-                          />
-                        ) : null}
-                        <span className="min-w-0 truncate font-semibold text-(--color-text)">
-                          {entry.nickname}
-                        </span>
-                        <span className="shrink-0 text-[11px] text-(--color-text-muted)">
-                          {entry.lastName.toUpperCase()}
-                        </span>
-                        <span className="shrink-0 rounded bg-(--color-surface-raised) px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-text-muted) uppercase">
-                          {entry.position}
-                        </span>
-                        <OvrBadge ovr={entry.peakOvr} size="sm" />
-                        {entry.archetypeId ? (
-                          <span className="shrink-0 rounded bg-(--color-surface-raised) px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-text-muted) uppercase">
-                            {ARCHETYPE_LABELS[entry.archetypeId]}
+                      <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="w-5 shrink-0 text-right text-xs font-semibold text-(--color-text-muted) tabular-nums">
+                            {i + 1}
                           </span>
-                        ) : null}
+                          {country ? (
+                            <CountryFlag
+                              code={country.code}
+                              name={country.name}
+                              fallbackEmoji={country.flag}
+                              size={16}
+                            />
+                          ) : null}
+                          <span className="min-w-0 flex-1 truncate font-semibold text-(--color-text) sm:flex-initial">
+                            {entry.nickname}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 pl-7 sm:pl-0">
+                          <span className="shrink-0 text-[11px] text-(--color-text-muted)">
+                            {entry.lastName.toUpperCase()}
+                          </span>
+                          <span className="shrink-0 rounded bg-(--color-surface-raised) px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-text-muted) uppercase">
+                            {entry.position}
+                          </span>
+                          <OvrBadge ovr={entry.peakOvr} size="sm" />
+                          {entry.archetypeId ? (
+                            <span className="shrink-0 rounded bg-(--color-surface-raised) px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-text-muted) uppercase">
+                              {ARCHETYPE_LABELS[entry.archetypeId]}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                       <p className="pl-7 text-xs text-(--color-text-muted) sm:pl-0">
                         {secondaryStat(category, entry)}

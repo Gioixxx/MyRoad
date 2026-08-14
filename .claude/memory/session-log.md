@@ -9,6 +9,13 @@ Snapshot automatici del lavoro in corso, salvati da `save_context.py` su PreComp
 (feature `enforcementHooks`) e ricaricati all'avvio da `session_start.py`. Gestito automaticamente:
 le entry sotto sono sovrascritte per `sessionId` (rolling, ultime ~10). Vedi [[sprint]] per i task attivi.
 
+<!-- session:ab22d50b-da38-489f-b307-2e6568ad35f5 -->
+### global-leaderboard-crossuser — 2026-08-14
+- **Branch:** main · **Quando:** 2026-08-13→2026-08-14
+- **Ultima richiesta:** procediamo con commit, push e release aggiorna la info a schermo
+- **File toccati:** career/PlayerCard.tsx, memory/decisions.md, memory/backlog.md, memory/MEMORY.md, Carriera/package.json, memory/sprint.md, plans/luminous-jingling-locket.md, supabase/schema.sql, Carriera/.gitignore, Carriera/.env, leaderboard/types.ts, leaderboard/settings.ts, leaderboard/client.ts, hooks/useLeaderboardSettings.ts, career/Leaderboard.tsx
+- **Comandi:** git; ls; find; netstat; npx; wc; adb; test; grep; sed
+
 <!-- session:e7b017c5-8566-4e96-9e05-25adf224fe32 -->
 ### tactical-fit-agent-mechanics — 2026-08-12
 - **Branch:** main · **Quando:** 2026-08-12→2026-08-12
