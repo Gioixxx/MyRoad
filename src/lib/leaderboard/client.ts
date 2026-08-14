@@ -12,7 +12,7 @@ import {
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const TABLE = "myroad_leaderboard_entries";
-const DEFAULT_LIMIT = 20;
+export const DEFAULT_LIMIT = 20;
 
 export type LeaderboardResult<T> = { ok: true; value: T } | { ok: false; error: string };
 

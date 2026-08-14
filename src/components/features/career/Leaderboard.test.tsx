@@ -11,6 +11,7 @@ const { isLeaderboardConfigured, fetchLeaderboardCategory } = vi.hoisted(() => (
 vi.mock("@/lib/leaderboard/client", () => ({
   isLeaderboardConfigured,
   fetchLeaderboardCategory,
+  DEFAULT_LIMIT: 20,
 }));
 
 function sampleItem(overrides: Partial<LeaderboardListItem> = {}): LeaderboardListItem {

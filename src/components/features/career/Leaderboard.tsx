@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Trophy as TrophyIcon } from "lucide-react";
 import { countries } from "@/data/countries";
-import { fetchLeaderboardCategory, isLeaderboardConfigured } from "@/lib/leaderboard/client";
+import { DEFAULT_LIMIT, fetchLeaderboardCategory, isLeaderboardConfigured } from "@/lib/leaderboard/client";
 import {
   LEADERBOARD_CATEGORY_LABELS,
   type LeaderboardCategory,
@@ -72,6 +72,7 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
       <div>
         <p className="font-display text-sm tracking-[0.2em] gold-metal-text">Globale</p>
         <h2 className="font-display text-2xl text-(--color-text)">Classifica</h2>
+        <p className="text-xs text-(--color-text-muted)">Top {DEFAULT_LIMIT}</p>
       </div>
 
       {!configured ? (
