@@ -1,10 +1,11 @@
 "use client";
 
-import { LogOut, Settings, User, Users } from "lucide-react";
+import { ClipboardList, LogOut, Settings, User, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MainMenuProps {
   onSinglePlayer: () => void;
+  onCoach: () => void;
   onSettings: () => void;
   onQuit: () => void;
 }
@@ -48,10 +49,11 @@ function MenuButton({
   );
 }
 
-export function MainMenu({ onSinglePlayer, onSettings, onQuit }: MainMenuProps) {
+export function MainMenu({ onSinglePlayer, onCoach, onSettings, onQuit }: MainMenuProps) {
   return (
     <nav aria-label="Menu principale" className="flex w-full flex-col gap-2.5">
       <MenuButton icon={<User size={20} />} label="Giocatore singolo" onClick={onSinglePlayer} />
+      <MenuButton icon={<ClipboardList size={20} />} label="Allenatore" onClick={onCoach} />
       <MenuButton
         icon={<Users size={20} />}
         label="Multiplayer"

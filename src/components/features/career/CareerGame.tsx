@@ -312,7 +312,11 @@ function SetupStepDots({ current }: { current: Step }) {
   );
 }
 
-export function CareerGame() {
+interface CareerGameProps {
+  onCoachCareer: () => void;
+}
+
+export function CareerGame({ onCoachCareer }: CareerGameProps) {
   const [step, setStep] = useState<Step>("menu");
   const [speed, setSpeed] = useState<GameSpeed | null>(null);
   const [archiveEntries, setArchiveEntries] = useState<ArchivedCareer[]>([]);
@@ -592,6 +596,7 @@ export function CareerGame() {
             <Card key="step-menu" className="animate-step-in flex flex-col gap-4 p-5 sm:p-7">
               <MainMenu
                 onSinglePlayer={() => setStep("speed")}
+                onCoach={onCoachCareer}
                 onSettings={handleShowSettings}
                 onQuit={handleQuit}
               />

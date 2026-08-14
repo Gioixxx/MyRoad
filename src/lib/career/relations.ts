@@ -39,7 +39,7 @@ const LAST_NAMES = [
 const RIVAL_MIN_OVR = 78;
 const RIVAL_MIN_CYCLES_AT_CLUB = 4;
 
-function fnv1a(seed: string): number {
+export function fnv1a(seed: string): number {
   const FNV_OFFSET_BASIS = 0x811c9dc5;
   const FNV_PRIME = 0x01000193;
   let hash = FNV_OFFSET_BASIS;
@@ -50,7 +50,7 @@ function fnv1a(seed: string): number {
   return hash >>> 0;
 }
 
-function pickName(seed: string): string {
+export function pickName(seed: string): string {
   const hash = fnv1a(seed);
   const first = FIRST_NAMES[hash % FIRST_NAMES.length];
   const last = LAST_NAMES[(hash >>> 8) % LAST_NAMES.length];

@@ -1,0 +1,150 @@
+import type { Club } from "@/types/career";
+import type {
+  CoachCycleObjective,
+  CoachCycleObjectiveKind,
+  CoachPersonalRecords,
+  CoachSeasonOutcome,
+  CoachSeasonTitleEntry,
+  CoachSeasonTitleId,
+  LeagueFinish,
+} from "@/types/coach";
+import { expectedLeagueFinishRank, LEAGUE_FINISH_RANK } from "./season-outcome";
+
+export const COACH_SEASON_TITLE_LABELS: Record<CoachSeasonTitleId, string> = {
+  miracle: "Miracolo salvezza",
+  champion: "Campione",
+  cupSpecialist: "Specialista di coppa",
+  continentalGlory: "Gloria continentale",
+  steadyHand: "Mano ferma",
+  underFire: "Sotto pressione",
+  sacked: "Esonerato",
+  toughSeason: "Stagione difficile",
+};
+
+/** Priorità di visualizzazione (numero più basso = titolo più prestigioso) — stesso principio di
+ * TITLE_RANK per il calciatore, usato per scegliere il "miglior titolo" da mostrare in archivio. */
+const COACH_TITLE_RANK: Record<CoachSeasonTitleId, number> = {
+  champion: 0,
+  continentalGlory: 1,
+  cupSpecialist: 2,
+  miracle: 3,
+  steadyHand: 4,
+  underFire: 5,
+  toughSeason: 6,
+  sacked: 7,
+};
+
+const COACH_SEASON_TITLES_CAP = 12;
+
+export interface CoachSeasonTitleContext {
+  age: number;
+  outcome: CoachSeasonOutcome;
+  expectedRank: number;
+  sacked: boolean;
+  /** true se boardConfidence era sotto la soglia di allarme in questo ciclo ma non si è arrivati
+   * all'esonero — un ciclo "salvato all'ultimo", distinto da una stagione tranquilla. */
+  survivedCrisis: boolean;
+}
+
+function pickCoachSeasonTitleId(ctx: CoachSeasonTitleContext): CoachSeasonTitleId {
+  if (ctx.sacked) return "sacked";
+  const actualRank = LEAGUE_FINISH_RANK[ctx.outcome.leagueFinish];
+  if (ctx.outcome.leagueFinish === "title") return "champion";
+  if (ctx.outcome.continentalRun === "won") return "continentalGlory";
+  if (ctx.outcome.cupRun === "won") return "cupSpecialist";
+  if (ctx.survivedCrisis && actualRank >= LEAGUE_FINISH_RANK["mid-table"]) return "miracle";
+  if (ctx.outcome.leagueFinish === "relegated") return "toughSeason";
+  if (ctx.survivedCrisis) return "underFire";
+  if (actualRank >= Math.round(ctx.expectedRank)) return "steadyHand";
+  return "toughSeason";
+}
+
+export function evaluateCoachSeasonTitle(ctx: CoachSeasonTitleContext): CoachSeasonTitleEntry {
+  const id = pickCoachSeasonTitleId(ctx);
+  return { age: ctx.age, id, label: COACH_SEASON_TITLE_LABELS[id] };
+}
+
+export function pushCoachSeasonTitle(
+  titles: CoachSeasonTitleEntry[],
+  entry: CoachSeasonTitleEntry,
+): CoachSeasonTitleEntry[] {
+  return [...titles, entry].slice(-COACH_SEASON_TITLES_CAP);
+}
+
+export function pickBestCoachCareerTitle(titles: CoachSeasonTitleEntry[]): string {
+  if (titles.length === 0) return "Carriera in panchina solida";
+  let best = titles[0]!;
+  for (const title of titles) {
+    if (COACH_TITLE_RANK[title.id] < COACH_TITLE_RANK[best.id]) best = title;
+  }
+  return best.label;
+}
+
+const OBJECTIVE_LEAGUE_FINISH_LABELS: Record<LeagueFinish, string> = {
+  relegated: "evita la retrocessione",
+  "relegation-battle": "esci dalla zona salvezza",
+  "mid-table": "porta il club a metà classifica",
+  "continental-qualification": "qualifica il club a una coppa europea",
+  title: "vinci il campionato",
+};
+
+const LEAGUE_FINISH_BY_RANK: LeagueFinish[] = [
+  "relegated",
+  "relegation-battle",
+  "mid-table",
+  "continental-qualification",
+  "title",
+];
+
+/**
+ * Brief della società per il ciclo corrente — Fase A copre solo `"league-finish"` (piazzamento
+ * minimo atteso in base a prestigio/reputazione, stessa formula di `rollCoachSeasonOutcome`);
+ * `"cup-run"`/`"no-sacking"`/`"reputation-gain"` restano pronti nel tipo per la Fase B.
+ */
+export function rollCoachCycleObjective(club: Club, reputation: number): CoachCycleObjective {
+  const target = Math.min(4, Math.max(0, Math.round(expectedLeagueFinishRank(club.prestige, reputation))));
+  const kind: CoachCycleObjectiveKind = "league-finish";
+  return {
+    id: `league-finish-${target}`,
+    kind,
+    target,
+    label: `La società chiede: ${OBJECTIVE_LEAGUE_FINISH_LABELS[LEAGUE_FINISH_BY_RANK[target]]}`,
+  };
+}
+
+export function evaluateCoachObjective(
+  objective: CoachCycleObjective,
+  outcome: CoachSeasonOutcome,
+): { met: boolean } {
+  if (objective.kind !== "league-finish") return { met: false };
+  return { met: LEAGUE_FINISH_RANK[outcome.leagueFinish] >= objective.target };
+}
+
+export function emptyCoachPersonalRecords(): CoachPersonalRecords {
+  return { peakReputation: 0, bestLeagueFinish: null, longestTenureClub: 0 };
+}
+
+export function updateCoachPersonalRecords(
+  records: CoachPersonalRecords,
+  reputation: number,
+  leagueFinish: LeagueFinish,
+  tenureCyclesAtClub: number,
+): { records: CoachPersonalRecords; broken: (keyof CoachPersonalRecords)[] } {
+  const next = { ...records };
+  const broken: (keyof CoachPersonalRecords)[] = [];
+
+  if (reputation > records.peakReputation) {
+    next.peakReputation = reputation;
+    broken.push("peakReputation");
+  }
+  if (records.bestLeagueFinish === null || LEAGUE_FINISH_RANK[leagueFinish] > LEAGUE_FINISH_RANK[records.bestLeagueFinish]) {
+    next.bestLeagueFinish = leagueFinish;
+    broken.push("bestLeagueFinish");
+  }
+  if (tenureCyclesAtClub > records.longestTenureClub) {
+    next.longestTenureClub = tenureCyclesAtClub;
+    broken.push("longestTenureClub");
+  }
+
+  return { records: next, broken };
+}

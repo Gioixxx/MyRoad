@@ -24,6 +24,7 @@ import {
   peaksFromAttributes,
 } from "./attributes";
 import { applyRelationsDelta, initialAgentRelation, relationsOnSign } from "./relations";
+import { pickWeighted } from "../shared/weighted-random";
 
 export const STARTING_AGE = 16;
 export const STARTING_OVR = 50;
@@ -264,14 +265,7 @@ export function resolveOutcome(
   if (outcomes.length === 0) {
     throw new Error("Un'opzione di decisione deve avere almeno un outcome");
   }
-  const totalWeight = outcomes.reduce((sum, o) => sum + o.weight, 0);
-  const roll = rng() * totalWeight;
-  let cumulative = 0;
-  for (const outcome of outcomes) {
-    cumulative += outcome.weight;
-    if (roll < cumulative) return outcome;
-  }
-  return outcomes[outcomes.length - 1];
+  return pickWeighted(outcomes, (o) => o.weight, rng);
 }
 
 /** Ritiro probabilistico crescente dai 31 anni, automatico da 40 (vedi costanti sopra). */
