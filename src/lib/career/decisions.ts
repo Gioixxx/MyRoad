@@ -360,7 +360,7 @@ export const LIFESTYLE_DECISIONS: Decision[] = [
         label: "Allenati duramente",
         hint: "Crescita OVR · rischio infortunio",
         outcomes: [
-          outcome(65, "Diventi titolare per il prossimo ciclo.", 2),
+          outcome(65, "Diventi titolare per la prossima stagione.", 2),
           injuryOutcome(35, "Un infortunio ti tiene lontano dai campi.", {
             label: "Distorsione alla caviglia",
             turnsRemaining: 2,
@@ -496,7 +496,7 @@ export function generateTransferWindow(player: Player, rng: Rng = Math.random): 
     category: "transfer",
     title: "Finestra di mercato",
     description:
-      "Sono arrivate offerte dopo l'ultimo ciclo. Puoi accettarne una o restare al tuo club.",
+      "Sono arrivate offerte dopo l'ultima stagione. Puoi accettarne una o restare al tuo club.",
     options: [
       ...offers.map((c) =>
         withHint(
@@ -764,7 +764,7 @@ export function generateEndOfCycle(player: Player, rng: Rng = Math.random): Deci
   return {
     id: `end-of-cycle-${player.age}`,
     category: "end-of-cycle",
-    title: "Fine ciclo",
+    title: "Fine stagione",
     description: "Il tuo club ha deciso di non rinnovarti. Scegli il prossimo passo della carriera.",
     options: [
       ...offers.map((c) =>
@@ -1560,7 +1560,7 @@ export function generateTrainingFocusDecision(player: Player): Decision {
   const options: DecisionOption[] = keys.map((key: AttributeKey) => ({
     id: `focus-${key}`,
     label: `Concentrati su: ${ATTRIBUTE_LABELS[key]}`,
-    hint: "Crescita più rapida su questo attributo nel prossimo ciclo",
+    hint: "Crescita più rapida su questo attributo nella prossima stagione",
     trainingFocus: key,
     outcomes: [outcome(100, `Ti alleni con priorità su ${ATTRIBUTE_LABELS[key]}.`, 0, {
       traitsDelta: { discipline: 2 },
@@ -1577,7 +1577,7 @@ export function generateTrainingFocusDecision(player: Player): Decision {
     id: `training-focus-${player.age}`,
     category: "training-focus",
     title: "Piano di allenamento",
-    description: "Il preparatore ti chiede su cosa vuoi concentrarti nel prossimo ciclo.",
+    description: "Il preparatore ti chiede su cosa vuoi concentrarti nella prossima stagione.",
     options,
   };
 }

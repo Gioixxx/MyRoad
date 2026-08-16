@@ -17,7 +17,7 @@ function TrophyChip({ count }: { count: number }) {
   return (
     <span
       className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-(--color-ovr-gold)/15 px-1.5 py-0.5 text-(--color-ovr-gold)"
-      title={`${count} ${count === 1 ? "trofeo vinto" : "trofei vinti"} in questo ciclo`}
+      title={`${count} ${count === 1 ? "trofeo vinto" : "trofei vinti"} in questa stagione`}
     >
       <Trophy size={13} aria-hidden="true" />
       {count > 1 ? <span className="text-xs font-semibold">×{count}</span> : null}
@@ -30,7 +30,7 @@ function AwardChip({ count }: { count: number }) {
   return (
     <span
       className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-(--color-ovr-gold)/15 px-1.5 py-0.5 text-(--color-ovr-gold)"
-      title={`${count} ${count === 1 ? "premio individuale" : "premi individuali"} in questo ciclo`}
+      title={`${count} ${count === 1 ? "premio individuale" : "premi individuali"} in questa stagione`}
     >
       <AwardIcon size={13} aria-hidden="true" />
       {count > 1 ? <span className="text-xs font-semibold">×{count}</span> : null}

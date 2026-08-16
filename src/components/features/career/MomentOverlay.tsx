@@ -207,7 +207,7 @@ export function MomentOverlay({ moment, onContinue }: MomentOverlayProps) {
   } else if (moment.kind === "objective") {
     eyebrow = "Obiettivo raggiunto";
     title = moment.label;
-    detail = "Hai completato l'obiettivo di questo ciclo.";
+    detail = "Hai completato l'obiettivo di questa stagione.";
     visual = (
       <span className="flex h-20 w-20 items-center justify-center rounded-full bg-(--color-success)/20 text-(--color-success)">
         <Target size={40} aria-hidden="true" />

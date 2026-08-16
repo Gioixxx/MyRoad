@@ -325,7 +325,7 @@ export function rollCycleObjective(
       id: "no-injury",
       kind: "no-injury",
       target: 1,
-      label: "Il mister chiede: resta sano per tutto il ciclo",
+      label: "Il mister chiede: resta sano per tutta la stagione",
     }),
   });
 
@@ -371,7 +371,7 @@ export function rollCycleObjective(
                 id: "no-injury",
                 kind: "no-injury" as const,
                 target: 1,
-                label: "Il mister chiede: resta sano per tutto il ciclo",
+                label: "Il mister chiede: resta sano per tutta la stagione",
               }),
             },
           ];
@@ -466,7 +466,7 @@ export function buildHighlightReel(ctx: CycleSatisfactionContext, rng: Rng = Mat
   if (ctx.ovrAfter - ctx.ovrBefore >= 4) pool.push("Crescita esplosiva: l'OVR vola");
 
   if (pool.length === 0) {
-    return ["Ciclo senza scosse, lavoro quotidiano in silenzio"];
+    return ["Stagione senza scosse, lavoro quotidiano in silenzio"];
   }
 
   // Shuffle stabile via rng e prendi fino a 3

@@ -119,7 +119,7 @@ export function PlayerCard({
               className="ml-1.5 inline-flex items-center gap-1 rounded bg-(--color-error)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-error) uppercase"
               title={`${player.injury.label} — fuori per ${
                 player.injury.turnsRemaining
-              } ${player.injury.turnsRemaining === 1 ? "ciclo" : "cicli"}`}
+              } ${player.injury.turnsRemaining === 1 ? "stagione" : "stagioni"}`}
             >
               <HeartCrack size={10} aria-hidden="true" />
               Infortunato

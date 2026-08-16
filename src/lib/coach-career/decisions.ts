@@ -109,7 +109,7 @@ export function generateCoachEndOfCycle(coach: Coach, rng: Rng = Math.random): C
   return {
     id: `end-of-cycle-${coach.age}`,
     category: "end-of-cycle",
-    title: "Fine ciclo",
+    title: "Fine stagione",
     description: "Il contratto è in scadenza. Scegli il prossimo passo della carriera.",
     options: [
       {
@@ -176,7 +176,7 @@ export function generateTacticalIdentityDecision(coach: Coach): CoachDecision {
     id: `tactical-identity-${coach.age}`,
     category: "tactical-identity",
     title: "Identità tattica",
-    description: "Che impronta tattica vuoi dare alla squadra nel prossimo ciclo?",
+    description: "Che impronta tattica vuoi dare alla squadra nella prossima stagione?",
     options,
   };
 }

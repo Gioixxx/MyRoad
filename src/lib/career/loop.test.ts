@@ -734,7 +734,7 @@ describe("resolveCycle — pressione del brief sul ciclo dopo", () => {
       ...playerAt(),
       currentObjective: {
         id: "ni",
-        label: "Il mister chiede: resta sano per tutto il ciclo",
+        label: "Il mister chiede: resta sano per tutta la stagione",
         kind: "no-injury" as const,
         target: 1,
       },
@@ -797,7 +797,7 @@ describe("pickStaticDecision — brief no-injury", () => {
       ...player,
       currentObjective: {
         id: "ni",
-        label: "Il mister chiede: resta sano per tutto il ciclo",
+        label: "Il mister chiede: resta sano per tutta la stagione",
         kind: "no-injury" as const,
         target: 1,
       },
