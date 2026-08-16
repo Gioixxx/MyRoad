@@ -277,7 +277,13 @@ export function CoachCareerGame({ onBack, seedEntry }: CoachCareerGameProps) {
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-3">
-      {activeMoment ? <CoachMomentOverlay moment={activeMoment} onContinue={handleMomentContinue} /> : null}
+      {activeMoment ? (
+        <CoachMomentOverlay
+          key={`moment-${momentIndex}-${activeMoment.kind}`}
+          moment={activeMoment}
+          onContinue={handleMomentContinue}
+        />
+      ) : null}
 
       <header className="flex shrink-0 items-center justify-between gap-4">
         <p className="font-display text-lg tracking-[0.2em] gold-metal-text">ALLENATORE</p>

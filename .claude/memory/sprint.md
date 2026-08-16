@@ -711,6 +711,30 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   gate password/blocco proseguimento allenatore — vedi [[tech-debt]]. **Azione utente pendente**:
   eseguire `supabase/nickname-uniqueness.sql` sul progetto Supabase live.
 
+- [x] **Allenatore: Fase C (continuità) + parità UI + bilanciamento con harness + QA con agenti**
+  (2026-08-16, sessione successiva, commit `a321276` committato dall'utente stesso a metà sessione
+  + un piccolo fix successivo non ancora committato): su richiesta esplicita dell'utente di
+  continuare lo sviluppo della modalità Allenatore, scelte 3 delle 4 direzioni proposte (Fase C,
+  parità UI, bilanciamento — Fase D/archivio-HoF esclusa, resta [[backlog]]). **Fase C**: nuovo
+  `lib/coach-career/bridge.ts` (continuità da un calciatore ritirato con peakOVR≥80, età/
+  patrimonio/popolarità ereditati, stesso gate password dell'ingresso ordinario). **Parità UI**:
+  `CoachMomentOverlay.tsx` (overlay celebrativi trofeo/premio/promozione/retrocessione/esonero/
+  obiettivo) e `CoachHistoryTable.tsx` (storico club), chip archetipo/rumors/relazioni sul
+  cartellino. **Bilanciamento**: nuovo harness `npm run coach-simulate` — **bug reale trovato**: la
+  reputazione allenatore non cresceva mai (picco medio 35.6 su 2000 carriere, 0 titoli/promozioni)
+  perché le formule "aspettativa società" e "esito in campo" erano tarate a tavolino senza
+  ancoraggio comune; corretto ancorandole alla stessa formula + ritarato il passo di crescita
+  (picco medio 43.5 dopo il fix). **QA con 3 agenti paralleli** (desktop Allenatore, regressione
+  calciatore+mobile, mobile approfondito su tutte le schermate 390px): zero regressioni, mobile
+  solido ovunque, blocco-proseguimento-dopo-ritiro confermato — e un **secondo bug reale trovato**:
+  l'overlay "Trofeo" spariva quasi subito per una `key` prop mancante su `CoachMomentOverlay` in
+  `CoachCareerGame.tsx` (il timer di auto-dismiss si aspetta un remount ad ogni nuovo moment,
+  stesso pattern già usato dal calciatore) — corretto e riverificato dal vivo forzando un titolo di
+  campionato via `localStorage`. 595 test verdi, `tsc`/lint puliti. Vedi [[decisions]] per il
+  dettaglio completo di entrambi i bug e [[tech-debt]] per le voci chiuse da questo giro. **Nessuna
+  release/bump di versione** — il fix `key` + gli aggiornamenti di memoria che lo documentano
+  restano non committati a fine sessione (il resto del lavoro è già in `a321276`).
+
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
 - `ClubStint` ora ha un campo `ovr` (OVR del giocatore alla fine di quel ciclo) — necessario per la CareerTable, che deve mostrare l'OVR storico per riga, non quello attuale

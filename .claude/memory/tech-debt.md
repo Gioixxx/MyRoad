@@ -1,7 +1,7 @@
 ---
 type: tech-debt
 tags: [memory, tech-debt]
-updated: [2026-08-14]
+updated: [2026-08-16]
 ---
 
 # Tech Debt
@@ -308,58 +308,29 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
   carriera fino al ritiro e verificare a schermo lo stato "Punteggio pubblicato ✓", poi controllare
   la schermata Classifica.
 
-### Password/blocco proseguimento modalità Allenatore (v0.13.0) non verificati nel browser
-- **Priorità:** Media
-- **Area:** `src/components/features/career/CareerGame.tsx` (`CoachModeGate`), `src/lib/coach-career/access.ts`, `src/components/features/coach/CoachCareerGame.tsx`
-- **Data:** 2026-08-16
-- **Descrizione:** il gate password sull'ingresso alla modalità Allenatore e la rimozione del
-  bottone "Nuova carriera" a fine carriera allenatore (vedi [[decisions]]) sono verificati solo via
-  `tsc`/build/lint — nessuna carriera allenatore giocata a mano in questa sessione (di codice +
-  rilascio, non di playtest). Non osservato a schermo: il campo password che blocca/sblocca
-  correttamente l'accesso, il messaggio di errore su password sbagliata, la schermata di fine
-  carriera senza più il bottone di restart.
-- **Perché rimandato:** sessione di implementazione + rilascio immediato su richiesta esplicita
-  dell'utente ("rilascia appena hai fatto"), nessun tempo dedicato al playtest in questo giro.
-- **Impatto:** rischio medio — è l'unico cancello che tiene la modalità allenatore (ancora WIP)
-  fuori dalla portata dei giocatori occasionali sul sito pubblico; un bug di wiring (es. il gate
-  che non blocca davvero, o che blocca sempre impedendo anche l'accesso corretto) sarebbe visibile
-  solo provandolo dal vivo.
-- **Risoluzione suggerita:** aprire il sito pubblicato, cliccare "Allenatore" dal menu, verificare
-  che senza password non si entri, con `coach2026` sì; giocare fino al ritiro e confermare che
-  resti solo il bottone "Menu".
-- **Aggiornamento 2026-08-16 (sessione successiva):** gate password verificato dal vivo nel
-  browser (password errata → "Password errata.", `coach2026` → accesso concesso, sia dal menu sia
-  dal flusso di continuità Fase C) — vedi [[decisions]]. **Resta non verificato**: il blocco del
-  proseguimento dopo il ritiro (nessuna carriera allenatore portata fino al ritiro in questo
-  playtest) — voce non ancora archiviabile per intero.
-
-### Overlay trofeo/premio/promozione allenatore mai osservati dal vivo
-- **Priorità:** Bassa
-- **Area:** `src/components/features/coach/CoachMomentOverlay.tsx`
-- **Data:** 2026-08-16
-- **Descrizione:** nel playtest della sessione "Continuazione sviluppo Allenatore" (vedi
-  [[decisions]]) è stato innescato e osservato solo l'overlay "Esonerato" (`kind: "sacked"`) — gli
-  altri 4 kind (`trophy`/`award`/`promoted`/`objective`, oltre a `relegated` mai capitato) non sono
-  mai comparsi a schermo, nonostante condividano lo stesso shell già verificato (confetti/focus-
-  trap/auto-dismiss, identico a `MomentOverlay.tsx` calciatore, ampiamente testato lì).
-- **Perché rimandato:** RNG-gated (trofeo/premio) o richiede più cicli di quelli giocati in questo
-  giro (promozione, che nell'harness `coach-simulate` risulta comunque rarissima anche dopo il fix
-  di bilanciamento — vedi [[decisions]]).
-- **Impatto:** basso — lo shell è lo stesso già verificato per il calciatore, il rischio residuo è
-  solo nel testo/icona specifico di ciascun kind (es. `COACH_AWARD_LABELS`, layout `TrophyImage`+
-  `CompetitionBadge` per `trophy`), non nel meccanismo.
-- **Risoluzione suggerita:** in un futuro playtest, forzare via `localStorage` una reputazione/
-  club di prestigio alti per aumentare la chance di trofeo/premio, oppure giocare più cicli con lo
-  stesso club per un tentativo di promozione.
-
 ## Priorità
 - **Alta:** —
-- **Media:** pass di game-feel v0.11.0 non verificato nel browser (vedi sopra); blocco
-  proseguimento dopo il ritiro allenatore non verificato (gate password sì, vedi sopra)
+- **Media:** pass di game-feel v0.11.0 non verificato nel browser (vedi sopra)
 - **Bassa:** pattern `min-h-0` non condizionato ricorrente; classifica globale non verificata
-  dall'eseguibile desktop; overlay trofeo/premio/promozione allenatore non osservati (vedi sopra)
+  dall'eseguibile desktop
 
 ## Archiviato
+- **Password/blocco proseguimento modalità Allenatore (v0.13.0) non verificati nel browser** —
+  risolto 2026-08-16: gate password verificato dal vivo (password errata → "Password errata.",
+  `coach2026` → accesso concesso, sia dal menu sia dal flusso di continuità Fase C). Blocco del
+  proseguimento dopo il ritiro confermato da un agente di test dedicato (forzando `coach.age` a
+  76+ via localStorage): la schermata "Carriera conclusa" mostra solo il bottone "Menu" — vedi
+  [[decisions]].
+- **Overlay trofeo/premio/promozione allenatore mai osservati dal vivo** — risolto 2026-08-16:
+  3 agenti di test paralleli hanno confermato 5 dei 6 kind (`award`/`promoted`/`relegated`/
+  `sacked`/`objective`, layout/colore/auto-dismiss corretti) e trovato un **bug reale** sul sesto
+  (`trophy`): l'overlay spariva quasi subito perché `CoachCareerGame.tsx` montava
+  `<CoachMomentOverlay>` senza `key` prop (a differenza dell'equivalente calciatore, che la usa
+  per forzare il remount del timer di auto-dismiss ad ogni nuovo moment). Fix applicato e
+  riverificato dal vivo forzando un titolo di campionato via localStorage — overlay "Trofeo" ora
+  resta visibile per intero. Una segnalazione collaterale ("badge Egyptian Premier League
+  mancante") si è rivelata la stessa causa, non un gap dati (URL verificati 200 con `curl`) — vedi
+  [[decisions]].
 - **Convocazione in nazionale salita da ~25% a ~37% come effetto collaterale della Fase 5 (soglie PlayStyle)** — risolto 2026-08-12: nella sessione di confronto plausibilità gioco-vs-realtà (vedi [[decisions]]), `TARGETMAN_CALLUP_BONUS` in `playstyles.ts` dimezzato prima a 0.04 (misurato 31.8%, ancora leggermente sopra la fascia target 20-30%) poi affinato a 0.03, misurato **28.4%** con `npm run simulate` — dentro la fascia 20-30% e vicino al ~25-28% tarato deliberatamente prima della deriva. Trofeo di club (82.1%) e trofeo di nazionale (5.5%) invariati nella stessa run, a conferma che il fix è isolato alla sola convocazione. 399 test verdi, `tsc` pulito.
 - **Trofeo di club forse troppo comune dopo la ricalibrazione OVR (~91%)** — risolto 2026-08-10: nella sessione di bilanciamento generale (vedi [[decisions]], "Bilanciamento su 7 fasi..."), `CLUB_TROPHY_PRESTIGE_WEIGHT` 0.08→0.03, `CLUB_TROPHY_OVR_DIVISOR` 200→350, `CLUB_TROPHY_OVR_BONUS_CAP` 0.15→0.08, `CLUB_TROPHY_CHANCE_CAP` 0.5→0.3 — "almeno 1 trofeo di club" da 94.8%/94.1% a 84.4%, dentro la fascia 75-85% richiesta esplicitamente dall'utente in questo giro (non più "fuori scope").
 - **Overlay trofeo+badge (TrophyImage) non verificato dal vivo con un vero evento di vittoria** — risolto 2026-08-10: 2 agenti browser paralleli hanno giocato carriere reali fino a vincere un vero trofeo di club (Copa del Rey e La Liga con il Valencia/Málaga, 3 vittorie osservate in totale su 2 carriere indipendenti). Layout `flex items-end justify-center gap-3` (trofeo 104px + badge 44px) confermato pulito in tutte e 3 le istanze: nessuna immagine rotta, bottom-alignment corretto, proporzioni naturali (trofeo elemento dominante, badge companion), nessuna distorsione nonostante dimensioni native diverse tra competizioni (256×256 vs 512×512, entrambe quadrate). URL reali verificati via DOM: tutte le immagini `complete: true`. Non ancora osservato in questo giro: overlay premio individuale o convocazione in nazionale (entrambi RNG-gated più rari) — se emerge un problema specifico a quelle varianti andrà riaperta una voce dedicata, ma il rischio principale (layout badge+trofeo mai visto) è chiuso.

@@ -1118,3 +1118,22 @@ Registro scelte tecniche con motivazioni.
   stato osservato dal vivo, gli altri kind condividono lo stesso shell/codice già verificato per
   il calciatore ma non sono stati innescati in questa sessione di playtest) — vedi [[tech-debt]].
   Nessun rilascio/bump di versione in questo giro — lavoro non ancora committato a fine sessione.
+
+- **Aggiornamento stessa sessione — QA con 3 agenti paralleli + bug reale trovato e corretto**:
+  su richiesta esplicita dell'utente di verificare anche via agenti la grafica/UI, lanciati 3 fork
+  in parallelo (isolati sulle rispettive chiavi localStorage: coach-save/coach-archive esclusivi
+  al primo, save/archive calciatore esclusivi al secondo, append-only condiviso su
+  `carriera:archive` per il terzo). Risultato: zero regressioni calciatore, mobile 390px solido su
+  tutte le schermate di entrambe le modalità (incluso il blocco-proseguimento-dopo-ritiro
+  allenatore, ora confermato — chiude quella voce di [[tech-debt]]). **Bug reale**: l'overlay
+  "Trofeo" in modalità allenatore spariva quasi subito invece di restare visibile 6s — causa
+  isolata a `CoachCareerGame.tsx` che montava `<CoachMomentOverlay>` **senza `key` prop**, a
+  differenza dell'equivalente calciatore (`CareerGame.tsx:867`, `key={moment-${momentIndex}-
+  ${kind}}`) — il timer di auto-dismiss del componente si aspetta un remount ad ogni nuovo moment
+  (dichiarato anche nel commento interno del componente). Fix: aggiunta la stessa `key` in
+  `CoachCareerGame.tsx`. Una seconda segnalazione ("badge Egyptian Premier League mancante
+  nell'overlay") si è rivelata la STESSA causa (URL badge/trofeo verificati raggiungibili con
+  `curl`, 200 su entrambi) — non un gap dati. Verificato dopo il fix: `tsc`/595 test/lint
+  invariati, e dal vivo nel browser forzando reputazione/prestigio club alti via `localStorage`
+  per innescare un vero titolo di campionato — overlay "Trofeo" (Bundesliga) ora resta visibile
+  per intero con immagine trofeo, badge e barra di progresso corretti.
