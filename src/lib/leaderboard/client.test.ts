@@ -101,10 +101,49 @@ describe("leaderboard/client — rete (env stubbate, modulo reimportato)", () =>
     });
 
     it("submitLeaderboardEntry ritorna ok:false su risposta non-ok, senza lanciare", async () => {
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 400 }));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({ ok: false, status: 400, text: async () => "" }),
+      );
       const mod = await import("./client");
       const result = await mod.submitLeaderboardEntry(ENTRY, "Nick", "device-abc");
       expect(result).toEqual({ ok: false, error: "http-400" });
+    });
+
+    it("submitLeaderboardEntry riconosce il rifiuto per nickname già in uso (trigger myroad_claim_nickname)", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 409,
+          text: async () => JSON.stringify({ code: "23505", message: "NICKNAME_TAKEN" }),
+        }),
+      );
+      const mod = await import("./client");
+      const result = await mod.submitLeaderboardEntry(ENTRY, "Nick", "device-abc");
+      expect(result).toEqual({ ok: false, error: "nickname-taken" });
+    });
+
+    it("checkNicknameAvailable chiama l'RPC e ritorna il booleano di disponibilità", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => true });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const mod = await import("./client");
+      const result = await mod.checkNicknameAvailable("  Nick  ", "device-abc");
+
+      expect(result).toEqual({ ok: true, value: true });
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe("https://test.supabase.co/rest/v1/rpc/myroad_nickname_available");
+      expect(JSON.parse(init.body)).toEqual({ p_nickname: "Nick", p_device_id: "device-abc" });
+    });
+
+    it("checkNicknameAvailable ritorna ok:false su errore di rete, senza lanciare", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+      const mod = await import("./client");
+      await expect(mod.checkNicknameAvailable("Nick", "device-abc")).resolves.toEqual({
+        ok: false,
+        error: "network",
+      });
     });
 
     it("submitLeaderboardEntry ritorna ok:false su errore di rete, senza lanciare", async () => {

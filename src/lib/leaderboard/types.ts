@@ -1,7 +1,13 @@
 import type { ArchivedCareer } from "@/types/career";
 
 /** Stato della pubblicazione automatica in classifica alla fine di una carriera. */
-export type PublishStatus = "idle" | "loading" | "done" | "error" | "skipped-no-nickname";
+export type PublishStatus =
+  | "idle"
+  | "loading"
+  | "done"
+  | "error"
+  | "error-nickname-taken"
+  | "skipped-no-nickname";
 
 /** Stesse 4 categorie della Hall of Fame locale (`HallOfFameRecords` in `career/satisfaction.ts`),
  * qui applicate globalmente (top-N invece di singolo vincitore). */

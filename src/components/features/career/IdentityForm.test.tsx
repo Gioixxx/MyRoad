@@ -5,7 +5,7 @@ import { IdentityForm } from "./IdentityForm";
 describe("IdentityForm", () => {
   it("dovrebbe mostrare errori di validazione se si conferma con campi mancanti", () => {
     const onSubmit = vi.fn();
-    render(<IdentityForm onSubmit={onSubmit} nickname="" onNicknameChange={vi.fn()} />);
+    render(<IdentityForm onSubmit={onSubmit} nickname="" onNicknameChange={vi.fn()} deviceId="device-test" />);
 
     fireEvent.click(screen.getByRole("button", { name: /conferma identità/i }));
 
@@ -17,7 +17,7 @@ describe("IdentityForm", () => {
 
   it("dovrebbe segnalare un numero di maglia fuori dal range 1-99", () => {
     const onSubmit = vi.fn();
-    render(<IdentityForm onSubmit={onSubmit} nickname="" onNicknameChange={vi.fn()} />);
+    render(<IdentityForm onSubmit={onSubmit} nickname="" onNicknameChange={vi.fn()} deviceId="device-test" />);
 
     fireEvent.change(screen.getByLabelText(/^numero$/i), { target: { value: "150" } });
     fireEvent.click(screen.getByRole("button", { name: /conferma identità/i }));
@@ -28,7 +28,7 @@ describe("IdentityForm", () => {
 
   it("dovrebbe chiamare onSubmit con l'identità corretta quando tutti i campi sono validi", () => {
     const onSubmit = vi.fn();
-    render(<IdentityForm onSubmit={onSubmit} nickname="" onNicknameChange={vi.fn()} />);
+    render(<IdentityForm onSubmit={onSubmit} nickname="" onNicknameChange={vi.fn()} deviceId="device-test" />);
 
     fireEvent.change(screen.getByLabelText(/cognome/i), { target: { value: "Rossi" } });
     fireEvent.change(screen.getByLabelText(/^numero$/i), { target: { value: "9" } });
@@ -66,7 +66,7 @@ describe("IdentityForm — con classifica configurata (env stubbate, modulo reim
     const { IdentityForm: FreshIdentityForm } = await import("./IdentityForm");
 
     const onSubmit = vi.fn();
-    render(<FreshIdentityForm onSubmit={onSubmit} nickname="" onNicknameChange={vi.fn()} />);
+    render(<FreshIdentityForm onSubmit={onSubmit} nickname="" onNicknameChange={vi.fn()} deviceId="device-test" />);
 
     expect(screen.getByLabelText(/nickname/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /conferma identità/i }));
@@ -82,7 +82,9 @@ describe("IdentityForm — con classifica configurata (env stubbate, modulo reim
     const { IdentityForm: FreshIdentityForm } = await import("./IdentityForm");
 
     const onSubmit = vi.fn();
-    render(<FreshIdentityForm onSubmit={onSubmit} nickname="Fenomeno99" onNicknameChange={vi.fn()} />);
+    render(
+      <FreshIdentityForm onSubmit={onSubmit} nickname="Fenomeno99" onNicknameChange={vi.fn()} deviceId="device-test" />,
+    );
 
     fireEvent.change(screen.getByLabelText(/cognome/i), { target: { value: "Rossi" } });
     fireEvent.change(screen.getByLabelText(/^numero$/i), { target: { value: "9" } });

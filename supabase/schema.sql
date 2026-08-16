@@ -296,3 +296,76 @@ drop trigger if exists myroad_leaderboard_keep_best_trigger on public.myroad_lea
 create trigger myroad_leaderboard_keep_best_trigger
   before insert on public.myroad_leaderboard_entries
   for each row execute function public.myroad_leaderboard_keep_best();
+
+-- =====================================================================
+-- Unicità del nickname tra dispositivi diversi (migrazione incrementale
+-- separata: supabase/nickname-uniqueness.sql, eseguire quella sul DB live —
+-- vedi il file per il commento completo). Una tabella di "possesso" del
+-- nickname normalizzato + un trigger BEFORE INSERT che gira PRIMA di
+-- myroad_leaderboard_keep_best_trigger (ordine alfabetico dei nomi
+-- trigger) rifiuta l'insert se un altro device_id possiede già quel
+-- nickname. Non e' un UNIQUE diretto sulla colonna nickname della tabella
+-- principale: quella colonna deve poter ripetere lo stesso valore su piu'
+-- righe dello STESSO dispositivo (una per specialita').
+--
+-- Il file incrementale azzera anche myroad_leaderboard_entries (TRUNCATE)
+-- prima di creare questi oggetti: su un'installazione da zero (questo file)
+-- e' un no-op, non serve ripeterlo qui.
+-- =====================================================================
+
+create table public.myroad_nickname_claims (
+  nickname_key text primary key,
+  device_id uuid not null,
+  claimed_at timestamptz not null default now()
+);
+
+alter table public.myroad_nickname_claims enable row level security;
+revoke all on public.myroad_nickname_claims from anon, authenticated;
+
+create or replace function public.myroad_nickname_available(p_nickname text, p_device_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select not exists (
+    select 1 from public.myroad_nickname_claims
+    where nickname_key = lower(trim(p_nickname))
+      and device_id <> p_device_id
+  );
+$$;
+
+revoke all on function public.myroad_nickname_available(text, uuid) from public;
+grant execute on function public.myroad_nickname_available(text, uuid) to anon;
+
+create or replace function public.myroad_claim_nickname()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  claim_key text := lower(trim(new.nickname));
+  owner_device_id uuid;
+begin
+  select device_id into owner_device_id
+  from public.myroad_nickname_claims
+  where nickname_key = claim_key
+  for update;
+
+  if owner_device_id is null then
+    insert into public.myroad_nickname_claims (nickname_key, device_id)
+    values (claim_key, new.device_id);
+  elsif owner_device_id <> new.device_id then
+    raise exception 'NICKNAME_TAKEN' using errcode = '23505';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists myroad_00_claim_nickname_trigger on public.myroad_leaderboard_entries;
+
+create trigger myroad_00_claim_nickname_trigger
+  before insert on public.myroad_leaderboard_entries
+  for each row execute function public.myroad_claim_nickname();

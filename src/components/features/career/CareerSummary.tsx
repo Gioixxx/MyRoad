@@ -47,6 +47,8 @@ const PUBLISH_STATUS_TEXT: Partial<Record<PublishStatus, string>> = {
   loading: "Pubblico il tuo punteggio in classifica…",
   done: "Punteggio pubblicato in classifica ✓",
   error: "Impossibile pubblicare il punteggio in classifica.",
+  "error-nickname-taken":
+    "Questo nickname è già usato da un altro giocatore. Cambialo nelle Impostazioni per comparire in classifica.",
   "skipped-no-nickname": "Imposta un nickname nelle Impostazioni per comparire in classifica.",
 };
 
@@ -98,7 +100,7 @@ export function CareerSummary({
           </h2>
           <p className="text-xs text-(--color-text-muted) sm:text-sm">
             Ritirato a {player.age} anni · {player.clubHistory.length}{" "}
-            {player.clubHistory.length === 1 ? "ciclo" : "cicli"} · {bestTitle}
+            {player.clubHistory.length === 1 ? "stagione" : "stagioni"} · {bestTitle}
             {archetype.primary ? ` · Stile: ${ARCHETYPE_LABELS[archetype.primary]}` : ""}
             {shadowTitle ? ` · ${shadowTitle}` : ""}
           </p>

@@ -69,8 +69,37 @@ export async function submitLeaderboardEntry(
       headers: { ...headers(), Prefer: "return=minimal" },
       body: JSON.stringify(buildSubmitPayload(entry, nickname, deviceId)),
     });
-    if (!res.ok) return { ok: false, error: `http-${res.status}` };
+    if (!res.ok) {
+      // Il trigger myroad_claim_nickname (supabase/nickname-uniqueness.sql) rifiuta l'insert con
+      // questo messaggio se il nickname è già di un altro dispositivo — distinto da un errore
+      // generico per poter guidare l'utente a cambiarlo nelle Impostazioni.
+      const body = await res.text().catch(() => "");
+      if (body.includes("NICKNAME_TAKEN")) return { ok: false, error: "nickname-taken" };
+      return { ok: false, error: `http-${res.status}` };
+    }
     return { ok: true, value: true };
+  } catch {
+    return { ok: false, error: "network" };
+  }
+}
+
+/** Controllo di disponibilità nickname (RPC `myroad_nickname_available`, sola lettura) — usato
+ * per un feedback immediato "onBlur" nei form, prima ancora di pubblicare un punteggio. */
+export async function checkNicknameAvailable(
+  nickname: string,
+  deviceId: string,
+): Promise<LeaderboardResult<boolean>> {
+  if (!isLeaderboardConfigured()) return { ok: false, error: "not-configured" };
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/myroad_nickname_available`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ p_nickname: nickname.trim(), p_device_id: deviceId }),
+    });
+    if (!res.ok) return { ok: false, error: `http-${res.status}` };
+    const available = (await res.json()) as boolean;
+    return { ok: true, value: available };
   } catch {
     return { ok: false, error: "network" };
   }

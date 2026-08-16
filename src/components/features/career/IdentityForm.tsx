@@ -7,7 +7,7 @@ import { Field } from "@/components/ui/Field";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { countries } from "@/data/countries";
 import { loadLastIdentity } from "@/lib/last-identity";
-import { isLeaderboardConfigured } from "@/lib/leaderboard/client";
+import { checkNicknameAvailable, isLeaderboardConfigured } from "@/lib/leaderboard/client";
 import { isValidNickname } from "@/lib/leaderboard/settings";
 import { JerseyCard } from "./JerseyCard";
 import { NationalitySelect } from "./NationalitySelect";
@@ -18,6 +18,8 @@ interface IdentityFormProps {
   /** Nickname per la classifica globale — obbligatorio se la classifica è configurata. */
   nickname: string;
   onNicknameChange: (nickname: string) => void;
+  /** Identità anonima per-dispositivo, per il controllo di disponibilità del nickname. */
+  deviceId: string;
 }
 
 interface FormErrors {
@@ -28,7 +30,9 @@ interface FormErrors {
   nickname?: string;
 }
 
-export function IdentityForm({ onSubmit, nickname, onNicknameChange }: IdentityFormProps) {
+type NicknameAvailability = "idle" | "checking" | "available" | "taken" | "unknown";
+
+export function IdentityForm({ onSubmit, nickname, onNicknameChange, deviceId }: IdentityFormProps) {
   const [lastIdentity] = useState(() => loadLastIdentity());
   const [lastName, setLastName] = useState(lastIdentity?.lastName ?? "");
   const [number, setNumber] = useState<number | null>(lastIdentity?.number ?? 10);
@@ -36,8 +40,21 @@ export function IdentityForm({ onSubmit, nickname, onNicknameChange }: IdentityF
   const [nationality, setNationality] = useState<string | null>(lastIdentity?.nationality ?? null);
   const [position, setPosition] = useState<Position | null>(lastIdentity?.position ?? null);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [nicknameAvailability, setNicknameAvailability] = useState<NicknameAvailability>("idle");
 
   const country = countries.find((c) => c.name === nationality);
+
+  function handleNicknameBlur() {
+    if (!isLeaderboardConfigured() || !isValidNickname(nickname)) return;
+    setNicknameAvailability("checking");
+    checkNicknameAvailable(nickname, deviceId).then((result) => {
+      if (!result.ok) {
+        setNicknameAvailability("unknown");
+      } else {
+        setNicknameAvailability(result.value ? "available" : "taken");
+      }
+    });
+  }
 
   function handleSubmit() {
     const nextErrors: FormErrors = {};
@@ -49,6 +66,8 @@ export function IdentityForm({ onSubmit, nickname, onNicknameChange }: IdentityF
     if (!position) nextErrors.position = "Seleziona un ruolo in campo.";
     if (isLeaderboardConfigured() && !isValidNickname(nickname)) {
       nextErrors.nickname = "Inserisci un nickname (2-20 caratteri) per la classifica globale.";
+    } else if (nicknameAvailability === "taken") {
+      nextErrors.nickname = "Questo nickname è già usato da un altro giocatore. Scegline un altro.";
     }
 
     setErrors(nextErrors);
@@ -117,11 +136,24 @@ export function IdentityForm({ onSubmit, nickname, onNicknameChange }: IdentityF
               <input
                 id="nickname"
                 value={nickname}
-                onChange={(e) => onNicknameChange(e.target.value)}
+                onChange={(e) => {
+                  onNicknameChange(e.target.value);
+                  setNicknameAvailability("idle");
+                }}
+                onBlur={handleNicknameBlur}
                 maxLength={20}
                 placeholder="Es. Fenomeno99"
                 className="input-recessed rounded-md px-3 py-2 text-sm"
               />
+              {!errors.nickname && nicknameAvailability === "checking" ? (
+                <p className="mt-1 text-xs text-(--color-text-muted)">Controllo disponibilità…</p>
+              ) : null}
+              {!errors.nickname && nicknameAvailability === "taken" ? (
+                <p className="mt-1 text-xs text-(--color-error)">Nickname già in uso da un altro giocatore.</p>
+              ) : null}
+              {!errors.nickname && nicknameAvailability === "available" ? (
+                <p className="mt-1 text-xs text-(--color-success)">Nickname disponibile.</p>
+              ) : null}
             </Field>
           ) : null}
         </div>

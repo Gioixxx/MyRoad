@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
-import { isLeaderboardConfigured } from "@/lib/leaderboard/client";
+import { checkNicknameAvailable, isLeaderboardConfigured } from "@/lib/leaderboard/client";
 import { isValidNickname } from "@/lib/leaderboard/settings";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
@@ -14,8 +15,12 @@ interface SettingsPanelProps {
   onMutedChange: (muted: boolean) => void;
   nickname: string;
   onNicknameChange: (nickname: string) => void;
+  /** Identità anonima per-dispositivo, per il controllo di disponibilità del nickname. */
+  deviceId: string;
   onBack: () => void;
 }
+
+type NicknameAvailability = "idle" | "checking" | "available" | "taken" | "unknown";
 
 export function SettingsPanel({
   volume,
@@ -24,12 +29,27 @@ export function SettingsPanel({
   onMutedChange,
   nickname,
   onNicknameChange,
+  deviceId,
   onBack,
 }: SettingsPanelProps) {
+  const [nicknameAvailability, setNicknameAvailability] = useState<NicknameAvailability>("idle");
   const nicknameError =
     nickname.length > 0 && !isValidNickname(nickname)
       ? "2-20 caratteri, solo lettere/numeri/spazi/. _ -"
       : undefined;
+
+  function handleNicknameBlur() {
+    if (!isValidNickname(nickname)) return;
+    setNicknameAvailability("checking");
+    checkNicknameAvailable(nickname, deviceId).then((result) => {
+      if (!result.ok) {
+        setNicknameAvailability("unknown");
+      } else {
+        setNicknameAvailability(result.value ? "available" : "taken");
+      }
+    });
+  }
+
   return (
     <div className="flex w-full flex-col gap-6">
       <div>
@@ -79,11 +99,24 @@ export function SettingsPanel({
             <input
               id="leaderboard-nickname"
               value={nickname}
-              onChange={(e) => onNicknameChange(e.target.value)}
+              onChange={(e) => {
+                onNicknameChange(e.target.value);
+                setNicknameAvailability("idle");
+              }}
+              onBlur={handleNicknameBlur}
               maxLength={20}
               placeholder="Es. Fenomeno99"
               className="input-recessed rounded-md px-3 py-2 text-sm"
             />
+            {!nicknameError && nicknameAvailability === "checking" ? (
+              <p className="mt-1 text-xs text-(--color-text-muted)">Controllo disponibilità…</p>
+            ) : null}
+            {!nicknameError && nicknameAvailability === "taken" ? (
+              <p className="mt-1 text-xs text-(--color-error)">Nickname già in uso da un altro giocatore.</p>
+            ) : null}
+            {!nicknameError && nicknameAvailability === "available" ? (
+              <p className="mt-1 text-xs text-(--color-success)">Nickname disponibile.</p>
+            ) : null}
           </Field>
         </div>
       ) : null}

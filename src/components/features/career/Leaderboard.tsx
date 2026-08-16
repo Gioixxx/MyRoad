@@ -19,7 +19,9 @@ interface LeaderboardProps {
   onBack: () => void;
 }
 
-const CATEGORIES: LeaderboardCategory[] = ["highestOvr", "mostTrophies", "richest", "mostPopular"];
+// "mostPopular" resta nel data model/tipo (vedi lib/leaderboard/types.ts) ma è nascosta dalla UI
+// su richiesta esplicita dell'utente ("la classifica popolarità è inutile in questo momento").
+const CATEGORIES: LeaderboardCategory[] = ["highestOvr", "mostTrophies", "richest"];
 
 const SAVINGS_FORMATTER = new Intl.NumberFormat("it-IT", {
   style: "currency",
