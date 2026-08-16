@@ -327,13 +327,37 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
 - **Risoluzione suggerita:** aprire il sito pubblicato, cliccare "Allenatore" dal menu, verificare
   che senza password non si entri, con `coach2026` sì; giocare fino al ritiro e confermare che
   resti solo il bottone "Menu".
+- **Aggiornamento 2026-08-16 (sessione successiva):** gate password verificato dal vivo nel
+  browser (password errata → "Password errata.", `coach2026` → accesso concesso, sia dal menu sia
+  dal flusso di continuità Fase C) — vedi [[decisions]]. **Resta non verificato**: il blocco del
+  proseguimento dopo il ritiro (nessuna carriera allenatore portata fino al ritiro in questo
+  playtest) — voce non ancora archiviabile per intero.
+
+### Overlay trofeo/premio/promozione allenatore mai osservati dal vivo
+- **Priorità:** Bassa
+- **Area:** `src/components/features/coach/CoachMomentOverlay.tsx`
+- **Data:** 2026-08-16
+- **Descrizione:** nel playtest della sessione "Continuazione sviluppo Allenatore" (vedi
+  [[decisions]]) è stato innescato e osservato solo l'overlay "Esonerato" (`kind: "sacked"`) — gli
+  altri 4 kind (`trophy`/`award`/`promoted`/`objective`, oltre a `relegated` mai capitato) non sono
+  mai comparsi a schermo, nonostante condividano lo stesso shell già verificato (confetti/focus-
+  trap/auto-dismiss, identico a `MomentOverlay.tsx` calciatore, ampiamente testato lì).
+- **Perché rimandato:** RNG-gated (trofeo/premio) o richiede più cicli di quelli giocati in questo
+  giro (promozione, che nell'harness `coach-simulate` risulta comunque rarissima anche dopo il fix
+  di bilanciamento — vedi [[decisions]]).
+- **Impatto:** basso — lo shell è lo stesso già verificato per il calciatore, il rischio residuo è
+  solo nel testo/icona specifico di ciascun kind (es. `COACH_AWARD_LABELS`, layout `TrophyImage`+
+  `CompetitionBadge` per `trophy`), non nel meccanismo.
+- **Risoluzione suggerita:** in un futuro playtest, forzare via `localStorage` una reputazione/
+  club di prestigio alti per aumentare la chance di trofeo/premio, oppure giocare più cicli con lo
+  stesso club per un tentativo di promozione.
 
 ## Priorità
 - **Alta:** —
-- **Media:** pass di game-feel v0.11.0 non verificato nel browser (vedi sopra); gate password
-  modalità Allenatore non verificato nel browser (vedi sopra)
+- **Media:** pass di game-feel v0.11.0 non verificato nel browser (vedi sopra); blocco
+  proseguimento dopo il ritiro allenatore non verificato (gate password sì, vedi sopra)
 - **Bassa:** pattern `min-h-0` non condizionato ricorrente; classifica globale non verificata
-  dall'eseguibile desktop (vedi sopra)
+  dall'eseguibile desktop; overlay trofeo/premio/promozione allenatore non osservati (vedi sopra)
 
 ## Archiviato
 - **Convocazione in nazionale salita da ~25% a ~37% come effetto collaterale della Fase 5 (soglie PlayStyle)** — risolto 2026-08-12: nella sessione di confronto plausibilità gioco-vs-realtà (vedi [[decisions]]), `TARGETMAN_CALLUP_BONUS` in `playstyles.ts` dimezzato prima a 0.04 (misurato 31.8%, ancora leggermente sopra la fascia target 20-30%) poi affinato a 0.03, misurato **28.4%** con `npm run simulate` — dentro la fascia 20-30% e vicino al ~25-28% tarato deliberatamente prima della deriva. Trofeo di club (82.1%) e trofeo di nazionale (5.5%) invariati nella stessa run, a conferma che il fix è isolato alla sola convocazione. 399 test verdi, `tsc` pulito.

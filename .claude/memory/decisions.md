@@ -1021,3 +1021,100 @@ Registro scelte tecniche con motivazioni.
   live — finché non lo fa, il controllo di unicità nickname non è attivo (documentato anche nelle
   note della release). **Non verificato in questa sessione**: coach-gate/blocco proseguimento non
   testati dal vivo nel browser (sessione di codice+release) — vedi [[tech-debt]].
+
+### Continuazione sviluppo Allenatore: Fase C (continuità), parità UI, harness di bilanciamento — bug reale di reputazione trovato e corretto
+- **Data:** 2026-08-16
+- **Decisione:** su richiesta dell'utente di continuare lo sviluppo della modalità Allenatore
+  dopo l'esecuzione di `supabase/nickname-uniqueness.sql`, scelte 3 delle 4 direzioni proposte
+  (`AskUserQuestion`): **Fase C** (continuità calciatore→allenatore, mai iniziata), **parità UI**
+  col calciatore (overlay celebrativi, storico club, chip relazioni/traits/shadow — assenti),
+  **bilanciamento con harness + playtest** (formule mai misurate). Esclusa la Fase D (archivio/
+  Hall of Fame allenatore) — resta backlog.
+  1. **Fase C**: nuovo `lib/coach-career/bridge.ts` (`seedCoachFromArchivedCareer`,
+     `isEligibleForCoachContinuity`/`COACH_CONTINUITY_MIN_PEAK_OVR=80`, `nudgeTraitsFromArchetype`
+     con nudge fisso per archetipo) — età di partenza = età di ritiro del calciatore (non
+     `COACH_STARTING_AGE`), patrimonio/popolarità ereditati 1:1, reputazione con bonus limitato
+     (picco OVR/trofei). `engine.ts::createCoach` accetta un `seed?: Partial<Coach>` opzionale
+     applicato sopra la base standard, con reputazione ri-clampata al tetto rollato per sicurezza.
+     `CareerArchive.tsx` mostra "Inizia carriera da allenatore" solo per entry con `peakOvr>=80`,
+     passa dallo **stesso gate password** dell'ingresso ordinario (`CareerGame.tsx`:
+     `pendingCoachSeed` portato attraverso lo step `coach-gate`, poi `onCoachCareer(seedEntry)` →
+     `page.tsx` → `CoachCareerGame`). Identità (cognome/nazionalità) precompilata ma editabile
+     nello step di creazione (stesso pattern già usato per la persistenza ultima identità
+     calciatore), non forzata.
+  2. **Parità UI**: nuovo `CoachMomentOverlay.tsx` (mirror strutturale — non tipizzato — di
+     `MomentOverlay.tsx` calciatore: stesso shell chalk-panel/confetti/focus-trap/auto-dismiss,
+     union `CoachMoment` propria con `trophy`/`award`/`promoted`/`relegated`/`sacked`/`objective`)
+     e `CoachHistoryTable.tsx` (mirror di `CareerTable.tsx` per `CoachStint`, con piazzamento/
+     coppa al posto di statistiche di gioco). Chip archetipo/rumors (riuso diretto di
+     `deriveArchetype`/`SHADOW_RUMOR_THRESHOLD` dal calciatore, stessa soglia `clubHistory>=4`) e
+     riga relazioni (società/stampa/capitano/rivale con affinità, riuso di `formatAffinity`)
+     aggiunti al cartellino allenatore. `COACH_AWARD_LABELS` spostato da un const locale in
+     `CoachCareerGame.tsx` a `coach-satisfaction.ts` (unica fonte, riusato anche dall'overlay).
+     Duplicazione UI deliberata rispetto a estendere `MomentOverlay.tsx`: stesso principio già
+     dichiarato nel piano di design per l'intero dominio allenatore ("parallelo, mai toccare tipi/
+     switch del calciatore già in produzione").
+  3. **Bilanciamento — bug reale trovato con l'harness**: nuovo `lib/coach-career/simulation.ts`
+     (`simulateCoachCareer`, mirror di `career/simulation.ts`) + `scripts/coach-simulate.ts` +
+     `vitest.coach-simulate.config.mts` + `npm run coach-simulate` (mirror completo del setup
+     calciatore). Prima esecuzione: **reputazione di picco media 35.6 su 2000 carriere (appena
+     sopra i 35 di partenza), 0 titoli e 0 promozioni mai osservati**. Diagnosticato con uno
+     script di debug ad-hoc (poi rimosso): `EXPECTED_FINISH_RANK_BY_PRESTIGE` (`engine.ts`,
+     giudica sovra/sotto-performance per reputazione/boardConfidence) e `expectedLeagueFinishRank`
+     (`season-outcome.ts`, determina l'esito reale in campo) erano state tarate a tavolino in
+     sessioni/momenti diversi, senza un ancoraggio comune — a `COACH_STARTING_REPUTATION=35` il
+     delta di reputazione medio era negativo per **ogni** fascia di prestigio (da -0.7 a -1.7 a
+     stagione), intrappolando ogni carriera vicino al valore di partenza. Fix in due passi,
+     entrambi misurati con l'harness prima/dopo: (1) `EXPECTED_FINISH_RANK_BY_PRESTIGE` ora
+     **derivata per costruzione** da `expectedLeagueFinishRank` valutata a una reputazione di
+     riferimento per fascia (0/1/2/3 → 40/58/78/95 nel primo giro, poi abbassata a 30/50/70/90 nel
+     secondo — vedi punto successivo), invece di 4 costanti indipendenti — le due formule non
+     possono più andare fuori sincrono per una modifica isolata a una sola delle due; (2) anche con
+     l'ancoraggio, un delta medio vicino a zero per costruzione (equilibrio) restava quasi piatto
+     per via dell'arrotondamento a intero in `advanceSeasons` (`Math.round`, assorbe variazioni
+     sotto ±0.5) — riferimenti abbassati sotto la soglia di fascia (non a metà) + 
+     `REPUTATION_OVERPERFORM_STEP` 2.2→4 per dare un margine di crescita reale invece di un
+     pareggio statistico. Risultato finale: reputazione di picco media 43.5 (20% delle carriere
+     supera 55, 4.9% supera 70), trofei/award/promozioni non più a zero (rari ma presenti), tasso
+     di esonero sceso da 92.5% a 69.3% delle carriere. **Non ulteriormente iterato** oltre questo
+     giro (stesso standard "harness → misura → aggiusta → rimisura → fermati quando non più
+     degenere" già consolidato per il calciatore) — 80% delle carriere resta comunque sotto
+     reputazione 55 di picco, plausibile per un sim di management (la maggioranza resta un
+     allenatore onesto, una minoranza sfonda), non riaperto senza nuovi dati.
+- **Perché:** la scoperta del bug di reputazione è il punto centrale — prima di questo fix la
+  modalità Allenatore era sostanzialmente non giocabile in modo soddisfacente (nessuna crescita
+  percepibile, nessun trofeo raggiungibile in migliaia di carriere simulate), un problema che
+  senza l'harness (mai scritto finora per questa modalità, a differenza del calciatore) sarebbe
+  stato visibile solo playtestando a lungo e attribuito erroneamente a "sfortuna" invece che a un
+  difetto strutturale nelle costanti.
+- **Alternative:** rimuovere `Math.round` e tenere la reputazione frazionaria — scartata, mostrare
+  decimali in UI (badge reputazione) sarebbe stato un downgrade visivo per un beneficio che
+  l'aumento di `REPUTATION_OVERPERFORM_STEP` ottiene senza toccare il tipo/formato del dato.
+- **Impatto:** `lib/coach-career/{bridge,simulation}.ts` (nuovi), `components/features/coach/
+  {CoachHistoryTable,CoachMomentOverlay}.tsx` (nuovi), `scripts/coach-simulate.ts` (nuovo),
+  `vitest.coach-simulate.config.mts` (nuovo), `engine.ts` (formula reputazione ancorata + seed in
+  `createCoach`), `coach-satisfaction.ts` (+`COACH_AWARD_LABELS`), `CoachCareerGame.tsx` (seed/
+  overlay/storico/chip), `useCoachCareerGame.ts` (+seed in `startCareer`, +`clubName`/`crestUrl`
+  in `CoachCycleOutcomeSummary`), `CareerArchive.tsx`/`CareerGame.tsx`/`page.tsx` (wiring Fase C),
+  `package.json` (+script `coach-simulate`). 595 test invariati (nessuna suite nuova aggiunta in
+  questo giro — `simulation.ts`/`bridge.ts` coperti solo dall'harness/playtest manuale, non da
+  unit test dedicati, stesso gap già accettato altrove per gli script di taratura calciatore),
+  `tsc --noEmit` pulito, lint con **5 errori `react-hooks/set-state-in-effect`** (i 4 pre-esistenti
+  invariati + 1 nuovo nell'effetto che deriva i moment allenatore da `state.lastOutcome` in
+  `CoachCareerGame.tsx` — stesso identico pattern mai risolto nell'equivalente calciatore
+  `CareerGame.tsx:439`, lasciato coerente con quel precedente invece di correggerlo isolatamente).
+  **Verificato approfonditamente dal vivo nel browser** (dev server): gate password (accesso
+  negato con password errata, mostrato "Password errata", accesso concesso con `coach2026`),
+  resume di un save esistente con chip archetipo/rumors/relazioni e storico tutti renderizzati
+  correttamente, corsa in coppa forzata, crisi societaria forzata → overlay "Esonerato" con testo/
+  icona/colore negativo corretti (club pre-esonero, non null), nuove offerte di lavoro da
+  svincolato. **Fase C verificata end-to-end iniettando un `ArchivedCareer` di test in
+  `localStorage` (peakOvr 88, 3 trofei, patrimonio 25M€)**: bottone "Inizia carriera da
+  allenatore" comparso solo per quell'entry, gate password superato, form precompilato
+  ("Bianchi"/Italy) con banner di continuità, carriera creata con età 36 (= retiredAge), 
+  reputazione 43 (35+4.5+3, formula confermata esatta), popolarità 72 e patrimonio 25.000.000€
+  tutti ereditati correttamente (controllato via `localStorage.getItem("carriera:coach-save")`).
+  **Non verificato in questo giro**: overlay trofeo/premio/promozione (solo l'overlay esonero è
+  stato osservato dal vivo, gli altri kind condividono lo stesso shell/codice già verificato per
+  il calciatore ma non sono stati innescati in questa sessione di playtest) — vedi [[tech-debt]].
+  Nessun rilascio/bump di versione in questo giro — lavoro non ancora committato a fine sessione.

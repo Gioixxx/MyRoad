@@ -1,33 +1,44 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import type { GameSpeed } from "@/types/career";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ArchivedCareer, GameSpeed } from "@/types/career";
 import type { CoachDecision, CoachIdentity } from "@/types/coach";
 import { useCoachCareerGame, type CoachCycleOutcomeSummary } from "@/hooks/useCoachCareerGame";
+import { seedCoachFromArchivedCareer } from "@/lib/coach-career/bridge";
 import { TACTICAL_SYSTEM_LABELS, type TacticalSystem } from "@/lib/career/tactics";
+import { deriveArchetype, ARCHETYPE_LABELS } from "@/lib/career/traits";
+import { SHADOW_RUMOR_THRESHOLD } from "@/lib/career/shadow";
+import { formatAffinity } from "@/lib/career/relations";
+import { COACH_RELATION_LABELS } from "@/lib/coach-career/coach-relations";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
 import { NationalitySelect } from "@/components/features/career/NationalitySelect";
 import { ClubCrest } from "@/components/features/career/ClubCrest";
-import { CompetitionBadge } from "@/components/features/career/CompetitionBadge";
-import type { CoachAwardType } from "@/types/coach";
-
-const COACH_AWARD_LABELS: Record<CoachAwardType, string> = {
-  "manager-of-the-season": "Allenatore della stagione",
-  "manager-of-the-year": "Allenatore dell'anno",
-};
+import { CoachHistoryTable } from "./CoachHistoryTable";
+import { buildCoachMoments, CoachMomentOverlay, type CoachMoment } from "./CoachMomentOverlay";
 
 interface CoachCareerGameProps {
   onBack: () => void;
+  /** Carriera calciatore archiviata da cui continuare (Fase C — continuità), o null/undefined per
+   * una carriera allenatore standalone da zero. */
+  seedEntry?: ArchivedCareer | null;
 }
 
 const TACTICAL_SYSTEMS: TacticalSystem[] = ["possesso", "pressing", "contropiede", "diretto"];
 const DEFAULT_SPEED: GameSpeed = "normal";
 
-function CoachIdentityStep({ onSubmit, onBack }: { onSubmit: (identity: CoachIdentity) => void; onBack: () => void }) {
-  const [lastName, setLastName] = useState("");
-  const [nationality, setNationality] = useState<string | null>(null);
+function CoachIdentityStep({
+  seedEntry,
+  onSubmit,
+  onBack,
+}: {
+  seedEntry?: ArchivedCareer | null;
+  onSubmit: (identity: CoachIdentity) => void;
+  onBack: () => void;
+}) {
+  const [lastName, setLastName] = useState(seedEntry?.lastName ?? "");
+  const [nationality, setNationality] = useState<string | null>(seedEntry?.nationality ?? null);
   const [preferredSystem, setPreferredSystem] = useState<TacticalSystem>("possesso");
 
   const canSubmit = lastName.trim().length > 0 && nationality !== null;
@@ -37,6 +48,12 @@ function CoachIdentityStep({ onSubmit, onBack }: { onSubmit: (identity: CoachIde
       <div>
         <p className="font-display text-sm tracking-[0.2em] gold-metal-text">Nuovo incarico</p>
         <h2 className="font-display text-2xl text-(--color-text)">Crea il tuo profilo da allenatore</h2>
+        {seedEntry ? (
+          <p className="mt-1 text-xs text-(--color-text-muted)">
+            Continui la carriera di {seedEntry.lastName.toUpperCase()}, ex calciatore: patrimonio e popolarità
+            ereditati, prima panchina con qualche credito in più.
+          </p>
+        ) : null}
       </div>
 
       <label className="flex flex-col gap-1 text-sm">
@@ -146,45 +163,6 @@ function CoachOutcomeBanner({ outcome, onContinue }: { outcome: CoachCycleOutcom
           </span>
         </p>
 
-        {outcome.sacked ? <p className="text-sm font-semibold text-(--color-error)">Sei stato esonerato.</p> : null}
-
-        {outcome.clubTierChange ? (
-          <p
-            className={cn(
-              "text-sm font-medium",
-              outcome.clubTierChange === "promoted" ? "text-(--color-success)" : "text-(--color-error)",
-            )}
-          >
-            {outcome.clubTierChange === "promoted" ? "Il club è stato promosso!" : "Il club è retrocesso."}
-          </p>
-        ) : null}
-
-        {outcome.newTrophies.length > 0 ? (
-          <ul className="flex flex-col gap-1.5">
-            {outcome.newTrophies.map((trophy, i) => (
-              <li key={i} className="flex items-center gap-2 text-sm font-medium text-(--color-ovr-gold)">
-                <CompetitionBadge competition={trophy.competition} size={18} />
-                <span>Vinci: {trophy.competition}</span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
-        {outcome.newAward ? (
-          <p className="text-sm font-medium text-(--color-ovr-gold)">{COACH_AWARD_LABELS[outcome.newAward.type]}</p>
-        ) : null}
-
-        {outcome.objectiveResult ? (
-          <p
-            className={cn(
-              "text-sm font-medium",
-              outcome.objectiveResult.met ? "text-(--color-success)" : "text-(--color-text-muted)",
-            )}
-          >
-            Obiettivo {outcome.objectiveResult.met ? "raggiunto" : "mancato"}: {outcome.objectiveResult.label}
-          </p>
-        ) : null}
-
         {outcome.popularityDelta !== 0 ? (
           <p
             className={cn(
@@ -205,25 +183,55 @@ function CoachOutcomeBanner({ outcome, onContinue }: { outcome: CoachCycleOutcom
   );
 }
 
-export function CoachCareerGame({ onBack }: CoachCareerGameProps) {
+export function CoachCareerGame({ onBack, seedEntry }: CoachCareerGameProps) {
   const { state, startCareer, chooseOption, isResuming } = useCoachCareerGame();
+  const [moments, setMoments] = useState<CoachMoment[]>([]);
+  const [momentIndex, setMomentIndex] = useState(0);
   const [awaitingOutcome, setAwaitingOutcome] = useState(false);
+  const seenOutcome = useRef<CoachCycleOutcomeSummary | null>(null);
 
   const handleStart = useCallback(
     (identity: CoachIdentity) => {
-      startCareer(identity, DEFAULT_SPEED);
+      const seed = seedEntry ? seedCoachFromArchivedCareer(seedEntry) : undefined;
+      startCareer(identity, DEFAULT_SPEED, seed);
     },
-    [startCareer],
+    [startCareer, seedEntry],
   );
+
+  useEffect(() => {
+    const outcome = state?.lastOutcome ?? null;
+    if (outcome === seenOutcome.current) return;
+    seenOutcome.current = outcome;
+
+    if (!outcome) {
+      setMoments([]);
+      setMomentIndex(0);
+      setAwaitingOutcome(false);
+      return;
+    }
+
+    const nextMoments = buildCoachMoments({
+      newTrophies: outcome.newTrophies,
+      newAward: outcome.newAward,
+      objectiveResult: outcome.objectiveResult,
+      clubTierChange: outcome.clubTierChange,
+      sacked: outcome.sacked,
+      clubName: outcome.clubName,
+      crestUrl: outcome.crestUrl,
+    });
+    setMoments(nextMoments);
+    setMomentIndex(0);
+    setAwaitingOutcome(true);
+  }, [state?.lastOutcome]);
 
   const handleChoose = useCallback(
     (optionId: string) => {
       chooseOption(optionId);
-      setAwaitingOutcome(true);
     },
     [chooseOption],
   );
 
+  const handleMomentContinue = useCallback(() => setMomentIndex((i) => i + 1), []);
   const handleOutcomeContinue = useCallback(() => setAwaitingOutcome(false), []);
 
   if (isResuming) {
@@ -231,7 +239,7 @@ export function CoachCareerGame({ onBack }: CoachCareerGameProps) {
   }
 
   if (!state) {
-    return <CoachIdentityStep onSubmit={handleStart} onBack={onBack} />;
+    return <CoachIdentityStep seedEntry={seedEntry} onSubmit={handleStart} onBack={onBack} />;
   }
 
   if (state.retired) {
@@ -261,9 +269,16 @@ export function CoachCareerGame({ onBack }: CoachCareerGameProps) {
   }
 
   const { coach } = state;
+  const archetype = deriveArchetype(coach.traits, coach.shadow);
+  const showArchetypeChip = coach.clubHistory.length >= 4 && archetype.primary !== null;
+  const showRumorsChip = coach.shadow >= SHADOW_RUMOR_THRESHOLD;
+  const activeMoment = awaitingOutcome && momentIndex < moments.length ? moments[momentIndex] : null;
+  const showOutcomeBanner = awaitingOutcome && !activeMoment && state.lastOutcome;
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-3">
+      {activeMoment ? <CoachMomentOverlay moment={activeMoment} onContinue={handleMomentContinue} /> : null}
+
       <header className="flex shrink-0 items-center justify-between gap-4">
         <p className="font-display text-lg tracking-[0.2em] gold-metal-text">ALLENATORE</p>
         <Button variant="ghost" onClick={onBack} className="px-0 text-xs">
@@ -272,11 +287,28 @@ export function CoachCareerGame({ onBack }: CoachCareerGameProps) {
       </header>
 
       <Card className="flex flex-col gap-2 p-4 sm:p-5">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {coach.club ? <ClubCrest crestUrl={coach.club.crestUrl} clubName={coach.club.name} size={28} /> : null}
           <div>
-            <p className="font-semibold text-(--color-text)">{coach.lastName}</p>
-            <p className="text-xs text-(--color-text-muted)">{coach.club?.name ?? "Svincolato"} · {coach.age} anni</p>
+            <p className="flex flex-wrap items-center gap-1.5 font-semibold text-(--color-text)">
+              {coach.lastName}
+              {showArchetypeChip ? (
+                <span className="rounded bg-(--color-accent)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-accent) uppercase">
+                  Stile: {ARCHETYPE_LABELS[archetype.primary!]}
+                </span>
+              ) : null}
+              {showRumorsChip ? (
+                <span
+                  className="rounded bg-(--color-warning)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-warning) uppercase"
+                  title="Girano voci poco lusinghiere sul tuo conto"
+                >
+                  Rumors
+                </span>
+              ) : null}
+            </p>
+            <p className="text-xs text-(--color-text-muted)">
+              {coach.club?.name ?? "Svincolato"} · {coach.age} anni
+            </p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center text-xs text-(--color-text-muted)">
@@ -296,11 +328,26 @@ export function CoachCareerGame({ onBack }: CoachCareerGameProps) {
         {coach.currentObjective ? (
           <p className="text-xs text-(--color-text-muted)">Obiettivo: {coach.currentObjective.label}</p>
         ) : null}
+        {coach.relations.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5 border-t border-(--color-border) pt-2">
+            {coach.relations.map((rel) => (
+              <span
+                key={rel.id}
+                className="rounded bg-(--color-surface-raised) px-1.5 py-0.5 text-[11px] text-(--color-text-muted)"
+                title={rel.name}
+              >
+                {COACH_RELATION_LABELS[rel.id]} {formatAffinity(rel.affinity)}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </Card>
 
-      {awaitingOutcome && state.lastOutcome ? (
+      {coach.clubHistory.length > 0 ? <CoachHistoryTable coach={coach} compact /> : null}
+
+      {showOutcomeBanner && state.lastOutcome ? (
         <CoachOutcomeBanner outcome={state.lastOutcome} onContinue={handleOutcomeContinue} />
-      ) : state.currentDecision ? (
+      ) : !awaitingOutcome && state.currentDecision ? (
         <Card className="p-4 shadow-lg shadow-black/5 sm:p-5">
           <CoachDecisionPanel decision={state.currentDecision} onChoose={handleChoose} />
         </Card>

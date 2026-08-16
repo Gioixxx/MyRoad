@@ -9,6 +9,13 @@ Snapshot automatici del lavoro in corso, salvati da `save_context.py` su PreComp
 (feature `enforcementHooks`) e ricaricati all'avvio da `session_start.py`. Gestito automaticamente:
 le entry sotto sono sovrascritte per `sessionId` (rolling, ultime ~10). Vedi [[sprint]] per i task attivi.
 
+<!-- session:4f941499-c03f-4b30-8032-fb65e8feeb97 -->
+### Correggere nickname duplicati e terminologia stagione — 2026-08-16
+- **Branch:** main · **Quando:** 2026-08-16→2026-08-16
+- **Ultima richiesta:** poi committa pushia e mergia sul main in modo da rilasciare appena hai fatto
+- **File toccati:** career/PlayerCard.tsx, career/CareerTable.tsx, career/CareerSummary.tsx, career/CareerGame.tsx, career/MomentOverlay.tsx, career/decisions.ts, career/satisfaction.ts, coach-career/decisions.ts, career/loop.test.ts, career/Leaderboard.tsx, supabase/nickname-uniqueness.sql, supabase/schema.sql, leaderboard/client.ts, leaderboard/types.ts, career/IdentityForm.tsx
+- **Comandi:** git; powershell; grep; npx; pwd;; npm; cat; ls; "$LOCALAPPDATA/Android/Sdk/build-tools"/*/aapt2.exe; export
+
 <!-- session:ab22d50b-da38-489f-b307-2e6568ad35f5 -->
 ### global-leaderboard-crossuser — 2026-08-14
 - **Branch:** main · **Quando:** 2026-08-13→2026-08-14
@@ -69,10 +76,3 @@ le entry sotto sono sovrascritte per `sessionId` (rolling, ultime ~10). Vedi [[s
 - **Ultima richiesta:** sì, chiudi il tab
 - **File toccati:** memory/backlog.md, memory/tech-debt.md, memory/decisions.md, plans/hazy-strolling-wilkinson.md
 - **Comandi:** git
-
-<!-- session:dbc41714-e6eb-491f-8aea-41a390d16701 -->
-### Creare simulatore carriera calcistica testuale — 2026-08-04
-- **Branch:** main · **Quando:** 2026-08-04→2026-08-04
-- **Ultima richiesta:** sì, procedi con questi aggiornamenti
-- **File toccati:** plans/piped-bouncing-cocke.md, Carriera/.gitignore, Carriera/CLAUDE.md, Carriera/package.json, Carriera/vitest.config.ts, Carriera/vitest.setup.ts, lib/utils.ts, constants/design-tokens.ts, app/globals.css, components/theme-provider.tsx, app/layout.tsx, app/page.tsx, lib/utils.test.ts, Carriera/vitest.config.mts, Carriera/workspace.json
-- **Comandi:** git; powershell; ls; node; cd; grep; cat; wc; curl

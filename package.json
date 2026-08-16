@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "simulate": "vitest run --config vitest.simulate.config.mts --reporter=verbose",
+    "coach-simulate": "vitest run --config vitest.coach-simulate.config.mts --reporter=verbose",
     "sync-rosters": "vitest run --config vitest.sync-rosters.config.mts --reporter=verbose"
   },
   "dependencies": {

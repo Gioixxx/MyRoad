@@ -1,8 +1,9 @@
-import { Trophy as TrophyIcon } from "lucide-react";
+import { ClipboardList, Trophy as TrophyIcon } from "lucide-react";
 import type { ArchivedCareer } from "@/types/career";
 import { countries } from "@/data/countries";
 import { computeHallOfFame } from "@/lib/career/satisfaction";
 import { ARCHETYPE_LABELS } from "@/lib/career/traits";
+import { isEligibleForCoachContinuity } from "@/lib/coach-career/bridge";
 import { Button } from "@/components/ui/Button";
 import { CountryFlag } from "./CountryFlag";
 import { OvrBadge } from "./OvrBadge";
@@ -10,6 +11,9 @@ import { OvrBadge } from "./OvrBadge";
 interface CareerArchiveProps {
   entries: ArchivedCareer[];
   onBack: () => void;
+  /** Fase C — continuità: azione secondaria per iniziare una carriera allenatore da questa
+   * carriera calciatore, mostrata solo per le entry idonee (vedi `isEligibleForCoachContinuity`). */
+  onContinueAsCoach?: (entry: ArchivedCareer) => void;
 }
 
 const SAVINGS_FORMATTER = new Intl.NumberFormat("it-IT", {
@@ -19,7 +23,7 @@ const SAVINGS_FORMATTER = new Intl.NumberFormat("it-IT", {
   maximumFractionDigits: 1,
 });
 
-export function CareerArchive({ entries, onBack }: CareerArchiveProps) {
+export function CareerArchive({ entries, onBack, onContinueAsCoach }: CareerArchiveProps) {
   const hof = computeHallOfFame(entries);
 
   return (
@@ -102,13 +106,25 @@ export function CareerArchive({ entries, onBack }: CareerArchiveProps) {
                       </span>
                     ) : null}
                   </div>
-                  <p className="pl-6 text-xs text-(--color-text-muted) sm:pl-0">
-                    {entry.careerTitle ? `${entry.careerTitle} · ` : ""}
-                    Ritirato a {entry.retiredAge} anni · {entry.trophyCount}{" "}
-                    {entry.trophyCount === 1 ? "trofeo" : "trofei"} · {entry.awardCount}{" "}
-                    {entry.awardCount === 1 ? "premio" : "premi"} · Pop {entry.finalPopularity} ·{" "}
-                    {SAVINGS_FORMATTER.format(entry.finalSavingsEur)}
-                  </p>
+                  <div className="flex flex-col gap-1.5 pl-6 sm:flex-row sm:items-center sm:gap-3 sm:pl-0">
+                    <p className="text-xs text-(--color-text-muted)">
+                      {entry.careerTitle ? `${entry.careerTitle} · ` : ""}
+                      Ritirato a {entry.retiredAge} anni · {entry.trophyCount}{" "}
+                      {entry.trophyCount === 1 ? "trofeo" : "trofei"} · {entry.awardCount}{" "}
+                      {entry.awardCount === 1 ? "premio" : "premi"} · Pop {entry.finalPopularity} ·{" "}
+                      {SAVINGS_FORMATTER.format(entry.finalSavingsEur)}
+                    </p>
+                    {onContinueAsCoach && isEligibleForCoachContinuity(entry) ? (
+                      <Button
+                        variant="ghost"
+                        onClick={() => onContinueAsCoach(entry)}
+                        className="shrink-0 gap-1.5 self-start px-0 text-xs sm:self-auto"
+                      >
+                        <ClipboardList size={13} aria-hidden="true" />
+                        Inizia carriera da allenatore
+                      </Button>
+                    ) : null}
+                  </div>
                 </li>
               );
             })}

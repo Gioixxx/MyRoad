@@ -36,6 +36,11 @@ export interface CoachCycleOutcomeSummary {
   newTrophies: Trophy[];
   newAward: CoachAward | null;
   clubTierChange: "promoted" | "relegated" | null;
+  /** Nome/stemma del club coinvolto nell'esonero o nel movimento di categoria (per l'overlay
+   * celebrativo) — il club dell'esonero va preso PRIMA della risoluzione (dopo, `coach.club` è
+   * già null), quello del movimento di categoria DOPO (riflette la nuova lega). */
+  clubName: string | null;
+  crestUrl: string | null;
 }
 
 interface CoachCareerGameState {
@@ -51,14 +56,14 @@ interface CoachCareerGameState {
 
 export interface UseCoachCareerGame {
   state: CoachCareerGameState | null;
-  startCareer: (identity: CoachIdentity, speed: GameSpeed) => void;
+  startCareer: (identity: CoachIdentity, speed: GameSpeed, seed?: Partial<Coach>) => void;
   chooseOption: (optionId: string) => void;
   restart: () => void;
   isResuming: boolean;
 }
 
-function buildInitialState(identity: CoachIdentity, speed: GameSpeed): CoachCareerGameState {
-  const coach = createCoach(identity);
+function buildInitialState(identity: CoachIdentity, speed: GameSpeed, seed?: Partial<Coach>): CoachCareerGameState {
+  const coach = createCoach(identity, Math.random, seed);
   const decision = generateJobOffers(coach);
   return {
     coach,
@@ -121,10 +126,10 @@ export function useCoachCareerGame(): UseCoachCareerGame {
     appendToCoachArchive(buildCoachArchiveEntry(state.coach));
   }, [state?.retired, state?.coach]);
 
-  const startCareer = useCallback((identity: CoachIdentity, speed: GameSpeed) => {
+  const startCareer = useCallback((identity: CoachIdentity, speed: GameSpeed, seed?: Partial<Coach>) => {
     clearCoachGame();
     archivedRef.current = false;
-    setState(buildInitialState(identity, speed));
+    setState(buildInitialState(identity, speed, seed));
   }, []);
 
   const chooseOption = useCallback((optionId: string) => {
@@ -159,6 +164,16 @@ export function useCoachCareerGame(): UseCoachCareerGame {
         newTrophies: result.newTrophies,
         newAward: result.newAward,
         clubTierChange: result.clubTierChange,
+        clubName: result.sacked
+          ? (prev.coach.club?.name ?? null)
+          : result.clubTierChange
+            ? (result.coach.club?.name ?? null)
+            : null,
+        crestUrl: result.sacked
+          ? (prev.coach.club?.crestUrl ?? null)
+          : result.clubTierChange
+            ? (result.coach.club?.crestUrl ?? null)
+            : null,
       };
 
       if (result.retired) {

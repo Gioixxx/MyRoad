@@ -365,7 +365,7 @@ function CoachModeGate({
 }
 
 interface CareerGameProps {
-  onCoachCareer: () => void;
+  onCoachCareer: (seedEntry?: ArchivedCareer) => void;
 }
 
 export function CareerGame({ onCoachCareer }: CareerGameProps) {
@@ -379,6 +379,7 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
   const [publishStatus, setPublishStatus] = useState<PublishStatus>("idle");
   const autoPublishRef = useRef(false);
   const [coachGateError, setCoachGateError] = useState(false);
+  const [pendingCoachSeed, setPendingCoachSeed] = useState<ArchivedCareer | null>(null);
 
   // Letto in un effect (non lazy initializer) per lo stesso motivo di useCareerGame: window non
   // esiste in SSR, evita un hydration mismatch tra il render server e il primo render client.
@@ -520,6 +521,16 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
 
   const handleShowCoachGate = useCallback(() => {
     setCoachGateError(false);
+    setPendingCoachSeed(null);
+    setStep("coach-gate");
+  }, []);
+
+  /** Fase C — continuità: da una carriera calciatore archiviata (peakOvr>=80) a una nuova
+   * carriera allenatore, passando comunque dal gate password come l'ingresso ordinario in
+   * "Allenatore" (stessa modalità WIP, stesso filtro leggero). */
+  const handleContinueAsCoach = useCallback((entry: ArchivedCareer) => {
+    setCoachGateError(false);
+    setPendingCoachSeed(entry);
     setStep("coach-gate");
   }, []);
 
@@ -527,12 +538,12 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
     (password: string) => {
       if (isCoachModePasswordCorrect(password)) {
         setCoachGateError(false);
-        onCoachCareer();
+        onCoachCareer(pendingCoachSeed ?? undefined);
       } else {
         setCoachGateError(true);
       }
     },
-    [onCoachCareer],
+    [onCoachCareer, pendingCoachSeed],
   );
 
   const handleShowSettings = useCallback(() => {
@@ -740,7 +751,11 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
 
           {!showPlaying && step === "archive" ? (
             <Card key="step-archive" className="animate-step-in p-5 sm:p-7">
-              <CareerArchive entries={archiveEntries} onBack={handleBackFromArchive} />
+              <CareerArchive
+                entries={archiveEntries}
+                onBack={handleBackFromArchive}
+                onContinueAsCoach={handleContinueAsCoach}
+              />
             </Card>
           ) : null}
 

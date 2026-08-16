@@ -12,6 +12,11 @@ import type {
 import { clamp, type Rng } from "@/lib/career/progression";
 import { expectedLeagueFinishRank, LEAGUE_FINISH_RANK } from "./season-outcome";
 
+export const COACH_AWARD_LABELS: Record<CoachAwardType, string> = {
+  "manager-of-the-season": "Allenatore della stagione",
+  "manager-of-the-year": "Allenatore dell'anno",
+};
+
 export const COACH_SEASON_TITLE_LABELS: Record<CoachSeasonTitleId, string> = {
   miracle: "Miracolo salvezza",
   champion: "Campione",

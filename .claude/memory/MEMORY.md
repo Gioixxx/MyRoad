@@ -8,7 +8,7 @@ updated: [2026-08-16]
 > Contesto persistente. Aggiornato da /remember. Vault Obsidian: vedi workflows/obsidian-vault.md.
 > Progetto rinominato da "Carriera" a "My Road - L'Ascesa" il 2026-08-07 — vedi [[decisions]] per il dettaglio del rename (repo GitHub, launcher/exe, UI). La cartella locale del repo resta fisicamente `C:\Dev\Carriera` (non rinominata, solo il nome logico del progetto/repo GitHub).
 
-**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android) · Supabase (classifica)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso, incluso un nuovo modo di gioco parallelo "Allenatore" (WIP, dietro password)  **Aggiornamento:** 2026-08-16 (v0.13.0 — modalità Allenatore Fase A+B dietro password, terminologia "stagione", nickname unico in classifica)
+**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android) · Supabase (classifica)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso, incluso un nuovo modo di gioco parallelo "Allenatore" (WIP, dietro password, ora con Fase C/continuità + parità UI + bilanciamento harness)  **Aggiornamento:** 2026-08-16 (non ancora committato/rilasciato: Fase C continuità calciatore→allenatore, overlay/storico/chip allenatore, bug reale di reputazione trovato e corretto con `npm run coach-simulate` — vedi [[decisions]])
 
 ## Contesto
 Clone testuale di "Copero — Simulador de carrera" (https://copero.com.ar/juegos/simulador-carrera):
@@ -93,6 +93,9 @@ Vedi [[decisions]], [[sprint]] e [[tech-debt]].
   filtro leggero client-side, non vera sicurezza (il sorgente è pubblico). Nessun proseguimento
   dopo il ritiro di una carriera allenatore (bottone "Nuova carriera" rimosso di proposito). Se in
   futuro si sblocca la modalità al pubblico, ricordarsi di rimuovere sia il gate sia il blocco.
+  Dal 2026-08-16 (sessione successiva) anche l'azione "Inizia carriera da allenatore" (Fase C,
+  continuità da un calciatore ritirato con peakOvr≥80, in `CareerArchive.tsx`) passa dallo stesso
+  gate — vedi [[decisions]].
 - **Azione utente pendente**: `supabase/nickname-uniqueness.sql` (nickname unico tra dispositivi
   in classifica, con reset della classifica esistente) va eseguito manualmente sul progetto
   Supabase live — finché non succede, il controllo non è attivo in produzione nonostante il

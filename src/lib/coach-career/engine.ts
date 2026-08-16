@@ -13,7 +13,7 @@ import { accrueSalary, applyPopularityDelta, computeSigningBonusEur, resignSalar
 import { applyShadowDelta } from "@/lib/career/shadow";
 import { applyTraitsDelta, NEUTRAL_TRAITS } from "@/lib/career/traits";
 import { clubTacticalSystem, tacticalFitMultiplier, type TacticalFit } from "@/lib/career/tactics";
-import { LEAGUE_FINISH_RANK, rollCoachSeasonOutcome } from "./season-outcome";
+import { expectedLeagueFinishRank, LEAGUE_FINISH_RANK, rollCoachSeasonOutcome } from "./season-outcome";
 import { applyCoachRelationsDelta, relationsOnNewJob } from "./coach-relations";
 import { emptyCoachPersonalRecords } from "./coach-satisfaction";
 
@@ -48,8 +48,16 @@ export function rollInitialReputationCeiling(rng: Rng = Math.random): number {
   return last.min + Math.round(rng() * (last.max - last.min));
 }
 
-export function createCoach(identity: CoachIdentity, rng: Rng = Math.random): Coach {
-  return {
+/**
+ * `seed` innesta i campi ereditati da una carriera calciatore ritirata (Fase C — continuità, vedi
+ * `lib/coach-career/bridge.ts::seedCoachFromArchivedCareer`) sopra la base standard "da zero":
+ * età/reputazione/popolarità/patrimonio/traits di partenza diversi, tutto il resto (club nullo,
+ * storico vuoto, relazioni vuote, ecc.) resta quello di un nuovo incarico. La reputazione seedata
+ * è sempre ricalmpata sotto il tetto individuale rollato per questa carriera, per sicurezza anche
+ * se in pratica il seed resta sempre ben sotto la fascia minima di `reputationCeiling`.
+ */
+export function createCoach(identity: CoachIdentity, rng: Rng = Math.random, seed?: Partial<Coach>): Coach {
+  const base: Coach = {
     ...identity,
     age: COACH_STARTING_AGE,
     reputation: COACH_STARTING_REPUTATION,
@@ -71,6 +79,9 @@ export function createCoach(identity: CoachIdentity, rng: Rng = Math.random): Co
     records: emptyCoachPersonalRecords(),
     relations: [],
   };
+  if (!seed) return base;
+  const merged = { ...base, ...seed };
+  return { ...merged, reputation: clamp(merged.reputation, 1, merged.reputationCeiling) };
 }
 
 /** Compatibilità tra il sistema preferito dell'allenatore e quello del club — a differenza del
@@ -102,17 +113,49 @@ export function signWithClub(coach: Coach, club: Club): Coach {
   };
 }
 
-/** Piazzamento atteso "di base" da società/tifosi per un club di un dato prestigio, a
- * prescindere da chi è in panchina — usato per giudicare sovra/sotto-performance (reputazione e
+/**
+ * Piazzamento atteso "di base" da società/tifosi per un club di un dato prestigio, a prescindere
+ * da chi è in panchina — usato per giudicare sovra/sotto-performance (reputazione e
  * boardConfidence), distinto da `expectedLeagueFinishRank` in season-outcome.ts (che invece
- * INCLUDE la reputazione dell'allenatore per determinare cosa succede davvero in campo). */
-const EXPECTED_FINISH_RANK_BY_PRESTIGE: Record<number, number> = { 0: 1.2, 1: 1.8, 2: 2.6, 3: 3.3 };
+ * INCLUDE la reputazione dell'allenatore per determinare cosa succede davvero in campo).
+ *
+ * **Ancorato per costruzione alla stessa formula di `expectedLeagueFinishRank`**, valutata a una
+ * reputazione "di riferimento" per fascia — appena sotto la soglia che fa scattare la fascia
+ * successiva in `coachTargetPrestige` (decisions.ts: 0/45/65/85) — invece di 4 costanti scelte
+ * indipendentemente. Bug reale trovato con `npm run coach-simulate` prima di questa scelta: le
+ * due formule erano state tarate a tavolino separatamente e non erano allineate — a
+ * `COACH_STARTING_REPUTATION=35` la reputazione attesa era SEMPRE sotto l'aspettativa societaria,
+ * per ogni fascia di prestigio (delta medio da -0.7 a -1.7 per stagione), intrappolando ogni
+ * carriera vicino al valore di partenza (reputazione di picco media 35.6 su 2000 carriere
+ * simulate, 0 titoli e 0 promozioni osservati). Con l'ancoraggio le due formule non possono più
+ * andare fuori sincrono per una futura modifica isolata a una delle due.
+ *
+ * **Reputazione di riferimento sotto la soglia di fascia, non a metà** (0/45/65/85, vedi sopra):
+ * un primo giro con riferimenti a metà fascia (40/58/78/95) restava comunque quasi piatto —
+ * `npm run coach-simulate` post-fix mostrava reputazione di picco media 36.3 (appena sopra i 35
+ * di partenza) su 2000 carriere. Causa: a un delta medio vicino a zero per costruzione
+ * (equilibrio), l'arrotondamento a intero di `advanceSeasons` (`Math.round`) assorbe quasi ogni
+ * variazione sotto ±0.5 — un coach ha bisogno di sovraperformare chiaramente, non solo "in
+ * pareggio", per vedere un numero muoversi. Riferimenti abbassati (30/50/70/90, il primo sotto
+ * `COACH_STARTING_REPUTATION`) danno un margine di crescita reale a inizio carriera invece di un
+ * pareggio statistico.
+ */
+const REFERENCE_REPUTATION_BY_PRESTIGE: Record<number, number> = { 0: 30, 1: 50, 2: 70, 3: 90 };
+const EXPECTED_FINISH_RANK_BY_PRESTIGE: Record<number, number> = Object.fromEntries(
+  Object.entries(REFERENCE_REPUTATION_BY_PRESTIGE).map(([prestige, reputation]) => [
+    prestige,
+    expectedLeagueFinishRank(Number(prestige), reputation),
+  ]),
+);
 
 export function baseExpectedRank(prestige: number): number {
-  return EXPECTED_FINISH_RANK_BY_PRESTIGE[prestige] ?? 1.2;
+  return EXPECTED_FINISH_RANK_BY_PRESTIGE[prestige] ?? EXPECTED_FINISH_RANK_BY_PRESTIGE[0];
 }
 
-const REPUTATION_OVERPERFORM_STEP = 2.2;
+/** Alzato da 2.2 nello stesso giro di taratura di cui sopra — con delta tipicamente piccoli
+ * (overperformance frazionaria di rank), un passo troppo debole non riesce mai a superare
+ * l'arrotondamento a intero di `advanceSeasons`. */
+const REPUTATION_OVERPERFORM_STEP = 4;
 const REPUTATION_CUP_WIN_BONUS = 1.5;
 const REPUTATION_CUP_FINAL_BONUS = 0.6;
 /** Dopo i 60, un lieve logorio anche a parità di risultati. */
