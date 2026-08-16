@@ -94,4 +94,23 @@ describe("MomentOverlay", () => {
 
     expect(screen.getByText("Fuoriclasse")).toBeInTheDocument();
   });
+
+  it("mostra il titolo Retrocessione senza coriandoli", () => {
+    render(
+      <MomentOverlay
+        moment={{
+          kind: "relegation",
+          clubName: "Torino",
+          fromLeague: "Serie A",
+          toLeague: "Serie B",
+          crestUrl: "https://r2.thesportsdb.com/images/media/team/badge/xxprty1448806802.png",
+        }}
+        onContinue={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Retrocessione" })).toBeInTheDocument();
+    expect(screen.getByText("Torino retrocede dalla Serie A alla Serie B.")).toBeInTheDocument();
+    expect(document.querySelector(".animate-confetti-fall")).toBeNull();
+  });
 });

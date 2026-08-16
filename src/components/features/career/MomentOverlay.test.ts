@@ -50,7 +50,7 @@ describe("buildCareerMoments", () => {
     expect(moments).toEqual([{ kind: "objective", label: "Segna almeno 10 gol" }]);
   });
 
-  it("ordina i moment: trofeo, premio, convocazione, traguardo, playstyle, obiettivo", () => {
+  it("ordina i moment: trofeo, premio, retrocessione, convocazione, traguardo, playstyle, obiettivo", () => {
     const moments = buildCareerMoments({
       newTrophies: [trophy],
       newAward: award,
@@ -58,15 +58,49 @@ describe("buildCareerMoments", () => {
       newMilestones: [80],
       newPlayStyles: ["playmaker"],
       objectiveResult: { label: "Segna almeno 10 gol", met: true, firstTime: true },
+      clubTierChange: "relegated",
+      clubName: "Torino",
+      fromLeague: "Serie A",
+      toLeague: "Serie B",
+      crestUrl: "https://r2.thesportsdb.com/images/media/team/badge/xxprty1448806802.png",
     });
 
     expect(moments.map((m) => m.kind)).toEqual([
       "trophy",
       "award",
+      "relegation",
       "callup",
       "milestone",
       "playstyle",
       "objective",
+    ]);
+  });
+
+  it("include il moment retrocessione solo se clubTierChange è relegated e i campi sono completi", () => {
+    const base = {
+      newTrophies: [] as Trophy[],
+      newAward: null,
+      nationalCallup: false,
+      clubName: "Torino",
+      fromLeague: "Serie A",
+      toLeague: "Serie B",
+      crestUrl: "https://r2.thesportsdb.com/images/media/team/badge/xxprty1448806802.png",
+    };
+
+    expect(buildCareerMoments({ ...base, clubTierChange: null })).toHaveLength(0);
+    expect(buildCareerMoments({ ...base, clubTierChange: "promoted" })).toHaveLength(0);
+    expect(buildCareerMoments({ ...base, clubTierChange: "relegated", clubName: null })).toHaveLength(0);
+
+    expect(
+      buildCareerMoments({ ...base, clubTierChange: "relegated" }),
+    ).toEqual([
+      {
+        kind: "relegation",
+        clubName: "Torino",
+        fromLeague: "Serie A",
+        toLeague: "Serie B",
+        crestUrl: base.crestUrl,
+      },
     ]);
   });
 });

@@ -45,6 +45,11 @@ export interface CycleOutcomeSummary {
   brokenRecords: string[];
   highlights: string[];
   newPlayStyles: PlayStyleId[];
+  clubTierChange: "promoted" | "relegated" | null;
+  clubName: string | null;
+  fromLeague: string | null;
+  toLeague: string | null;
+  crestUrl: string | null;
 }
 
 interface CareerGameState {
@@ -178,6 +183,11 @@ export function useCareerGame(): UseCareerGame {
         brokenRecords: result.brokenRecords,
         highlights: result.highlights,
         newPlayStyles: result.newPlayStyles,
+        clubTierChange: result.clubTierChange,
+        clubName: result.player.club?.name ?? prev.player.club?.name ?? null,
+        fromLeague: prev.player.club?.competitions.league ?? null,
+        toLeague: result.player.club?.competitions.league ?? null,
+        crestUrl: result.player.club?.crestUrl ?? prev.player.club?.crestUrl ?? null,
       };
 
       if (result.retired) {

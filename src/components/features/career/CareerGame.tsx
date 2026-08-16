@@ -239,6 +239,13 @@ function OutcomeBanner({
           </p>
         ) : null}
 
+        {outcome.clubTierChange === "relegated" && outcome.fromLeague && outcome.toLeague ? (
+          <p className="flex items-center gap-2 text-sm font-medium text-(--color-error)">
+            <TrendingDown size={16} aria-hidden="true" />
+            Retrocessione: {outcome.fromLeague} → {outcome.toLeague}
+          </p>
+        ) : null}
+
         {outcome.newInjury ? (
           <p className="flex items-center gap-2 text-sm font-medium text-(--color-error)">
             Infortunio: {outcome.newInjury.label} — fuori per {outcome.newInjury.turnsRemaining}{" "}
@@ -391,6 +398,11 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
       newMilestones: outcome.newMilestones,
       newPlayStyles: outcome.newPlayStyles,
       objectiveResult: outcome.objectiveResult,
+      clubTierChange: outcome.clubTierChange,
+      clubName: outcome.clubName,
+      fromLeague: outcome.fromLeague,
+      toLeague: outcome.toLeague,
+      crestUrl: outcome.crestUrl,
     });
     setMoments(nextMoments);
     setMomentIndex(0);

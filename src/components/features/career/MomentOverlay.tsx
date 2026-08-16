@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { Flag, Sparkles, Target } from "lucide-react";
+import { Flag, Sparkles, Target, TrendingDown } from "lucide-react";
 import type { Award, PlayStyleId, Trophy } from "@/types/career";
 import { AWARD_LABELS } from "@/lib/career/award-labels";
 import { PLAY_STYLE_LABELS } from "@/lib/career/playstyles";
@@ -10,6 +10,7 @@ import { usePrefersReducedMotion } from "@/hooks/useMotion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { AwardBadge } from "./AwardBadge";
+import { ClubCrest } from "./ClubCrest";
 import { CompetitionBadge } from "./CompetitionBadge";
 import { TrophyImage } from "./TrophyImage";
 import { OvrBadge } from "./OvrBadge";
@@ -17,6 +18,7 @@ import { OvrBadge } from "./OvrBadge";
 export type CareerMoment =
   | { kind: "trophy"; trophy: Trophy }
   | { kind: "award"; award: Award }
+  | { kind: "relegation"; clubName: string; fromLeague: string; toLeague: string; crestUrl: string }
   | { kind: "callup" }
   | { kind: "milestone"; ovr: number }
   | { kind: "playstyle"; playStyleId: PlayStyleId }
@@ -64,11 +66,12 @@ export function MomentOverlay({ moment, onContinue }: MomentOverlayProps) {
   const continueRef = useRef<HTMLButtonElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const isNegativeMoment = moment.kind === "relegation";
   const confetti = useMemo(
-    () => (prefersReducedMotion ? [] : buildConfetti()),
+    () => (prefersReducedMotion || isNegativeMoment ? [] : buildConfetti()),
     // Regenerate when the celebrated moment changes
     // eslint-disable-next-line react-hooks/exhaustive-deps -- moment identity drives confetti burst
-    [moment, prefersReducedMotion],
+    [moment, prefersReducedMotion, isNegativeMoment],
   );
 
   useEffect(() => {
@@ -174,6 +177,18 @@ export function MomentOverlay({ moment, onContinue }: MomentOverlayProps) {
       ? `${moment.award.club.name} · ${moment.award.age} anni`
       : `${moment.award.age} anni`;
     visual = <AwardBadge type={moment.award.type} size={88} />;
+  } else if (moment.kind === "relegation") {
+    eyebrow = "Campionato";
+    title = "Retrocessione";
+    detail = `${moment.clubName} retrocede dalla ${moment.fromLeague} alla ${moment.toLeague}.`;
+    visual = (
+      <span className="flex items-center justify-center gap-3">
+        <ClubCrest crestUrl={moment.crestUrl} clubName={moment.clubName} size={72} />
+        <span className="flex h-20 w-20 items-center justify-center rounded-full bg-(--color-error)/20 text-(--color-error)">
+          <TrendingDown size={40} aria-hidden="true" />
+        </span>
+      </span>
+    );
   } else if (moment.kind === "milestone") {
     const copy = getMilestoneCopy(moment.ovr);
     eyebrow = "Traguardo";
@@ -238,7 +253,10 @@ export function MomentOverlay({ moment, onContinue }: MomentOverlayProps) {
 
       <div
         data-testid="moment-panel"
-        className="animate-moment-in relative z-2 chalk-panel flex w-full max-w-md flex-col items-center gap-5 rounded-2xl border-2 border-(--color-accent)/60 p-8 text-center shadow-2xl sm:p-10"
+        className={cn(
+          "animate-moment-in relative z-2 chalk-panel flex w-full max-w-md flex-col items-center gap-5 rounded-2xl border-2 p-8 text-center shadow-2xl sm:p-10",
+          isNegativeMoment ? "border-(--color-error)/60" : "border-(--color-accent)/60",
+        )}
         onMouseEnter={pauseDismissTimer}
         onMouseLeave={resumeDismissTimer}
       >
@@ -255,8 +273,9 @@ export function MomentOverlay({ moment, onContinue }: MomentOverlayProps) {
           <div
             aria-hidden="true"
             className={cn(
-              "absolute inset-x-6 bottom-3 h-1 origin-left rounded-full bg-(--color-accent)/70 animate-moment-timer",
+              "absolute inset-x-6 bottom-3 h-1 origin-left rounded-full animate-moment-timer",
               isAutoDismissPaused && "moment-timer-paused",
+              isNegativeMoment ? "bg-(--color-error)/70" : "bg-(--color-accent)/70",
             )}
             style={{ animationDuration: `${AUTO_DISMISS_MS}ms` }}
           />
@@ -273,6 +292,11 @@ export function buildCareerMoments(input: {
   newMilestones?: number[];
   newPlayStyles?: PlayStyleId[];
   objectiveResult?: { label: string; met: boolean; firstTime: boolean } | null;
+  clubTierChange?: "promoted" | "relegated" | null;
+  clubName?: string | null;
+  fromLeague?: string | null;
+  toLeague?: string | null;
+  crestUrl?: string | null;
 }): CareerMoment[] {
   const moments: CareerMoment[] = [];
   for (const trophy of input.newTrophies) {
@@ -280,6 +304,21 @@ export function buildCareerMoments(input: {
   }
   if (input.newAward) {
     moments.push({ kind: "award", award: input.newAward });
+  }
+  if (
+    input.clubTierChange === "relegated" &&
+    input.clubName &&
+    input.fromLeague &&
+    input.toLeague &&
+    input.crestUrl
+  ) {
+    moments.push({
+      kind: "relegation",
+      clubName: input.clubName,
+      fromLeague: input.fromLeague,
+      toLeague: input.toLeague,
+      crestUrl: input.crestUrl,
+    });
   }
   if (input.nationalCallup) {
     moments.push({ kind: "callup" });
