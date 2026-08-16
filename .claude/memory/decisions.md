@@ -1,7 +1,7 @@
 ---
 type: decisions
 tags: [memory, architecture]
-updated: [2026-08-14]
+updated: [2026-08-16]
 ---
 
 # Decisioni Architetturali
@@ -957,3 +957,67 @@ Registro scelte tecniche con motivazioni.
   0.12.2.0) e `dist/MyRoad.apk` (versionCode 1202/versionName 0.12.2, firma verificata — stesso
   SHA-256 certificato delle release precedenti) rigenerati e allegati alla [release GitHub
   v0.12.2](https://github.com/Gioixxx/MyRoad/releases/tag/v0.12.2).
+
+### Tre fix urgenti prima di riprendere l'allenatore: terminologia, nickname unico, password su Allenatore — release v0.13.0
+- **Data:** 2026-08-16
+- **Decisione:** sessione di 3 richieste esplicite dell'utente, in mezzo al lavoro sulla modalità
+  allenatore (`feature/carriera-allenatore`, Fase A+B già committate da sessione precedente —
+  vedi sotto per il contesto di quel lavoro, mai ancora documentato in memoria prima d'ora).
+  1. **"ciclo" → "stagione"** in tutti i testi visibili al giocatore (cartellino, storico, overlay
+     obiettivo/infortunio, titoli/hint decisioni calciatore e allenatore) — lasciati invariati i
+     commenti interni al codice, dove "ciclo" resta il concetto tecnico corretto (1-3 stagioni a
+     seconda del ritmo).
+  2. **Nickname unico tra dispositivi in classifica**: nuova tabella `myroad_nickname_claims` +
+     trigger `myroad_claim_nickname` (`supabase/nickname-uniqueness.sql`, specchiato in
+     `schema.sql`) che gira PRIMA di `myroad_leaderboard_keep_best_trigger` (ordine alfabetico dei
+     nomi trigger) e rifiuta l'insert se il nickname è già di un altro `device_id` — non un
+     `UNIQUE` diretto sulla colonna (deve poter ripetersi tra righe dello stesso dispositivo). La
+     migrazione include un `truncate` della classifica esistente su richiesta esplicita
+     dell'utente ("mettiamo il reset della classifica"): senza azzerare, il primo dispositivo a
+     pubblicare dopo la migrazione avrebbe "vinto" per caso un nickname già legittimamente in uso
+     da altri prima della regola. Nuova RPC `myroad_nickname_available` + controllo "onBlur" in
+     `IdentityForm`/`SettingsPanel` per un feedback immediato, con un messaggio dedicato in
+     `CareerSummary` come backstop se lo scontro avviene comunque in pubblicazione (race
+     condition). Rimossa anche la tab "Più popolare" dalla classifica (solo lato UI, tipo/vista/
+     trigger restano intatti per restare reversibile).
+  3. **Password per la modalità Allenatore + nessun proseguimento dopo il ritiro**: nuovo step
+     `coach-gate` in `CareerGame.tsx` (componente locale `CoachModeGate`) — cliccando "Allenatore"
+     nel menu compare un campo password invece di entrare direttamente, verificata client-side in
+     `lib/coach-career/access.ts` (password **`coach2026`**, scelta dall'utente — filtro leggero,
+     non vera sicurezza, il sorgente resta pubblico su GitHub). Rimosso il bottone "Nuova carriera"
+     dalla schermata di fine carriera allenatore: dopo il ritiro si può solo tornare al menu, non
+     iniziare un'altra carriera allenatore. Motivo esplicito dell'utente: poter rilasciare e
+     testare la modalità allenatore (ancora WIP) senza esporla ai giocatori occasionali.
+  **Contesto del lavoro allenatore già presente sul branch** (mai documentato in memoria prima):
+  Fase A (`c4d40e3`, standalone giocabile end-to-end — reputazione al posto dell'OVR, 4 categorie
+  di decisione, `pickWeighted` condivisa estratta in `lib/shared/weighted-random.ts`) e Fase B
+  (`18db9a8`, categorie forzate/ordinarie restanti — crisi societaria, coppa/coppa continentale,
+  scandalo riusando le soglie di `shadow.ts`, trofei/premio "Allenatore della stagione/anno").
+  Verificate dal vivo nel browser dalla sessione che le ha scritte (non da questa).
+- **Perché:** i primi due punti sono correzioni dirette segnalate dall'utente durante il playtest
+  (terminologia poco chiara, bug reale di integrità dati in classifica). Il terzo è una scelta di
+  processo: rendere possibile rilasciare in produzione (main + GitHub Pages) il lavoro sull'
+  allenatore senza che sia già "in pasto" ai giocatori — permette di continuare a svilupparlo e
+  testarlo dal vivo sul sito pubblico senza il rischio di un rilascio percepito come incompleto.
+- **Alternative:** per il nickname, un vincolo `UNIQUE` diretto sulla colonna — scartato, non
+  esprime la regola reale (un dispositivo può avere più righe con lo stesso nickname, una per
+  specialità). Per la modalità allenatore, un feature flag/env var invece di una password in-app —
+  scartato: avrebbe richiesto una build separata per i tester, mentre la password permette lo
+  stesso identico deploy pubblico con un accesso selettivo.
+- **Impatto:** `src/components/features/career/{CareerGame,CareerSummary,CareerTable,
+  MomentOverlay,PlayerCard,IdentityForm,SettingsPanel,Leaderboard}.tsx`,
+  `src/components/features/coach/CoachCareerGame.tsx`, `src/lib/career/{decisions,satisfaction}.ts`,
+  `src/lib/coach-career/{decisions,access}.ts` (nuovo), `src/lib/leaderboard/{client,types}.ts`,
+  `supabase/schema.sql`, `supabase/nickname-uniqueness.sql` (nuovo). 595 test verdi (era 589),
+  `tsc --noEmit`/`npm run build` puliti, lint invariato (i 4 warning `react-hooks/set-state-in-
+  effect` pre-esistenti, confermati via `git stash` prima di procedere). Merge fast-forward
+  `feature/carriera-allenatore` → `main` (nessun conflitto, main era un antenato diretto). Bump
+  `package.json`/`package-lock.json` 0.12.2→**0.13.0** (minor, per il volume complessivo — Fase
+  A+B allenatore incluse in questo rilascio insieme ai 3 fix). `dist/MyRoad.exe` (FileVersion
+  0.13.0.0) e `dist/MyRoad.apk` (versionCode 1300/versionName 0.13.0, firma verificata) rigenerati
+  e allegati alla [release GitHub v0.13.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.13.0).
+  Deploy GitHub Pages verificato verde dopo il push (`gh run watch`). **⚠️ Azione manuale
+  richiesta**: `supabase/nickname-uniqueness.sql` va eseguito dall'utente sul progetto Supabase
+  live — finché non lo fa, il controllo di unicità nickname non è attivo (documentato anche nelle
+  note della release). **Non verificato in questa sessione**: coach-gate/blocco proseguimento non
+  testati dal vivo nel browser (sessione di codice+release) — vedi [[tech-debt]].

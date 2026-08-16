@@ -1,7 +1,7 @@
 ---
 type: sprint
 tags: [memory, sprint]
-updated: [2026-08-14]
+updated: [2026-08-16]
 ---
 > Aggiornato da /sprint — sessione 2026-08-06: espansione mondo (12 nuovi paesi, 96 club reali su
 > CONCACAF/CAF/AFC) + nuova meccanica "Giant Killer" (sorpresa di coppa) + strumento diagnostico
@@ -697,6 +697,19 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   (FileVersion 0.12.2.0) e `dist/MyRoad.apk` (versionCode 1202/versionName 0.12.2, firma
   verificata) rigenerati e allegati alla [release GitHub
   v0.12.2](https://github.com/Gioixxx/MyRoad/releases/tag/v0.12.2).
+
+- [x] **3 fix urgenti + rilascio v0.13.0** (2026-08-16, commit 59176c2/300e7a7/394d8dc/32124b5,
+  merge fast-forward `feature/carriera-allenatore`→`main`, tag v0.13.0): terminologia "ciclo"→
+  "stagione" nei testi visibili, nickname unico tra dispositivi in classifica (+ reset classifica
+  su richiesta esplicita) con controllo onBlur, tab "Più popolare" nascosta, password
+  (`coach2026`) per accedere alla modalità Allenatore dal menu + nessun proseguimento dopo il
+  ritiro allenatore — vedi [[decisions]] per il dettaglio completo. Bundle con Fase A+B della
+  modalità Allenatore (già committate in sessione precedente, mai documentate in memoria prima
+  d'ora) e sync roster/fix retrocessione. 595 test verdi, `tsc`/build puliti, deploy GitHub Pages
+  verificato verde. `dist/MyRoad.exe`/`dist/MyRoad.apk` (0.13.0) allegati alla [release GitHub
+  v0.13.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.13.0). **Non verificato nel browser**:
+  gate password/blocco proseguimento allenatore — vedi [[tech-debt]]. **Azione utente pendente**:
+  eseguire `supabase/nickname-uniqueness.sql` sul progetto Supabase live.
 
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo

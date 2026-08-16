@@ -308,9 +308,30 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
   carriera fino al ritiro e verificare a schermo lo stato "Punteggio pubblicato ✓", poi controllare
   la schermata Classifica.
 
+### Password/blocco proseguimento modalità Allenatore (v0.13.0) non verificati nel browser
+- **Priorità:** Media
+- **Area:** `src/components/features/career/CareerGame.tsx` (`CoachModeGate`), `src/lib/coach-career/access.ts`, `src/components/features/coach/CoachCareerGame.tsx`
+- **Data:** 2026-08-16
+- **Descrizione:** il gate password sull'ingresso alla modalità Allenatore e la rimozione del
+  bottone "Nuova carriera" a fine carriera allenatore (vedi [[decisions]]) sono verificati solo via
+  `tsc`/build/lint — nessuna carriera allenatore giocata a mano in questa sessione (di codice +
+  rilascio, non di playtest). Non osservato a schermo: il campo password che blocca/sblocca
+  correttamente l'accesso, il messaggio di errore su password sbagliata, la schermata di fine
+  carriera senza più il bottone di restart.
+- **Perché rimandato:** sessione di implementazione + rilascio immediato su richiesta esplicita
+  dell'utente ("rilascia appena hai fatto"), nessun tempo dedicato al playtest in questo giro.
+- **Impatto:** rischio medio — è l'unico cancello che tiene la modalità allenatore (ancora WIP)
+  fuori dalla portata dei giocatori occasionali sul sito pubblico; un bug di wiring (es. il gate
+  che non blocca davvero, o che blocca sempre impedendo anche l'accesso corretto) sarebbe visibile
+  solo provandolo dal vivo.
+- **Risoluzione suggerita:** aprire il sito pubblicato, cliccare "Allenatore" dal menu, verificare
+  che senza password non si entri, con `coach2026` sì; giocare fino al ritiro e confermare che
+  resti solo il bottone "Menu".
+
 ## Priorità
 - **Alta:** —
-- **Media:** pass di game-feel v0.11.0 non verificato nel browser (vedi sopra)
+- **Media:** pass di game-feel v0.11.0 non verificato nel browser (vedi sopra); gate password
+  modalità Allenatore non verificato nel browser (vedi sopra)
 - **Bassa:** pattern `min-h-0` non condizionato ricorrente; classifica globale non verificata
   dall'eseguibile desktop (vedi sopra)
 

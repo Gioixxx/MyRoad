@@ -1,14 +1,14 @@
 ---
 type: memory
 tags: [memory, index]
-updated: [2026-08-14]
+updated: [2026-08-16]
 ---
 
 # My Road - L'Ascesa — Next.js
 > Contesto persistente. Aggiornato da /remember. Vault Obsidian: vedi workflows/obsidian-vault.md.
 > Progetto rinominato da "Carriera" a "My Road - L'Ascesa" il 2026-08-07 — vedi [[decisions]] per il dettaglio del rename (repo GitHub, launcher/exe, UI). La cartella locale del repo resta fisicamente `C:\Dev\Carriera` (non rinominata, solo il nome logico del progetto/repo GitHub).
 
-**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android) · Supabase (classifica)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso  **Aggiornamento:** 2026-08-14 (v0.12.2 — fix voci duplicate in classifica)
+**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android) · Supabase (classifica)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso, incluso un nuovo modo di gioco parallelo "Allenatore" (WIP, dietro password)  **Aggiornamento:** 2026-08-16 (v0.13.0 — modalità Allenatore Fase A+B dietro password, terminologia "stagione", nickname unico in classifica)
 
 ## Contesto
 Clone testuale di "Copero — Simulador de carrera" (https://copero.com.ar/juegos/simulador-carrera):
@@ -88,6 +88,15 @@ Vedi [[decisions]], [[sprint]] e [[tech-debt]].
 - @adr.md — [[adr]] — ADR formali
 
 ## Segnalibri critici
+- **Modalità Allenatore (dal 2026-08-16) protetta da password nel menu** (`coach2026`, in
+  `src/lib/coach-career/access.ts`) perché ancora WIP e ora live su `main`/GitHub Pages — è un
+  filtro leggero client-side, non vera sicurezza (il sorgente è pubblico). Nessun proseguimento
+  dopo il ritiro di una carriera allenatore (bottone "Nuova carriera" rimosso di proposito). Se in
+  futuro si sblocca la modalità al pubblico, ricordarsi di rimuovere sia il gate sia il blocco.
+- **Azione utente pendente**: `supabase/nickname-uniqueness.sql` (nickname unico tra dispositivi
+  in classifica, con reset della classifica esistente) va eseguito manualmente sul progetto
+  Supabase live — finché non succede, il controllo non è attivo in produzione nonostante il
+  codice client sia già rilasciato in v0.13.0.
 - **Classifica globale (2026-08-13/14) su un progetto Supabase CONDIVISO con un'altra
   applicazione dell'utente** (`https://jltfsljuysbipihnjkpn.supabase.co`) — qualunque futura
   modifica allo schema deve usare il prefisso `myroad_` e non toccare mai oggetti senza quel
