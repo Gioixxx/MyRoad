@@ -206,7 +206,7 @@ function CoachOutcomeBanner({ outcome, onContinue }: { outcome: CoachCycleOutcom
 }
 
 export function CoachCareerGame({ onBack }: CoachCareerGameProps) {
-  const { state, startCareer, chooseOption, restart, isResuming } = useCoachCareerGame();
+  const { state, startCareer, chooseOption, isResuming } = useCoachCareerGame();
   const [awaitingOutcome, setAwaitingOutcome] = useState(false);
 
   const handleStart = useCallback(
@@ -225,11 +225,6 @@ export function CoachCareerGame({ onBack }: CoachCareerGameProps) {
   );
 
   const handleOutcomeContinue = useCallback(() => setAwaitingOutcome(false), []);
-
-  const handleRestart = useCallback(() => {
-    restart();
-    setAwaitingOutcome(false);
-  }, [restart]);
 
   if (isResuming) {
     return <p className="text-center text-sm text-(--color-text-muted)">Caricamento…</p>;
@@ -252,11 +247,14 @@ export function CoachCareerGame({ onBack }: CoachCareerGameProps) {
           <p>Trofei vinti: {state.coach.trophies.length}</p>
           <p>Età al ritiro: {state.coach.age}</p>
         </div>
+        <p className="text-xs text-(--color-text-muted)">
+          Il proseguimento con una nuova carriera è temporaneamente disabilitato: la modalità
+          allenatore è ancora in fase di test.
+        </p>
         <div className="flex items-center justify-center gap-3">
           <Button variant="ghost" onClick={onBack}>
             Menu
           </Button>
-          <Button onClick={handleRestart}>Nuova carriera</Button>
         </div>
       </Card>
     );

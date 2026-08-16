@@ -9,6 +9,7 @@ import { useLeaderboardSettings } from "@/hooks/useLeaderboardSettings";
 import { usePrefersReducedMotion } from "@/hooks/useMotion";
 import { AWARD_LABELS } from "@/lib/career/award-labels";
 import { buildArchiveEntry, loadArchive } from "@/lib/career/storage";
+import { isCoachModePasswordCorrect } from "@/lib/coach-career/access";
 import { submitLeaderboardEntry } from "@/lib/leaderboard/client";
 import { isValidNickname } from "@/lib/leaderboard/settings";
 import type { PublishStatus } from "@/lib/leaderboard/types";
@@ -34,7 +35,7 @@ import { SettingsPanel } from "./SettingsPanel";
 import { SpeedSelect } from "./SpeedSelect";
 import { ClubCrest } from "./ClubCrest";
 
-type Step = "menu" | "speed" | "identity" | "archive" | "leaderboard" | "settings";
+type Step = "menu" | "speed" | "identity" | "archive" | "leaderboard" | "settings" | "coach-gate";
 type ResolvePhase = "season" | "moments" | "outcome" | null;
 
 const DECISION_EXIT_MS = 320;
@@ -63,7 +64,7 @@ function SeasonBeat({
 }) {
   return (
     <Card className="animate-step-in flex flex-col items-center gap-3 border-(--color-accent)/30 p-6 text-center sm:p-8">
-      <p className="font-display text-sm tracking-[0.25em] gold-metal-text">Ciclo in corso</p>
+      <p className="font-display text-sm tracking-[0.25em] gold-metal-text">Stagione in corso</p>
       <div className="flex items-center gap-2 text-(--color-text-muted)">
         {crestUrl && clubName ? (
           <ClubCrest crestUrl={crestUrl} clubName={clubName} size={22} />
@@ -249,7 +250,7 @@ function OutcomeBanner({
         {outcome.newInjury ? (
           <p className="flex items-center gap-2 text-sm font-medium text-(--color-error)">
             Infortunio: {outcome.newInjury.label} — fuori per {outcome.newInjury.turnsRemaining}{" "}
-            {outcome.newInjury.turnsRemaining === 1 ? "ciclo" : "cicli"}
+            {outcome.newInjury.turnsRemaining === 1 ? "stagione" : "stagioni"}
           </p>
         ) : null}
 
@@ -319,6 +320,50 @@ function SetupStepDots({ current }: { current: Step }) {
   );
 }
 
+function CoachModeGate({
+  error,
+  onSubmit,
+  onBack,
+}: {
+  error: boolean;
+  onSubmit: (password: string) => void;
+  onBack: () => void;
+}) {
+  const [password, setPassword] = useState("");
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <p className="font-display text-sm tracking-[0.2em] gold-metal-text">Accesso riservato</p>
+        <h2 className="font-display text-xl text-(--color-text)">Modalità Allenatore</h2>
+        <p className="mt-1 text-xs text-(--color-text-muted)">
+          In fase di test. Inserisci la password per accedere.
+        </p>
+      </div>
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="text-(--color-text-muted)">Password</span>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onSubmit(password);
+          }}
+          autoFocus
+          className="input-recessed rounded-md px-3 py-2 text-sm"
+        />
+      </label>
+      {error ? <p className="text-xs font-medium text-(--color-error)">Password errata.</p> : null}
+      <div className="flex items-center justify-between gap-3">
+        <Button variant="ghost" onClick={onBack} className="px-0 text-xs">
+          ← Menu
+        </Button>
+        <Button onClick={() => onSubmit(password)}>Accedi</Button>
+      </div>
+    </div>
+  );
+}
+
 interface CareerGameProps {
   onCoachCareer: () => void;
 }
@@ -333,6 +378,7 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
   const { nickname, deviceId, setNickname } = useLeaderboardSettings();
   const [publishStatus, setPublishStatus] = useState<PublishStatus>("idle");
   const autoPublishRef = useRef(false);
+  const [coachGateError, setCoachGateError] = useState(false);
 
   // Letto in un effect (non lazy initializer) per lo stesso motivo di useCareerGame: window non
   // esiste in SSR, evita un hydration mismatch tra il render server e il primo render client.
@@ -369,7 +415,11 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
     setPublishStatus("loading");
     const entry = buildArchiveEntry(state.player);
     submitLeaderboardEntry(entry, nickname, deviceId).then((result) => {
-      setPublishStatus(result.ok ? "done" : "error");
+      if (result.ok) {
+        setPublishStatus("done");
+      } else {
+        setPublishStatus(result.error === "nickname-taken" ? "error-nickname-taken" : "error");
+      }
     });
   }, [state?.retired, state?.player, nickname, deviceId]);
 
@@ -465,7 +515,25 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
 
   const handleGoMenu = useCallback(() => {
     setStep("menu");
+    setCoachGateError(false);
   }, []);
+
+  const handleShowCoachGate = useCallback(() => {
+    setCoachGateError(false);
+    setStep("coach-gate");
+  }, []);
+
+  const handleCoachGateSubmit = useCallback(
+    (password: string) => {
+      if (isCoachModePasswordCorrect(password)) {
+        setCoachGateError(false);
+        onCoachCareer();
+      } else {
+        setCoachGateError(true);
+      }
+    },
+    [onCoachCareer],
+  );
 
   const handleShowSettings = useCallback(() => {
     setStep("settings");
@@ -608,9 +676,19 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
             <Card key="step-menu" className="animate-step-in flex flex-col gap-4 p-5 sm:p-7">
               <MainMenu
                 onSinglePlayer={() => setStep("speed")}
-                onCoach={onCoachCareer}
+                onCoach={handleShowCoachGate}
                 onSettings={handleShowSettings}
                 onQuit={handleQuit}
+              />
+            </Card>
+          ) : null}
+
+          {!showPlaying && step === "coach-gate" ? (
+            <Card key="step-coach-gate" className="animate-step-in flex flex-col gap-4 p-5 sm:p-7">
+              <CoachModeGate
+                error={coachGateError}
+                onSubmit={handleCoachGateSubmit}
+                onBack={handleGoMenu}
               />
             </Card>
           ) : null}
@@ -624,6 +702,7 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
                 onMutedChange={setMuted}
                 nickname={nickname}
                 onNicknameChange={setNickname}
+                deviceId={deviceId}
                 onBack={handleGoMenu}
               />
             </Card>
@@ -654,6 +733,7 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
                 onSubmit={handleIdentitySubmitted}
                 nickname={nickname}
                 onNicknameChange={setNickname}
+                deviceId={deviceId}
               />
             </Card>
           ) : null}
@@ -745,7 +825,7 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
                       compact
                       pendingLabel={
                         (resolvePhase === "season" || decisionExiting) && !isRetired
-                          ? "Ciclo in corso…"
+                          ? "Stagione in corso…"
                           : undefined
                       }
                     />
