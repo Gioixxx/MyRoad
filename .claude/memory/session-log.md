@@ -9,6 +9,13 @@ Snapshot automatici del lavoro in corso, salvati da `save_context.py` su PreComp
 (feature `enforcementHooks`) e ricaricati all'avvio da `session_start.py`. Gestito automaticamente:
 le entry sotto sono sovrascritte per `sessionId` (rolling, ultime ~10). Vedi [[sprint]] per i task attivi.
 
+<!-- session:76439fd5-7805-4389-8152-258546c7830a -->
+### Continuare lo sviluppo della parte allenatore — 2026-08-16
+- **Branch:** main · **Quando:** 2026-08-16→2026-08-16
+- **Ultima richiesta:** sì, procedi con il commit
+- **File toccati:** coach-career/bridge.ts, coach-career/engine.ts, hooks/useCoachCareerGame.ts, coach/CoachHistoryTable.tsx, coach-career/coach-satisfaction.ts, coach/CoachMomentOverlay.tsx, coach/CoachCareerGame.tsx, app/page.tsx, career/CareerGame.tsx, career/CareerArchive.tsx, coach-career/simulation.ts, scripts/coach-simulate.ts, Carriera/vitest.coach-simulate.config.mts, Carriera/package.json, scripts/coach-debug.ts
+- **Comandi:** git; find; grep; wc; npx; npm; cat; rtk; node; cd
+
 <!-- session:4f941499-c03f-4b30-8032-fb65e8feeb97 -->
 ### Correggere nickname duplicati e terminologia stagione — 2026-08-16
 - **Branch:** main · **Quando:** 2026-08-16→2026-08-16
@@ -69,10 +76,3 @@ le entry sotto sono sovrascritte per `sessionId` (rolling, ultime ~10). Vedi [[s
 - **Ultima richiesta:** nella pagina possiamo inserire un menù al momenmto metteri giocatore singolo , multiplayer (in fase di sviluippo) , impostazioni e chiudi. & 'c:\Users\Gioix\Downloads\Passaggio di Spogliatoio (1).mp3'…
 - **File toccati:** lib/audio-settings.ts, lib/audio-settings.test.ts, hooks/useBackgroundMusic.ts, career/MainMenu.tsx, career/SettingsPanel.tsx, career/CareerGame.tsx, CarrieraLauncher/MainForm.cs, memory/decisions.md, memory/tech-debt.md, memory/sprint.md
 - **Comandi:** ls; grep; sed; mkdir; cat; npx; npm; rm; sleep; curl
-
-<!-- session:af474b59-7400-477d-9d2e-c27de66b0c15 -->
-### trophy-icons-already-implemented — 2026-08-06
-- **Branch:** main · **Quando:** 2026-08-06→2026-08-06
-- **Ultima richiesta:** sì, chiudi il tab
-- **File toccati:** memory/backlog.md, memory/tech-debt.md, memory/decisions.md, plans/hazy-strolling-wilkinson.md
-- **Comandi:** git
