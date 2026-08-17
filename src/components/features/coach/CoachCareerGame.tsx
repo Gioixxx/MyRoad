@@ -276,7 +276,7 @@ export function CoachCareerGame({ onBack, seedEntry }: CoachCareerGameProps) {
   const showOutcomeBanner = awaitingOutcome && !activeMoment && state.lastOutcome;
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-3">
+    <div className="flex min-w-0 flex-1 flex-col gap-3 lg:min-h-0">
       {activeMoment ? (
         <CoachMomentOverlay
           key={`moment-${momentIndex}-${activeMoment.kind}`}
@@ -292,72 +292,87 @@ export function CoachCareerGame({ onBack, seedEntry }: CoachCareerGameProps) {
         </Button>
       </header>
 
-      <Card className="flex flex-col gap-2 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center gap-2">
-          {coach.club ? <ClubCrest crestUrl={coach.club.crestUrl} clubName={coach.club.name} size={28} /> : null}
-          <div>
-            <p className="flex flex-wrap items-center gap-1.5 font-semibold text-(--color-text)">
-              {coach.lastName}
-              {showArchetypeChip ? (
-                <span className="rounded bg-(--color-accent)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-accent) uppercase">
-                  Stile: {ARCHETYPE_LABELS[archetype.primary!]}
-                </span>
-              ) : null}
-              {showRumorsChip ? (
-                <span
-                  className="rounded bg-(--color-warning)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-warning) uppercase"
-                  title="Girano voci poco lusinghiere sul tuo conto"
-                >
-                  Rumors
-                </span>
-              ) : null}
-            </p>
-            <p className="text-xs text-(--color-text-muted)">
-              {coach.club?.name ?? "Svincolato"} · {coach.age} anni
-            </p>
+      <div className="grid min-w-0 flex-1 gap-3 lg:min-h-0 lg:grid-cols-[20rem_1fr_16rem] lg:items-stretch xl:grid-cols-[23rem_1fr_18rem]">
+        <div className="min-w-0 shrink-0 lg:max-h-full lg:overflow-y-auto">
+          <Card className="flex flex-col gap-2 p-4 sm:p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              {coach.club ? <ClubCrest crestUrl={coach.club.crestUrl} clubName={coach.club.name} size={28} /> : null}
+              <div>
+                <p className="flex flex-wrap items-center gap-1.5 font-semibold text-(--color-text)">
+                  {coach.lastName}
+                  {showArchetypeChip ? (
+                    <span className="rounded bg-(--color-accent)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-accent) uppercase">
+                      Stile: {ARCHETYPE_LABELS[archetype.primary!]}
+                    </span>
+                  ) : null}
+                  {showRumorsChip ? (
+                    <span
+                      className="rounded bg-(--color-warning)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-warning) uppercase"
+                      title="Girano voci poco lusinghiere sul tuo conto"
+                    >
+                      Rumors
+                    </span>
+                  ) : null}
+                </p>
+                <p className="text-xs text-(--color-text-muted)">
+                  {coach.club?.name ?? "Svincolato"} · {coach.age} anni
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center text-xs text-(--color-text-muted)">
+              <div>
+                <p className="text-base font-semibold text-(--color-text)">{coach.reputation}</p>
+                <p>Reputazione</p>
+              </div>
+              <div>
+                <p className="text-base font-semibold text-(--color-text)">{coach.boardConfidence}</p>
+                <p>Fiducia società</p>
+              </div>
+              <div>
+                <p className="text-base font-semibold text-(--color-text)">{coach.popularity}</p>
+                <p>Popolarità</p>
+              </div>
+            </div>
+            {coach.currentObjective ? (
+              <p className="text-xs text-(--color-text-muted)">Obiettivo: {coach.currentObjective.label}</p>
+            ) : null}
+            {coach.relations.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 border-t border-(--color-border) pt-2">
+                {coach.relations.map((rel) => (
+                  <span
+                    key={rel.id}
+                    className="rounded bg-(--color-surface-raised) px-1.5 py-0.5 text-[11px] text-(--color-text-muted)"
+                    title={rel.name}
+                  >
+                    {COACH_RELATION_LABELS[rel.id]} {formatAffinity(rel.affinity)}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </Card>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-3 lg:min-h-0">
+          <div className="min-w-0 shrink-0">
+            {showOutcomeBanner && state.lastOutcome ? (
+              <CoachOutcomeBanner outcome={state.lastOutcome} onContinue={handleOutcomeContinue} />
+            ) : !awaitingOutcome && state.currentDecision ? (
+              <Card className="p-4 shadow-lg shadow-black/5 sm:p-5">
+                <CoachDecisionPanel decision={state.currentDecision} onChoose={handleChoose} />
+              </Card>
+            ) : null}
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-center text-xs text-(--color-text-muted)">
-          <div>
-            <p className="text-base font-semibold text-(--color-text)">{coach.reputation}</p>
-            <p>Reputazione</p>
-          </div>
-          <div>
-            <p className="text-base font-semibold text-(--color-text)">{coach.boardConfidence}</p>
-            <p>Fiducia società</p>
-          </div>
-          <div>
-            <p className="text-base font-semibold text-(--color-text)">{coach.popularity}</p>
-            <p>Popolarità</p>
+
+        <div className="flex min-w-0 flex-col gap-2 lg:min-h-0 lg:max-h-full">
+          <p className="shrink-0 font-display text-sm tracking-[0.15em] text-(--color-text-muted) uppercase">
+            Storico
+          </p>
+          <div className="min-w-0 flex-1 overflow-y-auto lg:min-h-0">
+            {coach.clubHistory.length > 0 ? <CoachHistoryTable coach={coach} compact /> : null}
           </div>
         </div>
-        {coach.currentObjective ? (
-          <p className="text-xs text-(--color-text-muted)">Obiettivo: {coach.currentObjective.label}</p>
-        ) : null}
-        {coach.relations.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5 border-t border-(--color-border) pt-2">
-            {coach.relations.map((rel) => (
-              <span
-                key={rel.id}
-                className="rounded bg-(--color-surface-raised) px-1.5 py-0.5 text-[11px] text-(--color-text-muted)"
-                title={rel.name}
-              >
-                {COACH_RELATION_LABELS[rel.id]} {formatAffinity(rel.affinity)}
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </Card>
-
-      {coach.clubHistory.length > 0 ? <CoachHistoryTable coach={coach} compact /> : null}
-
-      {showOutcomeBanner && state.lastOutcome ? (
-        <CoachOutcomeBanner outcome={state.lastOutcome} onContinue={handleOutcomeContinue} />
-      ) : !awaitingOutcome && state.currentDecision ? (
-        <Card className="p-4 shadow-lg shadow-black/5 sm:p-5">
-          <CoachDecisionPanel decision={state.currentDecision} onChoose={handleChoose} />
-        </Card>
-      ) : null}
+      </div>
     </div>
   );
 }
