@@ -731,9 +731,26 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   `CoachCareerGame.tsx` (il timer di auto-dismiss si aspetta un remount ad ogni nuovo moment,
   stesso pattern già usato dal calciatore) — corretto e riverificato dal vivo forzando un titolo di
   campionato via `localStorage`. 595 test verdi, `tsc`/lint puliti. Vedi [[decisions]] per il
-  dettaglio completo di entrambi i bug e [[tech-debt]] per le voci chiuse da questo giro. **Nessuna
-  release/bump di versione** — il fix `key` + gli aggiornamenti di memoria che lo documentano
-  restano non committati a fine sessione (il resto del lavoro è già in `a321276`).
+  dettaglio completo di entrambi i bug e [[tech-debt]] per le voci chiuse da questo giro.
+
+- [x] **Release v0.14.0 pubblicata** (2026-08-17, commit `aab2833`/`a321276` pushati + `e89f21a`
+  bump versione + tag v0.14.0): il fix `key` (commit `aab2833`) era rimasto locale a fine della
+  sessione precedente insieme a Fase C/parità UI/bilanciamento (`a321276`) — pushati entrambi su
+  `origin/main` in questa sessione. Bump `package.json`/`package-lock.json` 0.13.0→**0.14.0**
+  (minor, coerente col criterio già usato per bundle di questo volume: Fase C continuità +
+  parità UI + 2 bug reali corretti), `APP_RELEASE_DATE_ISO` aggiornato. Verificato prima del
+  rilascio: 595 test verdi, `tsc --noEmit` pulito, lint con i soli 5 warning
+  `react-hooks/set-state-in-effect` già noti (4 pre-esistenti + 1 in `CoachCareerGame.tsx`,
+  accettato in [[decisions]]). `dist/MyRoad.exe` (FileVersion 0.14.0.0) e `dist/MyRoad.apk`
+  (versionCode 1400/versionName 0.14.0, firma verificata con la stessa chiave stabile del
+  progetto) rigenerati — build Android richiesto di nuovo `JAVA_HOME`/`ANDROID_HOME` impostati
+  manualmente nella sessione (stesso JBR di Android Studio, non persistito nell'ambiente di
+  default, già documentato per release precedenti). Entrambi allegati alla [release GitHub
+  v0.14.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.14.0). **La modalità Allenatore
+  resta dietro password** (`coach2026`) anche in questa release — deliberato, non ancora aperta ai
+  giocatori occasionali. **Non verificato in questa sessione**: nessun nuovo playtest oltre alla
+  QA con agenti già fatta nella sessione precedente (questa è stata una sessione di rilascio, non
+  di ulteriore sviluppo/verifica).
 
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo

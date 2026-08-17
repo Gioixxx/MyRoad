@@ -1,14 +1,14 @@
 ---
 type: memory
 tags: [memory, index]
-updated: [2026-08-16]
+updated: [2026-08-17]
 ---
 
 # My Road - L'Ascesa — Next.js
 > Contesto persistente. Aggiornato da /remember. Vault Obsidian: vedi workflows/obsidian-vault.md.
 > Progetto rinominato da "Carriera" a "My Road - L'Ascesa" il 2026-08-07 — vedi [[decisions]] per il dettaglio del rename (repo GitHub, launcher/exe, UI). La cartella locale del repo resta fisicamente `C:\Dev\Carriera` (non rinominata, solo il nome logico del progetto/repo GitHub).
 
-**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android) · Supabase (classifica)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso, incluso un nuovo modo di gioco parallelo "Allenatore" (WIP, dietro password, ora con Fase C/continuità + parità UI + bilanciamento harness)  **Aggiornamento:** 2026-08-16 (non ancora committato/rilasciato: Fase C continuità calciatore→allenatore, overlay/storico/chip allenatore, bug reale di reputazione trovato e corretto con `npm run coach-simulate` — vedi [[decisions]])
+**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android) · Supabase (classifica)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso, incluso un nuovo modo di gioco parallelo "Allenatore" (WIP, dietro password, ora con Fase C/continuità + parità UI + bilanciamento harness, rilasciato in v0.14.0)  **Aggiornamento:** 2026-08-17 (release v0.14.0 pubblicata: Fase C continuità calciatore→allenatore, overlay/storico/chip allenatore, bug reale di reputazione corretto con `npm run coach-simulate`, fix key mancante su CoachMomentOverlay — vedi [[decisions]] e [[sprint]])
 
 ## Contesto
 Clone testuale di "Copero — Simulador de carrera" (https://copero.com.ar/juegos/simulador-carrera):
