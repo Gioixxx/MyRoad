@@ -752,6 +752,21 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   QA con agenti già fatta nella sessione precedente (questa è stata una sessione di rilascio, non
   di ulteriore sviluppo/verifica).
 
+- [x] **Fix layout allenatore desktop (contenuto tagliato) + release v0.14.1** (2026-08-17, commit
+  `2ca84c2` fix + `625dbc4` bump versione + tag v0.14.1): su segnalazione dell'utente di gravi
+  problemi di visualizzazione nella carriera allenatore, diagnosticato con Claude in Chrome che a
+  ≥1024px il wrapper ereditava `lg:overflow-hidden` dal calciatore senza avere il suo layout a
+  colonne — contenuto (storico, decisione) tagliato e irraggiungibile, nessuno scroll possibile.
+  Su richiesta esplicita dell'utente ("la ui deve essere come quella del calciatore"),
+  `CoachCareerGame.tsx` ristrutturato allo stesso grid a 3 colonne (cartellino | decisione |
+  storico) con scroll indipendente per colonna su desktop — vedi [[decisions]] per il dettaglio
+  completo. 595 test invariati, `tsc` pulito. **Verificato dal vivo nel browser** sia desktop
+  (scroll interno solo sullo Storico, resto fisso) sia mobile (iframe 390px, colonna singola
+  invariata). `dist/MyRoad.exe` (FileVersion 0.14.1.0) e `dist/MyRoad.apk` (versionCode 1401/
+  versionName 0.14.1, firma verificata) rigenerati e allegati alla [release GitHub
+  v0.14.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.14.1). Deploy GitHub Pages
+  verificato verde.
+
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
 - `ClubStint` ora ha un campo `ovr` (OVR del giocatore alla fine di quel ciclo) — necessario per la CareerTable, che deve mostrare l'OVR storico per riga, non quello attuale

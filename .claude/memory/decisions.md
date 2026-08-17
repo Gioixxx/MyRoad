@@ -1137,3 +1137,55 @@ Registro scelte tecniche con motivazioni.
   invariati, e dal vivo nel browser forzando reputazione/prestigio club alti via `localStorage`
   per innescare un vero titolo di campionato — overlay "Trofeo" (Bundesliga) ora resta visibile
   per intero con immagine trofeo, badge e barra di progresso corretti.
+
+### Bug grave di layout allenatore su desktop (contenuto tagliato, nessuno scroll) — layout allineato a 3 colonne come il calciatore — release v0.14.1
+- **Data:** 2026-08-17
+- **Decisione:** su segnalazione diretta dell'utente ("ci sono gravi problemi di visualizzazione
+  della carriera allenatore, usa il browser per definirli e risolverli"), diagnosticato con
+  Claude in Chrome (dev server locale): a schermo desktop/tablet (≥1024px, breakpoint `lg:`) il
+  wrapper in `src/app/page.tsx` che ospita `CoachCareerGame` aveva `lg:overflow-hidden` — pattern
+  copiato dal wrapper del calciatore in `CareerGame.tsx`, dove funziona perché lì il contenuto
+  interno è un **layout a 3 colonne** (`lg:grid-cols-[20rem_1fr_16rem]`) con scroll indipendente
+  per colonna. `CoachCareerGame.tsx` invece era una singola colonna verticale
+  (`flex flex-col gap-3`, cartellino + storico + decisione impilati) senza alcun meccanismo di
+  scroll interno — risultato: quando il contenuto superava l'altezza della viewport (già con 5-6
+  stagioni di storico + un banner esito), la parte in eccesso veniva **tagliata e resa
+  irraggiungibile**, senza alcuno scroll possibile (verificato via DOM: `scrollHeight` 867px
+  contro `clientHeight` 675px con `overflow-y: hidden` calcolato). L'utente ha poi chiarito
+  esplicitamente ("la ui deve essere come quella del calciatore") che la richiesta non era solo
+  "far scrollare qualcosa", ma allineare strutturalmente il layout a quello del calciatore — non
+  la correzione minima (rimuovere `lg:overflow-hidden` dal wrapper, lasciando `CoachCareerGame`
+  a colonna singola con scroll di pagina) inizialmente applicata e poi scartata.
+  Ristrutturato `CoachCareerGame.tsx` per replicare esattamente il grid del calciatore: cartellino
+  allenatore (stats, obiettivo, chip archetipo/rumors/relazioni) in colonna sinistra
+  (`lg:max-h-full lg:overflow-y-auto`), banner esito/decisione al centro, `CoachHistoryTable`
+  ("Storico") a destra con lo stesso pattern `flex-1 overflow-y-auto lg:min-h-0` del calciatore —
+  ciascuna colonna scrolla in modo indipendente su desktop, il wrapper esterno torna ad avere
+  `lg:overflow-hidden` (coerente col calciatore, non più un bug perché ora il layout interno lo
+  supporta). Sotto `lg:` il grid collassa a colonna singola come prima, nessuna modifica al
+  comportamento mobile.
+- **Perché:** il bug nasceva da un pattern CSS (`overflow-y-auto ... lg:overflow-hidden`) copiato
+  da un componente con un'architettura interna diversa (multi-colonna con scroll proprio) senza
+  portare anche l'architettura che lo rende sicuro — stesso principio generale già visto altre
+  volte nel progetto (una classe "presa in prestito" da un altro componente senza il contesto che
+  la rende corretta). La correzione strutturale (allineare l'intero layout, non solo rimuovere la
+  classe che tagliava il contenuto) è stata la richiesta esplicita dell'utente dopo il primo fix
+  minimo, per ottenere parità visiva reale col calciatore, non solo l'assenza del bug.
+- **Alternative:** rimuovere `lg:overflow-hidden` dal wrapper lasciando `CoachCareerGame` a
+  colonna singola con scroll dell'intera pagina — scartata dall'utente esplicitamente, voleva la
+  UI (struttura a colonne) uguale al calciatore, non solo il bug risolto con un fix più semplice.
+- **Impatto:** `src/components/features/coach/CoachCareerGame.tsx` (unico file toccato,
+  `src/app/page.tsx` riportato allo stato originale). 595 test invariati, `tsc --noEmit` pulito,
+  lint invariato (stesso warning `react-hooks/set-state-in-effect` già noto e accettato).
+  **Verificato dal vivo nel browser** (Claude in Chrome, non solo test automatici): desktop
+  1568px — creata una carriera da zero e giocati ~8 cicli fino a riempire lo Storico oltre
+  l'altezza della viewport, confermato lo scrollbar interno solo sulla colonna Storico mentre
+  cartellino e decisione restano fissi (comportamento identico al calciatore); mobile (iframe
+  390×844) — layout a colonna singola invariato, Storico raggiungibile scrollando l'intera
+  pagina. Overlay (premio individuale, obiettivo raggiunto), form di creazione, offerte di
+  lavoro, crisi societaria, rinnovo contratto — tutti verificati funzionanti nel nuovo layout.
+  Rilasciato come **v0.14.1** (patch, fix mirato a un componente), `dist/MyRoad.exe` (FileVersion
+  0.14.1.0) e `dist/MyRoad.apk` (versionCode 1401/versionName 0.14.1, firma verificata con la
+  stessa chiave stabile del progetto) rigenerati e allegati alla [release GitHub
+  v0.14.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.14.1). Deploy GitHub Pages
+  verificato verde dopo il push (`gh run watch`).
