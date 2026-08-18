@@ -1,4 +1,4 @@
-import { Flag, Trophy as TrophyIcon } from "lucide-react";
+import { ClipboardList, Flag, Trophy as TrophyIcon } from "lucide-react";
 import type { ArchivedCareer, Player } from "@/types/career";
 import { AWARD_LABELS } from "@/lib/career/award-labels";
 import { hallOfFameWinsFor, pickBestCareerTitle } from "@/lib/career/satisfaction";
@@ -7,6 +7,7 @@ import { buildArchiveEntry } from "@/lib/career/storage";
 import { peakOvr, summarizeClubHistory } from "@/lib/career/summary";
 import { ARCHETYPE_LABELS, deriveArchetype } from "@/lib/career/traits";
 import { PLAY_STYLE_LABELS } from "@/lib/career/playstyles";
+import { isEligibleForCoachContinuity } from "@/lib/coach-career/bridge";
 import { isLeaderboardConfigured } from "@/lib/leaderboard/client";
 import type { PublishStatus } from "@/lib/leaderboard/types";
 import { Button } from "@/components/ui/Button";
@@ -41,6 +42,8 @@ interface CareerSummaryProps {
   archive?: ArchivedCareer[];
   /** Pubblicazione automatica in classifica alla fine della carriera — vedi CareerGame.tsx. */
   publishStatus: PublishStatus;
+  /** Se presente e la carriera è eleggibile (peakOvr ≥ soglia), mostra l'invito a continuare come allenatore. */
+  onContinueAsCoach?: (entry: ArchivedCareer) => void;
 }
 
 const PUBLISH_STATUS_TEXT: Partial<Record<PublishStatus, string>> = {
@@ -66,6 +69,7 @@ export function CareerSummary({
   onRestart,
   archive = [],
   publishStatus,
+  onContinueAsCoach,
 }: CareerSummaryProps) {
   const isGoalkeeper = player.position === "GK";
   const clubs = summarizeClubHistory(player.clubHistory);
@@ -139,6 +143,16 @@ export function CareerSummary({
           <Button variant="secondary" onClick={onRestart}>
             Gioca ancora
           </Button>
+          {onContinueAsCoach && isEligibleForCoachContinuity(provisionalEntry) ? (
+            <Button
+              variant="ghost"
+              onClick={() => onContinueAsCoach(provisionalEntry)}
+              className="gap-1.5 text-xs"
+            >
+              <ClipboardList size={13} aria-hidden="true" />
+              Inizia carriera da allenatore
+            </Button>
+          ) : null}
           {publishStatusText ? (
             <p
               className={cn(

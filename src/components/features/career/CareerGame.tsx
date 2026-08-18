@@ -772,6 +772,7 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
               onRestart={handleRestart}
               archive={loadArchive()}
               publishStatus={publishStatus}
+              onContinueAsCoach={onCoachCareer}
             />
           ) : null}
         </>
