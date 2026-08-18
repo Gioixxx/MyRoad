@@ -10,6 +10,7 @@ import {
   type LeaderboardListItem,
 } from "@/lib/leaderboard/types";
 import { ARCHETYPE_LABELS } from "@/lib/career/traits";
+import { POSITION_LABELS } from "@/lib/career/position-labels";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { CountryFlag } from "./CountryFlag";
@@ -149,7 +150,7 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                             {entry.lastName.toUpperCase()}
                           </span>
                           <span className="shrink-0 rounded bg-(--color-surface-raised) px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-text-muted) uppercase">
-                            {entry.position}
+                            {POSITION_LABELS[entry.position]}
                           </span>
                           <OvrBadge ovr={entry.peakOvr} size="sm" />
                           {entry.archetypeId ? (

@@ -1288,3 +1288,47 @@ Registro scelte tecniche con motivazioni.
   un allenatore da 36 a 75 anni senza poter usare lo shortcut via `localStorage` (che bypassa
   proprio lo stato React in memoria che si vuole testare). Nessun rilascio/bump di versione in
   questo giro — lavoro non ancora committato a fine sessione.
+
+### Etichette ruoli calciatore in stile europeo/italiano (POR/DC/TS/TD/…) — solo visualizzazione
+- **Data:** 2026-08-18
+- **Decisione:** su richiesta dell'utente ("mettiamo quelli europei tipo ATT TS TD"), i 12
+  ruoli mostrati a schermo (`GK`/`CB`/`LB`/`RB`/`CDM`/`CM`/`CAM`/`LM`/`RM`/`LW`/`RW`/`ST`) ora
+  usano sigle italiane (`POR`/`DC`/`TS`/`TD`/`MED`/`CC`/`TRQ`/`ES`/`ED`/`AS`/`AD`/`ATT`,
+  mappatura proposta e confermata dall'utente via `AskUserQuestion`). Nuovo
+  `src/lib/career/position-labels.ts` (`POSITION_LABELS: Record<Position, string>`, esaustivo)
+  — **il tipo `Position` e i suoi 12 valori interni non sono stati toccati**, solo la
+  visualizzazione. Scelta deliberata dopo un'esplorazione completa: `Position` è chiave di
+  logica in `Record<Position, …>` esaustivi (`ROLE_WEIGHTS` in `progression.ts`,
+  `OUTFIELD_ROLE_ATTRIBUTE_WEIGHTS` in `attributes.ts`, `POSITION_CHANGE_ADJACENCY`/
+  `DECLINE_PREFERRED_TARGETS` in `decisions.ts`), `Set<Position>` (`injuries.ts`,
+  `last-identity.ts`), confronti `===` sparsi (`playstyles.ts`/`satisfaction.ts`/`tactics.ts`/
+  `loop.ts`/`engine.ts`), ed è **persistito** in localStorage (save/archivio) e su Supabase
+  (colonna `position` della classifica globale) — rinominare i valori stessi avrebbe richiesto
+  una migrazione dati reale, non solo un refactor, oltre a toccare i 17 file di test (81
+  occorrenze) che usano i literal come dato di dominio. Una label map di sola visualizzazione è
+  zero-rischio su tutto questo, stesso pattern già usato ovunque nel progetto (`AWARD_LABELS`,
+  `ARCHETYPE_LABELS`, `COACH_SEASON_TITLE_LABELS`, ecc.).
+  Wiring: `PositionPicker.tsx` (bottoni del selettore ruolo in creazione personaggio),
+  `PlayerCard.tsx` (chip sul cartellino), `CareerArchive.tsx`/`Leaderboard.tsx` (chip per voce),
+  e 2 generatori in `decisions.ts` (`generatePositionChangeDecision`/`generateCoachRoleRequest`)
+  dove il codice ruolo era interpolato **dentro il testo narrativo** (`Diventa ${newPosition}`,
+  "Ti riadatti al ruolo di...") — tradotto solo il testo mostrato, il campo `newPosition`
+  sull'opzione (usato da `changePosition()` per assegnare il ruolo reale) resta invariato.
+- **Perché:** l'utente ha chiesto esplicitamente etichette europee/italiane per i ruoli in tutta
+  l'interfaccia calciatore; l'approccio label-map-only evita ogni rischio di rottura su dati
+  persistiti/logica/test per un cambiamento che è puramente estetico nell'intento dell'utente.
+- **Alternative:** rinominare i valori del tipo `Position` stesso — scartata per il costo/rischio
+  sproporzionato (migrazione dati + refactor esteso) rispetto a un cambiamento richiesto come
+  puramente visivo.
+- **Impatto:** `src/lib/career/position-labels.ts` (nuovo), `PositionPicker.tsx`,
+  `PlayerCard.tsx`, `CareerArchive.tsx`, `Leaderboard.tsx`, `decisions.ts`. Un test esistente
+  (`IdentityForm.test.tsx`, 2 occorrenze) selezionava il radio del ruolo per nome accessibile
+  `"ST"` — aggiornato a `"ATT"` dato che il testo del bottone (e quindi il suo nome accessibile)
+  è cambiato; l'asserzione sul valore effettivo inviato (`position: "ST"`) resta invariata,
+  confermando che solo la label è cambiata, non il dato. 595 test verdi, `tsc --noEmit`/lint
+  puliti. **Verificato dal vivo nel browser**: selettore ruolo in creazione personaggio (griglia
+  campo completa AS/ATT/AD/TRQ/ES/CC/ED/MED/TS/DC/TD/POR), cartellino in partita ("ATT" al posto
+  di "ST"), voce archivio ("TS" per un ruolo LB iniettato via localStorage). Non verificato dal
+  vivo: il testo delle 2 decisioni di cambio ruolo (RNG/stato-gated, stessa sostituzione di
+  stringa già provata corretta altrove) e la Classifica globale (stesso identico pattern di
+  `CareerArchive.tsx`, rischio basso). Nessun rilascio/bump di versione in questo giro.

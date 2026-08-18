@@ -19,6 +19,7 @@ import { playStyleCallupBonus } from "./playstyles";
 import { tacticalFit, TACTICAL_SYSTEM_LABELS, clubTacticalSystem, playerPreferredSystem, type TacticalSystem } from "./tactics";
 import { deriveArchetype } from "./traits";
 import { getRelation } from "./relations";
+import { POSITION_LABELS } from "./position-labels";
 
 // ---------- Helper di selezione club ----------
 
@@ -1449,12 +1450,14 @@ export function generatePositionChangeDecision(player: Player, rng: Rng = Math.r
   const targets = decline && preferred ? preferred : adjacent;
   const options: DecisionOption[] = targets.map((newPosition) => ({
     id: `switch-to-${newPosition}`,
-    label: `Diventa ${newPosition}`,
+    label: `Diventa ${POSITION_LABELS[newPosition]}`,
     hint: decline
       ? "Meno dipendenza dalla corsa · adattamento costoso in OVR"
       : "Più minutaggio nel nuovo ruolo · adattamento costoso in OVR",
     newPosition,
-    outcomes: [outcome(100, `Ti riadatti al ruolo di ${newPosition}: serve tempo per l'ambientamento.`, -2)],
+    outcomes: [
+      outcome(100, `Ti riadatti al ruolo di ${POSITION_LABELS[newPosition]}: serve tempo per l'ambientamento.`, -2),
+    ],
   }));
   options.push({
     id: "reject-position",
@@ -1488,11 +1491,11 @@ export function generateCoachRoleRequest(player: Player): Decision {
   const adjacent = POSITION_CHANGE_ADJACENCY[player.position] ?? [];
   const options: DecisionOption[] = adjacent.map((newPosition) => ({
     id: `switch-to-${newPosition}`,
-    label: `Diventa ${newPosition}`,
+    label: `Diventa ${POSITION_LABELS[newPosition]}`,
     hint: "Fiducia del mister · adattamento costoso in OVR",
     newPosition,
     outcomes: [
-      outcome(100, `${coachName} ti sposta a ${newPosition}: serve tempo per l'ambientamento.`, -2, {
+      outcome(100, `${coachName} ti sposta a ${POSITION_LABELS[newPosition]}: serve tempo per l'ambientamento.`, -2, {
         relationsDelta: { coach: 1 },
       }),
     ],

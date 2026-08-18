@@ -15,6 +15,7 @@ import { ARCHETYPE_LABELS, deriveArchetype } from "@/lib/career/traits";
 import { SHADOW_RUMOR_THRESHOLD } from "@/lib/career/shadow";
 import { ATTRIBUTE_LABELS } from "@/lib/career/attributes";
 import { PLAY_STYLE_LABELS } from "@/lib/career/playstyles";
+import { POSITION_LABELS } from "@/lib/career/position-labels";
 import { tacticalFit, TACTICAL_FIT_LABELS } from "@/lib/career/tactics";
 import { prospectStatusLine } from "@/lib/career/decisions";
 import { RELATION_LABELS, formatAffinity } from "@/lib/career/relations";
@@ -112,7 +113,7 @@ export function PlayerCard({
         />
         <div className="min-w-0 flex-1">
           <span className="rounded bg-(--color-surface) px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-text-muted) uppercase">
-            {player.position}
+            {POSITION_LABELS[player.position]}
           </span>
           {player.injury ? (
             <span

@@ -3,6 +3,7 @@ import type { ArchivedCareer } from "@/types/career";
 import { countries } from "@/data/countries";
 import { computeHallOfFame } from "@/lib/career/satisfaction";
 import { ARCHETYPE_LABELS } from "@/lib/career/traits";
+import { POSITION_LABELS } from "@/lib/career/position-labels";
 import { isEligibleForCoachContinuity } from "@/lib/coach-career/bridge";
 import { Button } from "@/components/ui/Button";
 import { CountryFlag } from "./CountryFlag";
@@ -92,7 +93,7 @@ export function CareerArchive({ entries, onBack, onContinueAsCoach }: CareerArch
                       {entry.lastName.toUpperCase()}
                     </span>
                     <span className="shrink-0 rounded bg-(--color-surface-raised) px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-text-muted) uppercase">
-                      {entry.position}
+                      {POSITION_LABELS[entry.position]}
                     </span>
                     <OvrBadge ovr={entry.peakOvr} size="sm" />
                     {isHof ? (

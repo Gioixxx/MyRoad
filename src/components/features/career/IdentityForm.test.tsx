@@ -39,7 +39,7 @@ describe("IdentityForm", () => {
     fireEvent.change(screen.getByPlaceholderText(/cerca…/i), { target: { value: "Italy" } });
     fireEvent.click(screen.getByRole("option", { name: /italy/i }));
 
-    fireEvent.click(screen.getByRole("radio", { name: "ST" }));
+    fireEvent.click(screen.getByRole("radio", { name: "ATT" }));
 
     fireEvent.click(screen.getByRole("button", { name: /conferma identità/i }));
 
@@ -91,7 +91,7 @@ describe("IdentityForm — con classifica configurata (env stubbate, modulo reim
     fireEvent.click(screen.getByRole("button", { name: /^nazionalità$/i }));
     fireEvent.change(screen.getByPlaceholderText(/cerca…/i), { target: { value: "Italy" } });
     fireEvent.click(screen.getByRole("option", { name: /italy/i }));
-    fireEvent.click(screen.getByRole("radio", { name: "ST" }));
+    fireEvent.click(screen.getByRole("radio", { name: "ATT" }));
 
     fireEvent.click(screen.getByRole("button", { name: /conferma identità/i }));
 

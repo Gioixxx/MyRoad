@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import type { Position } from "@/types/career";
+import { POSITION_LABELS } from "@/lib/career/position-labels";
 
 interface PositionPickerProps {
   value: Position | null;
@@ -85,7 +86,7 @@ export function PositionPicker({
                     : "bg-white/10 text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] hover:bg-white/20 hover:scale-105",
                 )}
               >
-                {position}
+                {POSITION_LABELS[position]}
               </button>
             );
           })}
