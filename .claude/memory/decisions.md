@@ -1189,3 +1189,102 @@ Registro scelte tecniche con motivazioni.
   stessa chiave stabile del progetto) rigenerati e allegati alla [release GitHub
   v0.14.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.14.1). Deploy GitHub Pages
   verificato verde dopo il push (`gh run watch`).
+
+### Completamento carriera Allenatore: riepilogo di fine carriera, archivio/Hall of Fame (Fase D), sblocco pubblico
+- **Data:** 2026-08-18
+- **Decisione:** su richiesta esplicita dell'utente ("finiamo la parte della carriera
+  allenatore"), chiarito lo scope con `AskUserQuestion` — l'utente ha scelto **tutte e 4** le
+  opzioni proposte: riepilogo completo, archivio/Hall of Fame, sblocco pubblico, rifiniture
+  minori incontrate lungo il percorso. Sessione pianificata in modalità Plan (3 agenti Explore +
+  1 agente Plan paralleli, poi verifica a mano dei file critici prima di scrivere il piano finale)
+  data l'ampiezza (nuovi componenti, rimozione di un meccanismo di accesso già in produzione).
+  **Scoperta chiave**: la persistenza dell'archivio allenatore (`ArchivedCoachCareer`,
+  `buildCoachArchiveEntry`/`loadCoachArchive`/`appendToCoachArchive` in `storage.ts`, chiave
+  `carriera:coach-archive`) esisteva già al 100% e `useCoachCareerGame.ts` archiviava già in
+  automatico al ritiro — il lavoro reale era quasi interamente UI + una funzione di Hall of Fame,
+  non nuova persistenza.
+  1. **Riepilogo di fine carriera** (`CoachSummary.tsx`, nuovo): mirror di `CareerSummary.tsx` —
+     hero con titolo migliore/archetipo/shadow-title, griglia 4 statistiche (reputazione di picco
+     via `OvrBadge` in `size="sm"` — stesso pattern già collaudato in `CoachHistoryTable` per
+     evitare l'etichetta "OVR" fuorviante — club allenati/trofei/premi), patrimonio+
+     `PopularityMeter`, riga Hall of Fame, titoli di stagione, "momenti" (trofei/premi recenti,
+     nessun equivalente "nazionale"), griglia dettaglio a 2 colonne (non 3: **Storico** riusa
+     direttamente `CoachHistoryTable` invece di scrivere un'aggregazione stile
+     `summarizeClubHistory` — `CoachStint` non ha stat additive da sommare, solo un
+     `outcome`/`reputation` di fine ciclo, quindi il merge-per-club del calciatore non avrebbe
+     nulla di significativo da aggregare; **Trofei e premi** usa `CompetitionBadge` per i trofei
+     (componente condiviso, `Trophy` è un tipo riusato as-is) e l'idioma icona `AwardIcon` già
+     stabilito in `CoachMomentOverlay.tsx` per i premi, **non** `AwardBadge` del calciatore
+     (tipizzato su `AwardType`, unione chiusa incompatibile con `CoachAwardType` — riusarlo
+     avrebbe richiesto toccare uno switch calciatore, vietato dalla convenzione "parallelo, mai
+     toccare tipi/switch del calciatore già in produzione"). `EmptyShowcase` duplicato localmente
+     (8 righe, stesso principio di duplicazione deliberata già dichiarato nell'header di
+     `CoachMomentOverlay.tsx`) invece di esportarlo dal file calciatore.
+  2. **Archivio + Hall of Fame (Fase D)** (`CoachArchive.tsx`, nuovo; `computeCoachHallOfFame`/
+     `coachHallOfFameWinsFor` aggiunte a `coach-satisfaction.ts`): mirror esatto di
+     `computeHallOfFame`/`hallOfFameWinsFor` (`lib/career/satisfaction.ts`) sui 4 assi rinominati
+     OVR→reputazione (`peakReputation`/`trophyCount`/`finalSavingsEur`/`finalPopularity`).
+     Nessuna prop di continuità allenatore→presidente (non esiste, resta backlog).
+  3. **Sblocco pubblico**: rimossa interamente la password `coach2026` — eliminato
+     `src/lib/coach-career/access.ts` (unico importatore era `CareerGame.tsx`, nessun test lo
+     referenziava), rimosso lo step `"coach-gate"` (componente `CoachModeGate`, stato
+     `coachGateError`/`pendingCoachSeed`, handler `handleShowCoachGate`/`handleContinueAsCoach`/
+     `handleCoachGateSubmit`) da `CareerGame.tsx` — `MainMenu`'s `onCoach` e `CareerArchive`'s
+     `onContinueAsCoach` ora chiamano `onCoachCareer` direttamente. **Ribalta esplicitamente** la
+     decisione del 2026-08-16 (gate + nessun proseguimento) — non un fix, una scelta deliberata di
+     rendere la modalità pubblica ora che è più completa. Riattivato "Nuova carriera" dopo il
+     ritiro (chiama `restart()`, già esistente e inutilizzato nell'hook). **Design "seed una
+     tantum per mount"**: `CoachCareerGame` cattura `seedEntry` (il bonus di continuità Fase C) in
+     un `useState(seedEntry)` locale (`activeSeed`), letto una sola volta al mount — dato che
+     `page.tsx` non rimonta mai `CoachCareerGame` tra un ritiro e il successivo "Nuova carriera"
+     (resta sempre `mode === "coach"`), questo garantisce che il bonus di continuità si applichi
+     una volta sola per carriera e non venga ri-applicato ad ogni "Nuova carriera" successiva;
+     `handleRestart` azzera esplicitamente `activeSeed` a `null`.
+  4. **Rifiniture minori (item 4 dello scope) — 2 problemi reali trovati durante la verifica dal
+     vivo, non una caccia dedicata**: (a) il bottone "Le mie carriere" non compariva subito dopo
+     il **primissimo** ritiro di una sessione perché il branch `state.retired` leggeva la
+     visibilità del bottone dallo stato `archiveEntries` (aggiornato solo al mount/restart/apertura
+     archivio), mentre i dati della Hall of Fame venivano letti freschi via `loadCoachArchive()`
+     diretto — corretto calcolando `freshArchive = loadCoachArchive()` una volta e usandolo per
+     entrambi; (b) l'utente ha segnalato dal vivo che le card delle offerte di lavoro/mercato
+     (`CoachDecisionPanel`) non mostravano mai lo stemma del club nonostante
+     `CoachDecisionOption.club?: Club` fosse già nel tipo — mai cablato UI, a differenza
+     dell'equivalente calciatore (`OfferPanel.tsx`). Aggiunto `ClubCrest` condizionale
+     (`option.club ? ... : ...`) prima della label, riusando il componente già importato.
+- **Perché:** l'utente ha scelto lo scope più ampio disponibile — completare davvero la modalità
+  prima di eventualmente proseguire con altre carriere multi-ruolo (vedi backlog "calciatore→
+  allenatore→presidente"). Il riuso quasi totale di pattern e componenti già esistenti (mirror
+  1:1 di `CareerSummary`/`CareerArchive`/`computeHallOfFame`, riuso diretto di
+  `CoachHistoryTable`/`ClubCrest`/`CompetitionBadge`/`OvrBadge`/`PopularityMeter`/`CountryFlag`)
+  ha reso il lavoro quasi interamente additivo, coerente con la convenzione "parallelo, mai
+  toccare tipi/switch del calciatore già in produzione" seguita per l'intero dominio allenatore
+  finora.
+- **Alternative:** nessuna per lo scope (scelto esplicitamente dall'utente su tutte e 4 le
+  opzioni). Per `EmptyShowcase`/`HofRow`, esportarli da `CareerSummary.tsx`/`CareerArchive.tsx`
+  invece di duplicarli — scartato, stesso principio di zero-rischio-di-regressione-UI-calciatore
+  già stabilito nel progetto per l'intero dominio allenatore.
+- **Impatto:** `src/lib/coach-career/coach-satisfaction.ts` (+`CoachHallOfFameRecords`/
+  `computeCoachHallOfFame`/`coachHallOfFameWinsFor`), `src/components/features/coach/
+  {CoachSummary,CoachArchive}.tsx` (nuovi), `src/components/features/coach/CoachCareerGame.tsx`
+  (navigazione "Le mie carriere"/`activeSeed`/`handleRestart`, + crest sulle card decisione),
+  `src/components/features/career/CareerGame.tsx` (rimozione gate), `src/lib/coach-career/
+  access.ts` (eliminato). 595 test invariati, `tsc --noEmit` pulito, lint con i soli errori
+  `react-hooks/set-state-in-effect` pre-esistenti (nessuno nuovo introdotto dai file toccati).
+  **Verificato a fondo dal vivo nel browser** (non solo test automatici, sessione con dev server
+  reale): rimozione gate confermata da menu e da Fase C continuità (nessuna password richiesta in
+  entrambi i punti d'accesso), riepilogo di fine carriera con dati reali (forzando età/trofei/
+  premi via `localStorage`, stesso metodo già consolidato nel progetto), Hall of Fame verificata
+  con **2 carriere retirate con profili deliberatamente diversi** (una reputazione/trofei-alta,
+  una ricca/popolare) — confermato che i 4 assi si distribuiscono su vincitori diversi, non tutti
+  sulla stessa carriera; archivio con entrambe le voci e pillole HoF corrette; continuità Fase C
+  (bonus reputazione 35+5+3=43, patrimonio/popolarità ereditati) verificata end-to-end da
+  un'entry calciatore iniettata con peakOvr≥80; fix del bottone "Le mie carriere" verificato
+  ricaricando con lo stesso identico scenario; fix dello stemma club verificato sia col caso
+  presente (offerte di lavoro) sia col caso assente (conferenza stampa, nessuna regressione).
+  **Non verificato dal vivo in questo giro** (per costo sproporzionato rispetto al guadagno di
+  confidenza — la logica è stata comunque implementata e revisionata con cura): il comportamento
+  di "Nuova carriera" su una carriera continuity-seedata specificamente (il fatto che non
+  ri-applichi il bonus una seconda volta) — richiederebbe ~20 cicli di gioco reale per portare
+  un allenatore da 36 a 75 anni senza poter usare lo shortcut via `localStorage` (che bypassa
+  proprio lo stato React in memoria che si vuole testare). Nessun rilascio/bump di versione in
+  questo giro — lavoro non ancora committato a fine sessione.

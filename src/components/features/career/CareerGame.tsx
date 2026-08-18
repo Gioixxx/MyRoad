@@ -9,7 +9,6 @@ import { useLeaderboardSettings } from "@/hooks/useLeaderboardSettings";
 import { usePrefersReducedMotion } from "@/hooks/useMotion";
 import { AWARD_LABELS } from "@/lib/career/award-labels";
 import { buildArchiveEntry, loadArchive } from "@/lib/career/storage";
-import { isCoachModePasswordCorrect } from "@/lib/coach-career/access";
 import { submitLeaderboardEntry } from "@/lib/leaderboard/client";
 import { isValidNickname } from "@/lib/leaderboard/settings";
 import type { PublishStatus } from "@/lib/leaderboard/types";
@@ -35,7 +34,7 @@ import { SettingsPanel } from "./SettingsPanel";
 import { SpeedSelect } from "./SpeedSelect";
 import { ClubCrest } from "./ClubCrest";
 
-type Step = "menu" | "speed" | "identity" | "archive" | "leaderboard" | "settings" | "coach-gate";
+type Step = "menu" | "speed" | "identity" | "archive" | "leaderboard" | "settings";
 type ResolvePhase = "season" | "moments" | "outcome" | null;
 
 const DECISION_EXIT_MS = 320;
@@ -320,50 +319,6 @@ function SetupStepDots({ current }: { current: Step }) {
   );
 }
 
-function CoachModeGate({
-  error,
-  onSubmit,
-  onBack,
-}: {
-  error: boolean;
-  onSubmit: (password: string) => void;
-  onBack: () => void;
-}) {
-  const [password, setPassword] = useState("");
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <p className="font-display text-sm tracking-[0.2em] gold-metal-text">Accesso riservato</p>
-        <h2 className="font-display text-xl text-(--color-text)">Modalità Allenatore</h2>
-        <p className="mt-1 text-xs text-(--color-text-muted)">
-          In fase di test. Inserisci la password per accedere.
-        </p>
-      </div>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-(--color-text-muted)">Password</span>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") onSubmit(password);
-          }}
-          autoFocus
-          className="input-recessed rounded-md px-3 py-2 text-sm"
-        />
-      </label>
-      {error ? <p className="text-xs font-medium text-(--color-error)">Password errata.</p> : null}
-      <div className="flex items-center justify-between gap-3">
-        <Button variant="ghost" onClick={onBack} className="px-0 text-xs">
-          ← Menu
-        </Button>
-        <Button onClick={() => onSubmit(password)}>Accedi</Button>
-      </div>
-    </div>
-  );
-}
-
 interface CareerGameProps {
   onCoachCareer: (seedEntry?: ArchivedCareer) => void;
 }
@@ -378,8 +333,6 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
   const { nickname, deviceId, setNickname } = useLeaderboardSettings();
   const [publishStatus, setPublishStatus] = useState<PublishStatus>("idle");
   const autoPublishRef = useRef(false);
-  const [coachGateError, setCoachGateError] = useState(false);
-  const [pendingCoachSeed, setPendingCoachSeed] = useState<ArchivedCareer | null>(null);
 
   // Letto in un effect (non lazy initializer) per lo stesso motivo di useCareerGame: window non
   // esiste in SSR, evita un hydration mismatch tra il render server e il primo render client.
@@ -516,35 +469,7 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
 
   const handleGoMenu = useCallback(() => {
     setStep("menu");
-    setCoachGateError(false);
   }, []);
-
-  const handleShowCoachGate = useCallback(() => {
-    setCoachGateError(false);
-    setPendingCoachSeed(null);
-    setStep("coach-gate");
-  }, []);
-
-  /** Fase C — continuità: da una carriera calciatore archiviata (peakOvr>=80) a una nuova
-   * carriera allenatore, passando comunque dal gate password come l'ingresso ordinario in
-   * "Allenatore" (stessa modalità WIP, stesso filtro leggero). */
-  const handleContinueAsCoach = useCallback((entry: ArchivedCareer) => {
-    setCoachGateError(false);
-    setPendingCoachSeed(entry);
-    setStep("coach-gate");
-  }, []);
-
-  const handleCoachGateSubmit = useCallback(
-    (password: string) => {
-      if (isCoachModePasswordCorrect(password)) {
-        setCoachGateError(false);
-        onCoachCareer(pendingCoachSeed ?? undefined);
-      } else {
-        setCoachGateError(true);
-      }
-    },
-    [onCoachCareer, pendingCoachSeed],
-  );
 
   const handleShowSettings = useCallback(() => {
     setStep("settings");
@@ -687,19 +612,9 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
             <Card key="step-menu" className="animate-step-in flex flex-col gap-4 p-5 sm:p-7">
               <MainMenu
                 onSinglePlayer={() => setStep("speed")}
-                onCoach={handleShowCoachGate}
+                onCoach={() => onCoachCareer()}
                 onSettings={handleShowSettings}
                 onQuit={handleQuit}
-              />
-            </Card>
-          ) : null}
-
-          {!showPlaying && step === "coach-gate" ? (
-            <Card key="step-coach-gate" className="animate-step-in flex flex-col gap-4 p-5 sm:p-7">
-              <CoachModeGate
-                error={coachGateError}
-                onSubmit={handleCoachGateSubmit}
-                onBack={handleGoMenu}
               />
             </Card>
           ) : null}
@@ -754,7 +669,7 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
               <CareerArchive
                 entries={archiveEntries}
                 onBack={handleBackFromArchive}
-                onContinueAsCoach={handleContinueAsCoach}
+                onContinueAsCoach={onCoachCareer}
               />
             </Card>
           ) : null}

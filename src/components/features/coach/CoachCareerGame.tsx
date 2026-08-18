@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ArchivedCareer, GameSpeed } from "@/types/career";
-import type { CoachDecision, CoachIdentity } from "@/types/coach";
+import type { ArchivedCoachCareer, CoachDecision, CoachIdentity } from "@/types/coach";
 import { useCoachCareerGame, type CoachCycleOutcomeSummary } from "@/hooks/useCoachCareerGame";
 import { seedCoachFromArchivedCareer } from "@/lib/coach-career/bridge";
+import { loadCoachArchive } from "@/lib/coach-career/storage";
 import { TACTICAL_SYSTEM_LABELS, type TacticalSystem } from "@/lib/career/tactics";
 import { deriveArchetype, ARCHETYPE_LABELS } from "@/lib/career/traits";
 import { SHADOW_RUMOR_THRESHOLD } from "@/lib/career/shadow";
@@ -15,8 +16,10 @@ import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
 import { NationalitySelect } from "@/components/features/career/NationalitySelect";
 import { ClubCrest } from "@/components/features/career/ClubCrest";
+import { CoachArchive } from "./CoachArchive";
 import { CoachHistoryTable } from "./CoachHistoryTable";
 import { buildCoachMoments, CoachMomentOverlay, type CoachMoment } from "./CoachMomentOverlay";
+import { CoachSummary } from "./CoachSummary";
 
 interface CoachCareerGameProps {
   onBack: () => void;
@@ -32,10 +35,12 @@ function CoachIdentityStep({
   seedEntry,
   onSubmit,
   onBack,
+  onShowArchive,
 }: {
   seedEntry?: ArchivedCareer | null;
   onSubmit: (identity: CoachIdentity) => void;
   onBack: () => void;
+  onShowArchive?: () => void;
 }) {
   const [lastName, setLastName] = useState(seedEntry?.lastName ?? "");
   const [nationality, setNationality] = useState<string | null>(seedEntry?.nationality ?? null);
@@ -93,9 +98,16 @@ function CoachIdentityStep({
       </fieldset>
 
       <div className="flex items-center justify-between gap-3">
-        <Button variant="ghost" onClick={onBack} className="px-0 text-xs">
-          ← Menu
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" onClick={onBack} className="px-0 text-xs">
+            ← Menu
+          </Button>
+          {onShowArchive ? (
+            <Button variant="ghost" onClick={onShowArchive} className="px-0 text-xs">
+              Le mie carriere
+            </Button>
+          ) : null}
+        </div>
         <Button
           disabled={!canSubmit}
           onClick={() => nationality && onSubmit({ lastName: lastName.trim(), nationality, preferredSystem })}
@@ -126,7 +138,14 @@ function CoachDecisionPanel({ decision, onChoose }: { decision: CoachDecision; o
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-focus-glow)",
             )}
           >
-            <span className="text-sm font-semibold text-(--color-text)">{option.label}</span>
+            {option.club ? (
+              <span className="mb-1 flex items-center gap-2">
+                <ClubCrest crestUrl={option.club.crestUrl} clubName={option.club.name} size={20} />
+                <span className="text-sm font-semibold text-(--color-text)">{option.label}</span>
+              </span>
+            ) : (
+              <span className="text-sm font-semibold text-(--color-text)">{option.label}</span>
+            )}
             {option.hint ? <span className="text-xs text-(--color-text-muted)">{option.hint}</span> : null}
           </button>
         ))}
@@ -184,19 +203,44 @@ function CoachOutcomeBanner({ outcome, onContinue }: { outcome: CoachCycleOutcom
 }
 
 export function CoachCareerGame({ onBack, seedEntry }: CoachCareerGameProps) {
-  const { state, startCareer, chooseOption, isResuming } = useCoachCareerGame();
+  const { state, startCareer, chooseOption, restart, isResuming } = useCoachCareerGame();
   const [moments, setMoments] = useState<CoachMoment[]>([]);
   const [momentIndex, setMomentIndex] = useState(0);
   const [awaitingOutcome, setAwaitingOutcome] = useState(false);
   const seenOutcome = useRef<CoachCycleOutcomeSummary | null>(null);
 
+  // Cattura seedEntry una sola volta al mount: "Nuova carriera" dopo un ritiro non deve
+  // ri-applicare il bonus di continuità Fase C una seconda volta (page.tsx non rimonta mai
+  // CoachCareerGame tra un ritiro e il successivo "Nuova carriera").
+  const [activeSeed, setActiveSeed] = useState<ArchivedCareer | null | undefined>(seedEntry);
+  const [archiveEntries, setArchiveEntries] = useState<ArchivedCoachCareer[]>([]);
+  const [showArchive, setShowArchive] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- window non esiste in SSR, stesso motivo di useCoachCareerGame
+    setArchiveEntries(loadCoachArchive());
+  }, []);
+
   const handleStart = useCallback(
     (identity: CoachIdentity) => {
-      const seed = seedEntry ? seedCoachFromArchivedCareer(seedEntry) : undefined;
+      const seed = activeSeed ? seedCoachFromArchivedCareer(activeSeed) : undefined;
       startCareer(identity, DEFAULT_SPEED, seed);
     },
-    [startCareer, seedEntry],
+    [startCareer, activeSeed],
   );
+
+  const handleRestart = useCallback(() => {
+    restart();
+    setActiveSeed(null);
+    setArchiveEntries(loadCoachArchive());
+  }, [restart]);
+
+  const handleShowArchiveView = useCallback(() => {
+    setArchiveEntries(loadCoachArchive());
+    setShowArchive(true);
+  }, []);
+
+  const handleBackFromArchive = useCallback(() => setShowArchive(false), []);
 
   useEffect(() => {
     const outcome = state?.lastOutcome ?? null;
@@ -234,37 +278,37 @@ export function CoachCareerGame({ onBack, seedEntry }: CoachCareerGameProps) {
   const handleMomentContinue = useCallback(() => setMomentIndex((i) => i + 1), []);
   const handleOutcomeContinue = useCallback(() => setAwaitingOutcome(false), []);
 
+  if (showArchive) {
+    return <CoachArchive entries={archiveEntries} onBack={handleBackFromArchive} />;
+  }
+
   if (isResuming) {
     return <p className="text-center text-sm text-(--color-text-muted)">Caricamento…</p>;
   }
 
   if (!state) {
-    return <CoachIdentityStep seedEntry={seedEntry} onSubmit={handleStart} onBack={onBack} />;
+    return (
+      <CoachIdentityStep
+        seedEntry={activeSeed}
+        onSubmit={handleStart}
+        onBack={onBack}
+        onShowArchive={archiveEntries.length > 0 ? handleShowArchiveView : undefined}
+      />
+    );
   }
 
   if (state.retired) {
+    // Lettura fresca (non lo stato `archiveEntries`, aggiornato solo al mount/restart/apertura
+    // archivio): la carriera appena ritirata è già stata archiviata dall'effect di
+    // useCoachCareerGame prima di questo render, e "Le mie carriere" deve comparire subito.
+    const freshArchive = loadCoachArchive();
     return (
-      <Card className="animate-step-in flex flex-col gap-4 p-5 text-center sm:p-7">
-        <p className="font-display text-sm tracking-[0.2em] gold-metal-text">Carriera conclusa</p>
-        <h2 className="font-display text-2xl text-(--color-text)">
-          {state.coach.lastName} appende il taccuino al chiodo
-        </h2>
-        <div className="flex flex-col gap-1 text-sm text-(--color-text-muted)">
-          <p>Reputazione di picco: {state.coach.records.peakReputation}</p>
-          <p>Club allenati: {new Set(state.coach.clubHistory.map((s) => s.club.id)).size}</p>
-          <p>Trofei vinti: {state.coach.trophies.length}</p>
-          <p>Età al ritiro: {state.coach.age}</p>
-        </div>
-        <p className="text-xs text-(--color-text-muted)">
-          Il proseguimento con una nuova carriera è temporaneamente disabilitato: la modalità
-          allenatore è ancora in fase di test.
-        </p>
-        <div className="flex items-center justify-center gap-3">
-          <Button variant="ghost" onClick={onBack}>
-            Menu
-          </Button>
-        </div>
-      </Card>
+      <CoachSummary
+        coach={state.coach}
+        onRestart={handleRestart}
+        onShowArchive={freshArchive.length > 0 ? handleShowArchiveView : undefined}
+        archive={freshArchive}
+      />
     );
   }
 
@@ -287,9 +331,16 @@ export function CoachCareerGame({ onBack, seedEntry }: CoachCareerGameProps) {
 
       <header className="flex shrink-0 items-center justify-between gap-4">
         <p className="font-display text-lg tracking-[0.2em] gold-metal-text">ALLENATORE</p>
-        <Button variant="ghost" onClick={onBack} className="px-0 text-xs">
-          ← Menu
-        </Button>
+        <div className="flex items-center gap-3">
+          {archiveEntries.length > 0 ? (
+            <Button variant="ghost" onClick={handleShowArchiveView} className="px-0 text-xs">
+              Le mie carriere
+            </Button>
+          ) : null}
+          <Button variant="ghost" onClick={onBack} className="px-0 text-xs">
+            ← Menu
+          </Button>
+        </div>
       </header>
 
       <div className="grid min-w-0 flex-1 gap-3 lg:min-h-0 lg:grid-cols-[20rem_1fr_16rem] lg:items-stretch xl:grid-cols-[23rem_1fr_18rem]">

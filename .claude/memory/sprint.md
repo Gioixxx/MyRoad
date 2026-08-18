@@ -767,6 +767,26 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   v0.14.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.14.1). Deploy GitHub Pages
   verificato verde.
 
+- [x] **Completamento carriera Allenatore: riepilogo di fine carriera, archivio/Hall of Fame
+  (Fase D), sblocco pubblico** (2026-08-18, non ancora committato a fine di questa voce): su
+  richiesta esplicita dell'utente, scelte tutte e 4 le opzioni di scope proposte — nuovo
+  `CoachSummary.tsx` (mirror di `CareerSummary.tsx`, riusa `CoachHistoryTable` per lo storico
+  invece di un'aggregazione dedicata), nuovo `CoachArchive.tsx` + `computeCoachHallOfFame`/
+  `coachHallOfFameWinsFor` in `coach-satisfaction.ts` (Fase D, mai iniziata prima), rimozione
+  completa del gate password `coach2026` (`access.ts` eliminato) + riattivazione di "Nuova
+  carriera" dopo il ritiro con design "seed una tantum per mount" per non ri-applicare il bonus
+  di continuità Fase C. Trovati e corretti 2 problemi reali durante la verifica dal vivo: bottone
+  "Le mie carriere" non visibile al primissimo ritiro di sessione, stemmi club mai mostrati sulle
+  card di offerta/mercato (`CoachDecisionPanel`). Vedi [[decisions]] per il dettaglio completo.
+  595 test invariati, `tsc --noEmit` pulito, lint invariato. **Verificato a fondo dal vivo nel
+  browser**: gate rimosso da entrambi i punti d'accesso, riepilogo con dati reali, Hall of Fame
+  su 2 carriere con profili diversi (vincitori distribuiti sui 4 assi, non concentrati), archivio,
+  continuità Fase C end-to-end, entrambi i fix di rifinitura. **Non verificato dal vivo**: il
+  comportamento di "Nuova carriera" specificamente su una carriera continuity-seedata (richiede
+  ~20 cicli di gioco reale, non accelerabile via localStorage dato che testerebbe proprio lo
+  stato React che si vuole verificare) — vedi [[tech-debt]]. Nessun rilascio/bump di versione in
+  questo giro.
+
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
 - `ClubStint` ora ha un campo `ovr` (OVR del giocatore alla fine di quel ciclo) — necessario per la CareerTable, che deve mostrare l'OVR storico per riga, non quello attuale

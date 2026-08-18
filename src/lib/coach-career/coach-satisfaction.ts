@@ -1,5 +1,6 @@
 import type { Club } from "@/types/career";
 import type {
+  ArchivedCoachCareer,
   CoachAwardType,
   CoachCycleObjective,
   CoachCycleObjectiveKind,
@@ -185,4 +186,40 @@ export function rollCoachAward(
     return "manager-of-the-year";
   }
   return "manager-of-the-season";
+}
+
+/** Hall of Fame sull'archivio multi-carriera allenatore — mirror di `computeHallOfFame`/
+ * `hallOfFameWinsFor` (lib/career/satisfaction.ts) sui 4 assi rinominati OVR→reputazione. */
+export interface CoachHallOfFameRecords {
+  highestReputation: ArchivedCoachCareer | null;
+  mostTrophies: ArchivedCoachCareer | null;
+  richest: ArchivedCoachCareer | null;
+  mostPopular: ArchivedCoachCareer | null;
+}
+
+export function computeCoachHallOfFame(entries: ArchivedCoachCareer[]): CoachHallOfFameRecords {
+  if (entries.length === 0) {
+    return { highestReputation: null, mostTrophies: null, richest: null, mostPopular: null };
+  }
+  const by = (pick: (e: ArchivedCoachCareer) => number) =>
+    entries.reduce((best, e) => (pick(e) > pick(best) ? e : best));
+  return {
+    highestReputation: by((e) => e.peakReputation),
+    mostTrophies: by((e) => e.trophyCount),
+    richest: by((e) => e.finalSavingsEur),
+    mostPopular: by((e) => e.finalPopularity),
+  };
+}
+
+export function coachHallOfFameWinsFor(
+  entry: ArchivedCoachCareer,
+  archive: ArchivedCoachCareer[],
+): Array<"highestReputation" | "mostTrophies" | "richest" | "mostPopular"> {
+  const others = archive.filter((e) => e.id !== entry.id);
+  const wins: Array<"highestReputation" | "mostTrophies" | "richest" | "mostPopular"> = [];
+  if (others.every((e) => entry.peakReputation >= e.peakReputation)) wins.push("highestReputation");
+  if (others.every((e) => entry.trophyCount >= e.trophyCount)) wins.push("mostTrophies");
+  if (others.every((e) => entry.finalSavingsEur >= e.finalSavingsEur)) wins.push("richest");
+  if (others.every((e) => entry.finalPopularity >= e.finalPopularity)) wins.push("mostPopular");
+  return wins;
 }

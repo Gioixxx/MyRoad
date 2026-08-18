@@ -8,7 +8,7 @@ updated: [2026-08-17]
 > Contesto persistente. Aggiornato da /remember. Vault Obsidian: vedi workflows/obsidian-vault.md.
 > Progetto rinominato da "Carriera" a "My Road - L'Ascesa" il 2026-08-07 — vedi [[decisions]] per il dettaglio del rename (repo GitHub, launcher/exe, UI). La cartella locale del repo resta fisicamente `C:\Dev\Carriera` (non rinominata, solo il nome logico del progetto/repo GitHub).
 
-**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android) · Supabase (classifica)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso, incluso un nuovo modo di gioco parallelo "Allenatore" (WIP, dietro password, ora con Fase C/continuità + parità UI + bilanciamento harness + layout a 3 colonne, rilasciato in v0.14.1)  **Aggiornamento:** 2026-08-17 (release v0.14.1 pubblicata: bug grave di layout allenatore su desktop — contenuto tagliato senza scroll — corretto passando allo stesso grid a 3 colonne del calciatore, trovato e riprodotto via Claude in Chrome — vedi [[decisions]] e [[sprint]])
+**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android) · Supabase (classifica)  **Sprint:** 8/8 fasi complete (build iniziale conclusa) + feature post-build in corso — il modo di gioco parallelo "Allenatore" è ora completo e pubblico (Fase A→D + riepilogo/archivio/HoF + sblocco pubblico), non più dietro password  **Aggiornamento:** 2026-08-18 (completata la modalità Allenatore: riepilogo di fine carriera, archivio/Hall of Fame (Fase D), rimozione del gate password + "Nuova carriera" riattivato — vedi [[decisions]] e [[sprint]], lavoro non ancora rilasciato/committato)
 
 ## Contesto
 Clone testuale di "Copero — Simulador de carrera" (https://copero.com.ar/juegos/simulador-carrera):
@@ -88,14 +88,11 @@ Vedi [[decisions]], [[sprint]] e [[tech-debt]].
 - @adr.md — [[adr]] — ADR formali
 
 ## Segnalibri critici
-- **Modalità Allenatore (dal 2026-08-16) protetta da password nel menu** (`coach2026`, in
-  `src/lib/coach-career/access.ts`) perché ancora WIP e ora live su `main`/GitHub Pages — è un
-  filtro leggero client-side, non vera sicurezza (il sorgente è pubblico). Nessun proseguimento
-  dopo il ritiro di una carriera allenatore (bottone "Nuova carriera" rimosso di proposito). Se in
-  futuro si sblocca la modalità al pubblico, ricordarsi di rimuovere sia il gate sia il blocco.
-  Dal 2026-08-16 (sessione successiva) anche l'azione "Inizia carriera da allenatore" (Fase C,
-  continuità da un calciatore ritirato con peakOvr≥80, in `CareerArchive.tsx`) passa dallo stesso
-  gate — vedi [[decisions]].
+- **Modalità Allenatore sbloccata al pubblico dal 2026-08-18** (era dietro password `coach2026`
+  dal 2026-08-16) — completata con riepilogo di fine carriera (`CoachSummary.tsx`), archivio/Hall
+  of Fame dedicati (`CoachArchive.tsx`, Fase D) e "Nuova carriera" riattivato dopo il ritiro
+  (design "seed una tantum per mount" per il bonus di continuità Fase C, non ri-applicato ad ogni
+  restart) — vedi [[decisions]]. `src/lib/coach-career/access.ts` eliminato, non più necessario.
 - **Azione utente pendente**: `supabase/nickname-uniqueness.sql` (nickname unico tra dispositivi
   in classifica, con reset della classifica esistente) va eseguito manualmente sul progetto
   Supabase live — finché non succede, il controllo non è attivo in produzione nonostante il

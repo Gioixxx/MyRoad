@@ -308,11 +308,38 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
   carriera fino al ritiro e verificare a schermo lo stato "Punteggio pubblicato ✓", poi controllare
   la schermata Classifica.
 
+### "Nuova carriera" allenatore su una carriera continuity-seedata non verificato dal vivo
+- **Priorità:** Bassa
+- **Area:** `src/components/features/coach/CoachCareerGame.tsx` (`activeSeed`)
+- **Data:** 2026-08-18
+- **Descrizione:** il completamento della carriera Allenatore (vedi [[decisions]]) ha introdotto
+  un design "seed una tantum per mount" — `activeSeed` cattura `seedEntry` (il bonus di
+  continuità Fase C: reputazione/patrimonio/popolarità ereditati da un calciatore ritirato) una
+  sola volta al mount di `CoachCareerGame`, azzerato esplicitamente da `handleRestart`, per
+  evitare che "Nuova carriera" dopo un ritiro ri-applichi il bonus una seconda volta. Verificato
+  con attenzione via lettura del codice e `tsc`, ma **non dal vivo nel browser**: richiederebbe
+  giocare una carriera continuity-seedata per ~20 cicli reali (età 36→75, la finestra di rischio
+  di ritiro parte a 55) per arrivare al ritiro senza il solito shortcut via `localStorage`
+  (impraticabile qui perché testerebbe lo stato persistito, non lo stato React in memoria che
+  `activeSeed` effettivamente governa).
+- **Perché rimandato:** costo (decine di click reali) sproporzionato rispetto al rischio residuo
+  — la logica è un `useState` catturato una volta al mount più un reset esplicito, pattern React
+  semplice e a basso rischio, non un caso limite intricato.
+- **Impatto:** minimo — se il bug esistesse (bonus ri-applicato), l'effetto sarebbe solo un
+  allenatore leggermente più forte del previsto alla seconda carriera continuity-seedata
+  consecutiva, non un crash o una perdita di dati.
+- **Risoluzione suggerita:** in una futura sessione di playtest, creare una carriera allenatore
+  via continuità Fase C, forzare il ritiro a fine sessione (via localStorage, età≥75, prima del
+  restart) o giocare fino al ritiro naturale, cliccare "Nuova carriera" e confermare che la
+  seconda carriera parta da reputazione 35 (nessun bonus) invece di ~40+ e non mostri il banner
+  "Continui la carriera di...".
+
 ## Priorità
 - **Alta:** —
 - **Media:** pass di game-feel v0.11.0 non verificato nel browser (vedi sopra)
 - **Bassa:** pattern `min-h-0` non condizionato ricorrente; classifica globale non verificata
-  dall'eseguibile desktop
+  dall'eseguibile desktop; "Nuova carriera" allenatore su carriera continuity-seedata non
+  verificato dal vivo (vedi sopra)
 
 ## Archiviato
 - **Password/blocco proseguimento modalità Allenatore (v0.13.0) non verificati nel browser** —
