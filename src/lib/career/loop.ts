@@ -508,6 +508,7 @@ export interface CycleResult {
   brokenRecords: string[];
   highlights: string[];
   clubTierChange: "promoted" | "relegated" | null;
+  clubTierMovementFromLeague: string | null;
   newPlayStyles: PlayStyleId[];
 }
 
@@ -585,7 +586,7 @@ function applyInjuryStatCut(player: Player): Player {
   if (!last) return player;
   const cut = scaleStatLine(last.stats, INJURY_STATS_MULTIPLIER);
   const history = [...player.clubHistory];
-  history[history.length - 1] = { ...last, stats: cut };
+  history[history.length - 1] = { ...last, stats: cut, ovr: player.ovr };
   return {
     ...player,
     clubHistory: history,
@@ -634,6 +635,7 @@ export function resolveCycle(
       newInjury: null,
       injuryHealed: false,
       clubTierChange: null,
+      clubTierMovementFromLeague: null,
       newPlayStyles: [],
       ...emptySatisfactionFields(),
     };
@@ -716,14 +718,17 @@ export function resolveCycle(
   }
 
   let clubTierChange: "promoted" | "relegated" | null = null;
+  let clubTierMovementFromLeague: string | null = null;
   if (nextPlayer.club) {
     const wonLeagueTitle = newTrophies.some(
       (t) => t.competition === nextPlayer.club!.competitions.league,
     );
+    const preMovementLeague = nextPlayer.club.competitions.league;
     const movement = applyClubTierMovement(nextPlayer.club, wonLeagueTitle, rng);
     if (movement.change) {
       nextPlayer = { ...nextPlayer, club: movement.club };
       clubTierChange = movement.change;
+      clubTierMovementFromLeague = preMovementLeague;
     }
   }
 
@@ -911,6 +916,7 @@ export function resolveCycle(
     brokenRecords,
     highlights,
     clubTierChange,
+    clubTierMovementFromLeague,
     newPlayStyles,
   };
 }

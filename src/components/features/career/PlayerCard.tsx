@@ -112,78 +112,80 @@ export function PlayerCard({
           size="sm"
         />
         <div className="min-w-0 flex-1">
-          <span className="rounded bg-(--color-surface) px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-text-muted) uppercase">
-            {POSITION_LABELS[player.position]}
-          </span>
-          {player.injury ? (
-            <span
-              className="ml-1.5 inline-flex items-center gap-1 rounded bg-(--color-error)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-error) uppercase"
-              title={`${player.injury.label} — fuori per ${
-                player.injury.turnsRemaining
-              } ${player.injury.turnsRemaining === 1 ? "stagione" : "stagioni"}`}
-            >
-              <HeartCrack size={10} aria-hidden="true" />
-              Infortunato
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded bg-(--color-surface) px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-text-muted) uppercase">
+              {POSITION_LABELS[player.position]}
             </span>
-          ) : null}
-          {showArchetypeChip ? (
-            <span className="ml-1.5 rounded bg-(--color-accent)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-accent) uppercase">
-              Stile: {ARCHETYPE_LABELS[archetype.primary!]}
-            </span>
-          ) : null}
-          {showRumorsChip ? (
-            <span
-              className="ml-1.5 rounded bg-(--color-warning)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-warning) uppercase"
-              title="Girano voci poco lusinghiere sul tuo conto"
-            >
-              Rumors
-            </span>
-          ) : null}
-          {player.trainingFocus ? (
-            <span
-              className="ml-1.5 rounded bg-(--color-accent)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-accent) uppercase"
-              title="Attributo su cui ti stai concentrando in allenamento"
-            >
-              Focus: {ATTRIBUTE_LABELS[player.trainingFocus]}
-            </span>
-          ) : null}
-          {player.playStyles.length > 0 ? (
-            <span
-              className="ml-1.5 rounded bg-(--color-ovr-gold)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-ovr-gold) uppercase"
-              title={player.playStyles
-                .map((id) => PLAY_STYLE_LABELS[id])
-                .join(", ")}
-            >
-              {player.playStyles.length === 1
-                ? PLAY_STYLE_LABELS[player.playStyles[0]]
-                : `${player.playStyles.length} stili di gioco`}
-            </span>
-          ) : null}
-          {clubFit && clubFit !== "neutro" ? (
-            <span
-              className={cn(
-                "ml-1.5 rounded px-1.5 py-0.5 text-[11px] font-semibold tracking-wide uppercase",
-                clubFit === "ottimo"
-                  ? "bg-(--color-success)/15 text-(--color-success)"
-                  : "bg-(--color-error)/15 text-(--color-error)"
-              )}
-              title="Compatibilità tra il tuo stile e il sistema di gioco del club"
-            >
-              Fit tattico: {TACTICAL_FIT_LABELS[clubFit]}
-            </span>
-          ) : null}
-          {player.relations.map((rel) => (
-            <span
-              key={rel.id}
-              className={cn(
-                "ml-1.5 rounded bg-(--color-surface) px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-(--color-text-muted) uppercase",
-                compact && "hidden sm:inline-flex"
-              )}
-              title={`${rel.name} · affinità ${formatAffinity(rel.affinity)}`}
-            >
-              {RELATION_LABELS[rel.id]} {formatAffinity(rel.affinity)}
-            </span>
-          ))}
+            {player.injury ? (
+              <span
+                className="inline-flex items-center gap-1 rounded bg-(--color-error)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide whitespace-nowrap text-(--color-error) uppercase"
+                title={`${player.injury.label} — fuori per ${
+                  player.injury.turnsRemaining
+                } ${player.injury.turnsRemaining === 1 ? "stagione" : "stagioni"}`}
+              >
+                <HeartCrack size={10} aria-hidden="true" />
+                Infortunato
+              </span>
+            ) : null}
+            {showArchetypeChip ? (
+              <span className="rounded bg-(--color-accent)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide whitespace-nowrap text-(--color-accent) uppercase">
+                Stile: {ARCHETYPE_LABELS[archetype.primary!]}
+              </span>
+            ) : null}
+            {showRumorsChip ? (
+              <span
+                className="rounded bg-(--color-warning)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide whitespace-nowrap text-(--color-warning) uppercase"
+                title="Girano voci poco lusinghiere sul tuo conto"
+              >
+                Rumors
+              </span>
+            ) : null}
+            {player.trainingFocus ? (
+              <span
+                className="rounded bg-(--color-accent)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide whitespace-nowrap text-(--color-accent) uppercase"
+                title="Attributo su cui ti stai concentrando in allenamento"
+              >
+                Focus: {ATTRIBUTE_LABELS[player.trainingFocus]}
+              </span>
+            ) : null}
+            {player.playStyles.length > 0 ? (
+              <span
+                className="rounded bg-(--color-ovr-gold)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide whitespace-nowrap text-(--color-ovr-gold) uppercase"
+                title={player.playStyles
+                  .map((id) => PLAY_STYLE_LABELS[id])
+                  .join(", ")}
+              >
+                {player.playStyles.length === 1
+                  ? PLAY_STYLE_LABELS[player.playStyles[0]]
+                  : `${player.playStyles.length} stili di gioco`}
+              </span>
+            ) : null}
+            {clubFit && clubFit !== "neutro" ? (
+              <span
+                className={cn(
+                  "rounded px-1.5 py-0.5 text-[11px] font-semibold tracking-wide whitespace-nowrap uppercase",
+                  clubFit === "ottimo"
+                    ? "bg-(--color-success)/15 text-(--color-success)"
+                    : "bg-(--color-error)/15 text-(--color-error)"
+                )}
+                title="Compatibilità tra il tuo stile e il sistema di gioco del club"
+              >
+                Fit tattico: {TACTICAL_FIT_LABELS[clubFit]}
+              </span>
+            ) : null}
+            {player.relations.map((rel) => (
+              <span
+                key={rel.id}
+                className={cn(
+                  "rounded bg-(--color-surface) px-1.5 py-0.5 text-[11px] font-semibold tracking-wide whitespace-nowrap text-(--color-text-muted) uppercase",
+                  compact && "hidden sm:inline-flex"
+                )}
+                title={`${rel.name} · affinità ${formatAffinity(rel.affinity)}`}
+              >
+                {RELATION_LABELS[rel.id]} {formatAffinity(rel.affinity)}
+              </span>
+            ))}
+          </div>
           <p
             className={cn(
               "font-display truncate leading-tight text-(--color-text)",

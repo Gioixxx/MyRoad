@@ -9,6 +9,13 @@ Snapshot automatici del lavoro in corso, salvati da `save_context.py` su PreComp
 (feature `enforcementHooks`) e ricaricati all'avvio da `session_start.py`. Gestito automaticamente:
 le entry sotto sono sovrascritte per `sessionId` (rolling, ultime ~10). Vedi [[sprint]] per i task attivi.
 
+<!-- session:64b0a062-9884-4b8a-a5c4-7aeed93364f3 -->
+### Requisiti per carriera da allenatore — 2026-08-17
+- **Branch:** main · **Quando:** 2026-08-16→2026-08-17
+- **Ultima richiesta:** push e rilasciamo nuova versione
+- **File toccati:** Carriera/package.json, constants/app-info.ts, memory/sprint.md, memory/MEMORY.md
+- **Comandi:** git; npm; npx; sed; ls; "$env:LOCALAPPDATA/Android/Sdk/build-tools"/*/aapt2.exe; gh
+
 <!-- session:76439fd5-7805-4389-8152-258546c7830a -->
 ### Continuare lo sviluppo della parte allenatore — 2026-08-16
 - **Branch:** main · **Quando:** 2026-08-16→2026-08-16
@@ -69,10 +76,3 @@ le entry sotto sono sovrascritte per `sessionId` (rolling, ultime ~10). Vedi [[s
 - **Ultima richiesta:** voglio che non ci siano scrolbar in nessuna pagina
 - **File toccati:** plans/voglio-che-non-ci-warm-micali.md, app/globals.css, app/layout.tsx, app/page.tsx, career/CareerGame.tsx, career/CareerTable.tsx, career/NationalitySelect.tsx
 - **Comandi:** (npm; pwd; which; (npx; npx
-
-<!-- session:cf5600b0-806c-4c52-a842-a00f621da3de -->
-### Aggiungere menu e musica di sottofondo al gioco — 2026-08-06
-- **Branch:** main · **Quando:** 2026-08-06→2026-08-06
-- **Ultima richiesta:** nella pagina possiamo inserire un menù al momenmto metteri giocatore singolo , multiplayer (in fase di sviluippo) , impostazioni e chiudi. & 'c:\Users\Gioix\Downloads\Passaggio di Spogliatoio (1).mp3'…
-- **File toccati:** lib/audio-settings.ts, lib/audio-settings.test.ts, hooks/useBackgroundMusic.ts, career/MainMenu.tsx, career/SettingsPanel.tsx, career/CareerGame.tsx, CarrieraLauncher/MainForm.cs, memory/decisions.md, memory/tech-debt.md, memory/sprint.md
-- **Comandi:** ls; grep; sed; mkdir; cat; npx; npm; rm; sleep; curl

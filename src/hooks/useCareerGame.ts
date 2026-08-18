@@ -185,7 +185,7 @@ export function useCareerGame(): UseCareerGame {
         newPlayStyles: result.newPlayStyles,
         clubTierChange: result.clubTierChange,
         clubName: result.player.club?.name ?? prev.player.club?.name ?? null,
-        fromLeague: prev.player.club?.competitions.league ?? null,
+        fromLeague: result.clubTierMovementFromLeague,
         toLeague: result.player.club?.competitions.league ?? null,
         crestUrl: result.player.club?.crestUrl ?? prev.player.club?.crestUrl ?? null,
       };

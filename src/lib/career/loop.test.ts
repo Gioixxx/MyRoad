@@ -544,6 +544,27 @@ describe("resolveCycle", () => {
     expect(result.player.club?.competitions.league).toBe("Serie B");
   });
 
+  it("dovrebbe riportare la lega di partenza del club appena firmato, non quella del club lasciato, se cambio club e retrocessione avvengono nello stesso ciclo", () => {
+    // Il giocatore lascia la Sampdoria (Serie B) e firma per una Juventus a prestige 0 (Serie A):
+    // la stessa mossa che, nello stesso ciclo, retrocede la neo-firmata "Juventus" in Serie B —
+    // stesso nome lega di arrivo della Sampdoria appena lasciata. Prima del fix, il testo
+    // "Retrocessione: X → Y" derivava X dal club PRIMA DELL'INTERO CICLO (Sampdoria, Serie B),
+    // producendo "Serie B → Serie B" invece della vera transizione "Serie A → Serie B" del club
+    // appena firmato.
+    const player = playerAt(SAMPDORIA);
+    const option = {
+      id: "transfer-juve",
+      label: "Firma per la Juventus",
+      club: { ...JUVENTUS, prestige: 0 as const },
+      outcomes: [{ weight: 100, effect: {}, resultText: "Firmi un nuovo contratto." }],
+    };
+    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "transfer", option, "normal", () => 0);
+
+    expect(result.clubTierChange).toBe("relegated");
+    expect(result.player.club?.competitions.league).toBe("Serie B");
+    expect(result.clubTierMovementFromLeague).toBe("Serie A");
+  });
+
   it("dovrebbe cambiare la nazionalità del giocatore se l'opzione ha newNationality", () => {
     const player = playerAt();
     const option = {
@@ -619,9 +640,30 @@ describe("resolveCycle — gestione infortuni", () => {
 
     expect(result.newInjury).toEqual({ label: "Distorsione alla caviglia", turnsRemaining: 2, ovrPenalty: 4 });
     expect(result.player.injury?.turnsRemaining).toBe(2);
+    // Lo Storico deve riflettere l'OVR finale (già penalizzato dall'infortunio), non un valore
+    // intermedio pre-infortunio — vedi BUG-01.
     const stintOvr = result.player.clubHistory[result.player.clubHistory.length - 1]!.ovr;
-    expect(result.player.ovr).toBe(stintOvr - 4);
+    expect(stintOvr).toBe(result.player.ovr);
     expect(result.injuryHealed).toBe(false);
+  });
+
+  it("non dovrebbe disallineare lo Storico dall'OVR reale quando crescita OVR e infortunio coincidono nello stesso ciclo (BUG-01)", () => {
+    const player = { ...playerAt(), ovr: 50 };
+    const option = {
+      id: "breakout",
+      label: "Stagione da protagonista",
+      outcomes: [
+        {
+          weight: 100,
+          effect: { injury: { label: "Distorsione alla caviglia", turnsRemaining: 1, ovrPenalty: 7 } },
+          resultText: "Crescita esplosiva, poi lo stop.",
+        },
+      ],
+    };
+    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "lifestyle", option, "normal", () => 0.99);
+
+    const stintOvr = result.player.clubHistory[result.player.clubHistory.length - 1]!.ovr;
+    expect(stintOvr).toBe(result.player.ovr);
   });
 
   it("dovrebbe ripristinare esattamente il malus OVR alla guarigione, senza extra", () => {

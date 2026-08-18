@@ -462,7 +462,7 @@ export function buildHighlightReel(ctx: CycleSatisfactionContext, rng: Rng = Mat
   if (ctx.award) pool.push("Premio individuale: la critica applaude");
   if (ctx.nationalCallup) pool.push("Prima maglia azzurra (o quasi): convocazione ufficiale");
   if (ctx.newInjury) pool.push("Stagione spezzata dall'infortunio");
-  if (ctx.injuryHealed) pool.push("Rientro da manuale dopo il stop forzato");
+  if (ctx.injuryHealed) pool.push("Rientro da manuale dopo lo stop forzato");
   if (ctx.ovrAfter - ctx.ovrBefore >= 4) pool.push("Crescita esplosiva: l'OVR vola");
 
   if (pool.length === 0) {
