@@ -1,7 +1,7 @@
 ---
 type: sprint
 tags: [memory, sprint]
-updated: [2026-08-16]
+updated: [2026-08-19]
 ---
 > Aggiornato da /sprint — sessione 2026-08-06: espansione mondo (12 nuovi paesi, 96 club reali su
 > CONCACAF/CAF/AFC) + nuova meccanica "Giant Killer" (sorpresa di coppa) + strumento diagnostico
@@ -786,6 +786,79 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   ~20 cicli di gioco reale, non accelerabile via localStorage dato che testerebbe proprio lo
   stato React che si vuole verificare) — vedi [[tech-debt]]. Nessun rilascio/bump di versione in
   questo giro.
+
+- [x] **QA automatizzato su 20 carriere + 3 bug corretti (release v0.14.2)** (2026-08-18): su
+  richiesta esplicita dell'utente, lanciati un agente "player" (gioca) + un agente "monitor"
+  (riceve/organizza le segnalazioni) che hanno giocato 20 carriere complete fino al ritiro,
+  alternando Calciatore/Allenatore × desktop/mobile, ritmo Express, su dev server locale. Trovati
+  3 bug reali (nessuno bloccante) più 3 osservazioni minori: **BUG-01** lo Storico mostrava un
+  OVR diverso da quello reale del giocatore quando infortunio e crescita OVR coincidevano nello
+  stesso ciclo (`applyInjuryStatCut` in `loop.ts` non riscriveva l'`ovr` dello stint); **BUG-02**
+  il banner "Retrocessione: X → Y" poteva mostrare la stessa lega su entrambi i lati se cambio
+  club e retrocessione avvenivano nello stesso ciclo (`fromLeague` dedotto dal club pre-ciclo
+  invece che dal club appena firmato — nuovo campo `CycleResult.clubTierMovementFromLeague`);
+  **BUG-03** refuso "il stop" → "lo stop". Diagnosticati con precisione (file:riga) da 3 agenti
+  Explore/Plan paralleli, corretti con fix mirati, coperti da 2 nuovi test (`loop.test.ts`, uno
+  dei quali ha anche smascherato un test preesistente che *codificava* BUG-01 come comportamento
+  atteso), poi **verificati anche dal vivo nel browser** (non solo unit test) forzando gli
+  scenari esatti via `localStorage`/override di `Math.random`. Rifinitura collaterale: i chip del
+  cartellino (`PlayerCard.tsx`) potevano andare a capo a metà parola o traboccare sopra il badge
+  OVR con molti chip attivi insieme — contenitore convertito da `ml-1.5` individuali a
+  `flex flex-wrap gap-1.5`. 597 test verdi (era 595), `tsc` pulito. Rilasciato come **v0.14.2**
+  (`dist/MyRoad.exe`/`dist/MyRoad.apk` rigenerati e verificati, deploy Pages verde). **Nota
+  operativa non di codice**: le prime 2 carriere del playtest hanno pubblicato per errore dati di
+  test (nickname "Rossini"/"Ferreira") sulla classifica globale Supabase di produzione, condivisa
+  con un'altra app dell'utente, prima che venisse installato un blocco delle richieste `fetch`
+  verso `supabase.co` per le carriere successive — richiede pulizia manuale lato utente (SQL
+  Editor/Table Editor Supabase), non risolvibile da codice/chiave anon (vedi [[tech-debt]]).
+
+- [x] **Continuità diretta calciatore → allenatore da CareerSummary (release v0.15.0)** (2026-08-18,
+  sessione successiva): su richiesta esplicita dell'utente ("dobbiamo inserire la possibilità di
+  continuare direttamente dopo la carriera da giocatore"), aggiunto un bottone "Inizia carriera
+  da allenatore" direttamente nella schermata di fine carriera calciatore (`CareerSummary.tsx`),
+  accanto a "Gioca ancora", quando `peakOvr ≥ 80` — finora la continuità (eredita età di ritiro,
+  patrimonio, popolarità, bonus reputazione) era raggiungibile solo entrando manualmente in "Le
+  mie carriere". Verificato con 3 agenti Explore paralleli che il vincolo esplicito dell'utente
+  ("non deve saltare la creazione del personaggio") era già garantito gratis riusando la stessa
+  callback `onCoachCareer` già esistente (porta sempre a `CoachIdentityStep`, lo stesso form di
+  creazione allenatore — precompilato ma editabile — già usato dal percorso via archivio).
+  Modifiche minime: +prop `onContinueAsCoach` su `CareerSummary.tsx` (riusa `provisionalEntry`
+  già calcolata per la Hall of Fame) + wiring in `CareerGame.tsx` — nessuna modifica a
+  `page.tsx`/`bridge.ts`/`CoachCareerGame.tsx`. 597 test invariati (nessuna logica di dominio
+  toccata), `tsc` pulito. **Verificato dal vivo nel browser**: ritiro forzato a OVR 82 → bottone
+  compare → click → step creazione allenatore precompilato con banner di continuità → carriera
+  avviata con reputazione 38 (35 base + 3 bonus da peakOvr, formula esatta) e popolarità
+  ereditata correttamente. Rilasciato come **v0.15.0** insieme ai fix di v0.14.2.
+
+- [x] **Fix falso allarme "carriera di test" dopo il rilascio** (2026-08-18, stessa sessione,
+  nessuna modifica di codice): l'utente ha segnalato che avviando una carriera allenatore (sia
+  da continuità sia da "Allenatore" nuovo dal menu) compariva sempre una "carriera di test".
+  Diagnosticato ispezionando direttamente il browser reale dell'utente (Claude in Chrome opera
+  sullo stesso profilo Chrome dell'utente, non uno isolato): non un bug di codice, ma un
+  `carriera:coach-save` reale rimasto in `localStorage` da una sessione di test precedente
+  (cognome "Test", 45 anni, mai conclusa) — il gioco riprende sempre una carriera allenatore in
+  corso se ce n'è una, per design, stesso comportamento già esistente per il calciatore. Rimosso
+  il salvataggio residuo dal browser reale dell'utente, riverificato che "Allenatore" dal menu
+  parte ora pulito. Vedi [[tech-debt]] per il gap strutturale sottostante (nessun modo per
+  l'utente di abbandonare esplicitamente una carriera allenatore in corso dall'UI).
+
+- [ ] **Piano "Due classifiche" — Fasi 1-3 implementate, 4/5/6 da fare in una sessione futura**
+  (2026-08-18/19): campionato posizionale condiviso (`lib/shared/league-season.ts`) + wiring
+  allenatore + wiring calciatore completati e verificati (610/610 test, `tsc` pulito, harness
+  senza crash) — vedi [[decisions]] per il dettaglio completo (4 criticità trovate e corrette nel
+  piano prima di implementare, 2 bug di raddoppio in cadenza per-stagione trovati e corretti
+  proattivamente nel motore allenatore, 3 bug reali trovati implementando quello calciatore
+  — `cycleAgeFrom`, injury stat cut multi-stagione, `summarizeClubHistory` stintCount — e una
+  decisione presa in corsa: niente accesso continentale "guadagnato per stagione", troppo
+  invasivo). **Nessun commit, nessun rilascio** — working tree con ~33 file toccati. Piano
+  completo (fuori dal repo): `C:\Users\Gioix\.cursor\plans\due_classifiche_8e0866c3.plan.md`.
+  - [ ] Fase 4 — ritaratura con `npm run simulate`/`npm run coach-simulate`: numeri attualmente
+    fuori bersaglio per costruzione (trofeo di club calciatore 90.5%, reputazione di picco
+    allenatore 64.2, promozioni/retrocessioni quasi a zero) — vedi [[tech-debt]].
+  - [ ] Fase 5 — `supabase/career-ranks.sql` (nuova tabella, upsert nativo, trigger nickname
+    riagganciato, vista con `security_invoker`) + client/UI classifica a punteggio + publish
+    allenatore (oggi assente) — non ancora iniziata.
+  - [ ] Fase 6 — esecuzione SQL live (azione manuale utente) + merge/release.
 
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo

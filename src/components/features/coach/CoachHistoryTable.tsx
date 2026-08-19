@@ -1,5 +1,5 @@
 import { Award as AwardIcon, Trophy } from "lucide-react";
-import type { Coach, CupRun, LeagueFinish } from "@/types/coach";
+import type { Coach, CoachStint, CupRun } from "@/types/coach";
 import { cn } from "@/lib/utils";
 import { ClubCrest } from "@/components/features/career/ClubCrest";
 import { OvrBadge } from "@/components/features/career/OvrBadge";
@@ -12,13 +12,15 @@ interface CoachHistoryTableProps {
   compact?: boolean;
 }
 
-const LEAGUE_FINISH_LABELS: Record<LeagueFinish, string> = {
-  relegated: "Retrocesso",
-  "relegation-battle": "Lotta salvezza",
-  "mid-table": "Metà classifica",
-  "continental-qualification": "Qualificazione europea",
-  title: "Campione",
-};
+/** Piazzamento reale ("12° · Serie A") invece dell'etichetta a 5 valori derivata
+ * (`LeagueFinish`/`continental-qualification` confonderebbe una promozione dalla Championship con
+ * una vera qualificazione europea, vedi piano "Due classifiche", criticità 2) — save precedenti
+ * al wiring per-stagione non hanno `outcome.position`, niente migrazione inventata: si mostra solo
+ * il nome del club per quelle righe. */
+function seasonFinishLabel(stint: CoachStint): string {
+  if (stint.outcome.position === undefined) return stint.club.competitions.league;
+  return `${stint.outcome.position}° · ${stint.club.competitions.league}`;
+}
 
 const CUP_RUN_LABELS: Record<CupRun, string> = {
   none: "—",
@@ -89,7 +91,7 @@ export function CoachHistoryTable({ coach, pendingLabel, compact = false }: Coac
                 <OvrBadge ovr={stint.reputation} size="sm" className="ml-auto shrink-0" />
               </div>
               <p className="pl-6 text-xs text-(--color-text-muted)">
-                {LEAGUE_FINISH_LABELS[stint.outcome.leagueFinish]} · {CUP_RUN_LABELS[stint.outcome.cupRun]}
+                {seasonFinishLabel(stint)} · {CUP_RUN_LABELS[stint.outcome.cupRun]}
               </p>
             </li>
           );
@@ -136,7 +138,7 @@ export function CoachHistoryTable({ coach, pendingLabel, compact = false }: Coac
                 <td className="px-2 py-1.5 text-right">
                   <OvrBadge ovr={stint.reputation} size="sm" className="ml-auto" />
                 </td>
-                <td className="px-2 py-1.5 text-(--color-text)">{LEAGUE_FINISH_LABELS[stint.outcome.leagueFinish]}</td>
+                <td className="px-2 py-1.5 text-(--color-text)">{seasonFinishLabel(stint)}</td>
                 <td className="px-2 py-1.5 text-(--color-text)">{CUP_RUN_LABELS[stint.outcome.cupRun]}</td>
               </tr>
             );

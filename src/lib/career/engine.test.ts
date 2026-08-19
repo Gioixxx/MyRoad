@@ -144,14 +144,20 @@ describe("advanceSeasons", () => {
     expect(advanced.career.apps).toBeGreaterThan(0);
   });
 
-  it("dovrebbe aggiungere una riga a clubHistory per ogni ciclo, senza accorpare i cicli precedenti allo stesso club", () => {
+  it("dovrebbe aggiungere una riga a clubHistory per stagione (non per ciclo), con cycleId distinto tra un ciclo e l'altro", () => {
     const player = signWithClub(createPlayer(IDENTITY), TEST_CLUB);
     const afterFirstCycle = advanceSeasons(player, 2, NO_NOISE_RNG);
     const afterSecondCycle = advanceSeasons(afterFirstCycle, 2, NO_NOISE_RNG);
 
-    expect(afterSecondCycle.clubHistory).toHaveLength(2);
+    expect(afterFirstCycle.clubHistory).toHaveLength(2);
+    expect(afterSecondCycle.clubHistory).toHaveLength(4);
     expect(afterSecondCycle.clubHistory[0].ageFrom).toBe(STARTING_AGE);
-    expect(afterSecondCycle.clubHistory[1].ageFrom).toBe(STARTING_AGE + 2);
+    expect(afterSecondCycle.clubHistory[2].ageFrom).toBe(STARTING_AGE + 2);
+    expect(afterSecondCycle.clubHistory[0].cycleId).toBe(1);
+    expect(afterSecondCycle.clubHistory[1].cycleId).toBe(1);
+    expect(afterSecondCycle.clubHistory[2].cycleId).toBe(2);
+    expect(afterSecondCycle.clubHistory[3].cycleId).toBe(2);
+    expect(afterSecondCycle.cyclesPlayed).toBe(2);
   });
 });
 

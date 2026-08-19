@@ -1,11 +1,14 @@
 import type { Club, ClubStint, Player, StatLine } from "@/types/career";
+import { cyclesAtClub } from "@/lib/shared/club-tenure";
 
 export interface ClubSummary {
   club: Club;
   ageFrom: number;
   ageTo: number;
   stats: StatLine;
-  /** Quanti cicli separati (righe di clubHistory) sono stati accorpati per questo club. */
+  /** Quanti cicli (non stagioni) separati sono stati passati a questo club — dal wiring "Due
+   * classifiche" `clubHistory` ha una riga per stagione, quindi un solo ciclo Express (3
+   * stagioni consecutive nello stesso club) non deve contare come "×3" spell separati. */
   stintCount: number;
 }
 
@@ -37,17 +40,20 @@ export function summarizeClubHistory(clubHistory: ClubStint[]): ClubSummary[] {
     if (existing) {
       existing.stats = sumStats(existing.stats, stint.stats);
       existing.ageTo = Math.max(existing.ageTo, stint.ageTo);
-      existing.stintCount += 1;
     } else {
       byClub.set(stint.club.id, {
         club: stint.club,
         ageFrom: stint.ageFrom,
         ageTo: stint.ageTo,
         stats: { ...stint.stats },
-        stintCount: 1,
+        stintCount: 0, // ricalcolato sotto per ciclo, non per riga
       });
       order.push(stint.club.id);
     }
+  }
+
+  for (const id of order) {
+    byClub.get(id)!.stintCount = cyclesAtClub(clubHistory, id);
   }
 
   return order.map((id) => byClub.get(id)!);

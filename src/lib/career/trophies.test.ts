@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getClub } from "@/data/clubs";
-import { awardChance, clubTrophyChance, nationalTournamentWinChance, rollAward, rollClubTrophies, rollNationalTrophies } from "./trophies";
+import { awardChance, clubTrophyChance, nationalTournamentWinChance, rollAward, rollCupTrophy, rollNationalTrophies } from "./trophies";
 
 const JUVENTUS = getClub("juventus")!; // prestige 3, competitions: Serie A / Coppa Italia / Champions League
 
@@ -18,23 +18,18 @@ describe("clubTrophyChance", () => {
   });
 });
 
-describe("rollClubTrophies", () => {
-  it("dovrebbe assegnare campionato e coppa se il roll è favorevole", () => {
-    const trophies = rollClubTrophies(JUVENTUS, 90, 25, () => 0);
-    expect(trophies).toHaveLength(2);
-    expect(trophies[0].competition).toBe("Serie A");
-    expect(trophies[1].competition).toBe("Coppa Italia");
+describe("rollCupTrophy", () => {
+  it("vince la coppa se il roll è favorevole", () => {
+    expect(rollCupTrophy(JUVENTUS, 90, () => 0)).toBe(true);
   });
 
-  it("non dovrebbe assegnare nulla se il roll è sfavorevole", () => {
-    const trophies = rollClubTrophies(JUVENTUS, 90, 25, () => 0.999);
-    expect(trophies).toHaveLength(0);
+  it("non vince nulla se il roll è sfavorevole", () => {
+    expect(rollCupTrophy(JUVENTUS, 90, () => 0.999)).toBe(false);
   });
 
-  it("non dovrebbe assegnare il campionato se skipLeague è true", () => {
-    const trophies = rollClubTrophies(JUVENTUS, 90, 25, () => 0, 0, true);
-    expect(trophies.some((t) => t.competition === "Serie A")).toBe(false);
-    expect(trophies.some((t) => t.competition === "Coppa Italia")).toBe(true);
+  it("è sempre false per un club senza coppa nazionale", () => {
+    const clubWithoutCup = { ...JUVENTUS, competitions: { ...JUVENTUS.competitions, cup: undefined } };
+    expect(rollCupTrophy(clubWithoutCup, 90, () => 0)).toBe(false);
   });
 });
 

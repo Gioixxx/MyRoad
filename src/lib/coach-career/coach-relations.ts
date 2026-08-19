@@ -1,6 +1,7 @@
 import type { Club } from "@/types/career";
 import type { Coach, CoachRelation, CoachRelationId } from "@/types/coach";
 import { clampAffinity, pickName } from "@/lib/career/relations";
+import { cyclesAtClub } from "@/lib/shared/club-tenure";
 
 export const COACH_RELATION_LABELS: Record<CoachRelationId, string> = {
   board: "Società",
@@ -57,8 +58,8 @@ export function maybeSpawnCoachRival(coach: Coach): Coach {
   if (getCoachRelation(coach, "rival")) return coach;
   if (!coach.club) return coach;
   const club = coach.club;
-  const cyclesAtClub = coach.clubHistory.filter((stint) => stint.club.id === club.id).length;
-  if (coach.reputation < RIVAL_MIN_REPUTATION && cyclesAtClub < RIVAL_MIN_CYCLES_AT_CLUB) return coach;
+  const tenureCycles = cyclesAtClub(coach.clubHistory, club.id);
+  if (coach.reputation < RIVAL_MIN_REPUTATION && tenureCycles < RIVAL_MIN_CYCLES_AT_CLUB) return coach;
   return {
     ...coach,
     relations: upsertCoachRelation(coach.relations, {

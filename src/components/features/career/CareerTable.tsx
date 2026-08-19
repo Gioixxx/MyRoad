@@ -1,5 +1,5 @@
 import { Award as AwardIcon, Trophy } from "lucide-react";
-import type { Player } from "@/types/career";
+import type { ClubStint, Player } from "@/types/career";
 import { cn } from "@/lib/utils";
 import { ClubCrest } from "./ClubCrest";
 import { OvrBadge } from "./OvrBadge";
@@ -10,6 +10,14 @@ interface CareerTableProps {
   pendingLabel?: string;
   /** Forza sempre il layout a lista (mobile), anche su schermi larghi — per colonne strette. */
   compact?: boolean;
+}
+
+/** Piazzamento reale ("12° · Serie A"), mirror di `CoachHistoryTable.tsx::seasonFinishLabel` —
+ * le stint pre-migrazione al wiring "Due classifiche" non hanno `leaguePosition`, niente
+ * migrazione inventata: si mostra solo il nome del campionato per quelle righe. */
+function seasonFinishLabel(stint: ClubStint): string {
+  if (stint.leaguePosition === undefined) return stint.club.competitions.league;
+  return `${stint.leaguePosition}° · ${stint.club.competitions.league}`;
 }
 
 function TrophyChip({ count }: { count: number }) {
@@ -84,6 +92,7 @@ export function CareerTable({ player, pendingLabel, compact = false }: CareerTab
                 <OvrBadge ovr={stint.ovr} size="sm" className="ml-auto shrink-0" />
               </div>
               <p className="pl-6 text-xs text-(--color-text-muted)">
+                {seasonFinishLabel(stint)} ·{" "}
                 {isGoalkeeper
                   ? `${stint.stats.apps} pres. · ${stint.stats.goalsAgainst ?? 0} gol subiti · ${stint.stats.cleanSheets ?? 0} clean sheet`
                   : `${stint.stats.apps} pres. · ${stint.stats.goals} gol · ${stint.stats.assists} assist`}
@@ -138,6 +147,7 @@ export function CareerTable({ player, pendingLabel, compact = false }: CareerTab
                     <TrophyChip count={trophyCount} />
                     <AwardChip count={awardCount} />
                   </div>
+                  <div className="truncate text-xs text-(--color-text-muted)">{seasonFinishLabel(stint)}</div>
                 </td>
                 <td className="px-2 py-1.5 text-right">
                   <OvrBadge ovr={stint.ovr} size="sm" className="ml-auto" />

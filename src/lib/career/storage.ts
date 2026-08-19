@@ -8,7 +8,9 @@ import { createAttributesFromOvr, peaksFromAttributes } from "./attributes";
 import { ensureCoreRelations } from "./relations";
 
 const STORAGE_KEY = "carriera:save";
-const STORAGE_VERSION = 14;
+/** 15 dal wiring "Due classifiche" (`Player.cyclesPlayed`, campi opzionali su `ClubStint` —
+ * vedi `migratePlayerV15`). */
+const STORAGE_VERSION = 15;
 
 export interface SavedGame {
   version: number;
@@ -123,10 +125,23 @@ function migratePlayerV13(raw: Player): Player {
 }
 
 function migratePlayerV14(raw: Player): Player {
-  return ensureCoreRelations({
+  return migratePlayerV15(
+    ensureCoreRelations({
+      ...raw,
+      relations: raw.relations ?? [],
+    }),
+  );
+}
+
+/** Arricchisce un save v14 con `cyclesPlayed` (dal wiring "Due classifiche") — le stint esistenti
+ * in `clubHistory` restano senza `leaguePosition`/`leagueSize`/`zone`/`cupWon`/`cycleId`/
+ * `clubTierChange` (campi opzionali additivi, niente da ricostruire: erano cicli, non stagioni,
+ * per definizione — vedi `lib/shared/club-tenure.ts`). */
+function migratePlayerV15(raw: Player): Player {
+  return {
     ...raw,
-    relations: raw.relations ?? [],
-  });
+    cyclesPlayed: raw.cyclesPlayed ?? 0,
+  };
 }
 
 export function saveGame(save: Omit<SavedGame, "version">): void {
@@ -180,6 +195,9 @@ export function loadGame(): SavedGame | null {
     }
     if (parsed.version === 13) {
       return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV14(parsed.player) };
+    }
+    if (parsed.version === 14) {
+      return { ...parsed, version: STORAGE_VERSION, player: migratePlayerV15(parsed.player) };
     }
     if (parsed.version !== STORAGE_VERSION) return null;
     return parsed;

@@ -68,10 +68,16 @@ const LEAGUE_FINISH_SHORT_LABELS: Record<LeagueFinish, string> = {
   title: "Corsa al titolo",
 };
 
+/** Stesso distinguo di `objectiveLabelFor` in `coach-satisfaction.ts`: a rank 3 fuori dal tier 1
+ * non c'è nessuna coppa europea in palio, solo la promozione. */
+const SHORT_PROMOTION_LABEL = "Corsa promozione";
+
 /** Anticipazione (solo UI) del livello di pressione atteso a un club, senza esporre la formula. */
 function offerHint(club: Club, reputation: number): string {
   const rank = clamp(Math.round(expectedLeagueFinishRank(club.prestige, reputation)), 0, 4);
-  return `Ci si aspetta: ${LEAGUE_FINISH_SHORT_LABELS[LEAGUE_FINISH_ORDER[rank]]}`;
+  const finish = LEAGUE_FINISH_ORDER[rank];
+  const label = finish === "continental-qualification" && club.tier > 1 ? SHORT_PROMOTION_LABEL : LEAGUE_FINISH_SHORT_LABELS[finish];
+  return `Ci si aspetta: ${label}`;
 }
 
 const JOB_SEARCH_OFFERS = 3;

@@ -1,3 +1,5 @@
+import type { LeagueZone } from "@/lib/shared/league-season";
+
 export type Position =
   | "GK"
   | "CB"
@@ -83,8 +85,22 @@ export interface ClubStint {
   ageTo: number;
   type: "permanent" | "loan";
   stats: StatLine;
-  /** OVR del giocatore alla fine di questo ciclo (per la riga storica della career table). */
+  /** OVR del giocatore alla fine di questa stagione (per la riga storica della career table). */
   ovr: number;
+  /** Piazzamento di campionato tirato con `lib/shared/league-season.ts` — campi opzionali
+   * additivi, assenti sulle stint pre-migrazione (dove non esisteva un campionato posizionale). */
+  leaguePosition?: number;
+  leagueSize?: number;
+  /** Zona del piazzamento — fonte di verità per copy/UI, `leaguePosition`/`leagueSize` da soli
+   * non bastano a ricostruirla (servirebbero anche gli spot per zona, vedi `LeagueRules`). */
+  zone?: LeagueZone;
+  /** Coppa nazionale vinta in questa stagione specifica (roll indipendente dal piazzamento). */
+  cupWon?: boolean;
+  /** Raggruppa le stint create nello stesso ciclo (1 stagione Intense, 2 Normal, 3 Express) —
+   * stesso ruolo di `CoachStint.cycleId`, vedi `lib/shared/club-tenure.ts::cyclesAtClub`. */
+  cycleId?: number;
+  /** Movimento di categoria applicato in questa stagione specifica. */
+  clubTierChange?: "promoted" | "relegated" | null;
 }
 
 export interface Trophy {
@@ -251,6 +267,9 @@ export interface Player extends PlayerIdentity {
   releaseClauseEur: number;
   /** Relazioni NPC leggere (mister, agente, rivale) — max 3. */
   relations: Relation[];
+  /** Contatore di cicli (non stagioni) — usato solo come sorgente di `ClubStint.cycleId`,
+   * opzionale additivo, assente/`undefined` su un save pre-migrazione (equivale a 0). */
+  cyclesPlayed?: number;
 }
 
 /** Tratto distintivo sbloccabile quando un attributo supera una soglia — dà un bonus concreto

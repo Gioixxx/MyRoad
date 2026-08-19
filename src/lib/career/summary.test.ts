@@ -41,6 +41,28 @@ describe("summarizeClubHistory", () => {
     expect(result[0].ageTo).toBe(22);
     expect(result[0].stats).toEqual({ apps: 25, goals: 6, assists: 4 });
   });
+
+  it("non conta come cicli separati più stagioni consecutive dello stesso ciclo (cycleId condiviso)", () => {
+    // 3 stint (una per stagione, ciclo Express) con lo stesso cycleId: un solo vero "ciclo" a
+    // questo club, non "×3" spell separati — vedi piano "Due classifiche", criticità 1.
+    const history = [
+      stint({ ageFrom: 16, ageTo: 17, cycleId: 1 }),
+      stint({ ageFrom: 17, ageTo: 18, cycleId: 1 }),
+      stint({ ageFrom: 18, ageTo: 19, cycleId: 1 }),
+    ];
+    const result = summarizeClubHistory(history);
+    expect(result).toHaveLength(1);
+    expect(result[0].stintCount).toBe(1);
+  });
+
+  it("conta cicli distinti allo stesso club anche con cycleId diversi", () => {
+    const history = [
+      stint({ ageFrom: 16, ageTo: 18, cycleId: 1 }),
+      stint({ ageFrom: 20, ageTo: 22, cycleId: 2 }),
+    ];
+    const result = summarizeClubHistory(history);
+    expect(result[0].stintCount).toBe(2);
+  });
 });
 
 describe("peakOvr", () => {

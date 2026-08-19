@@ -32,27 +32,17 @@ export function clubTrophyChance(prestige: number, ovr: number): number {
 /** Probabilità della coppa nazionale relativa a quella del campionato — meno prestigiosa, quindi più rara. */
 const CUP_TROPHY_RELATIVE_CHANCE = 0.7;
 
-/** Estrae i trofei di campionato/coppa nazionale vinti in un ciclo al club corrente.
+/**
+ * Tira la coppa nazionale di **una** stagione — il trofeo di campionato non passa più da qui (lo
+ * decide `zoneForPosition`/`applySeasonToClub` del motore condiviso, vedi piano "Due
+ * classifiche"), resta solo la coppa, roll indipendente e ancora probabilistico.
  * `trophyChanceBonus` (default 0, punti percentuali additivi) è pensato per il playstyle
- * "Muro difensivo". */
-export function rollClubTrophies(
-  club: Club,
-  ovr: number,
-  age: number,
-  rng: Rng = Math.random,
-  trophyChanceBonus = 0,
-  skipLeague = false,
-): Trophy[] {
-  const trophies: Trophy[] = [];
+ * "Muro difensivo".
+ */
+export function rollCupTrophy(club: Club, ovr: number, rng: Rng = Math.random, trophyChanceBonus = 0): boolean {
+  if (!club.competitions.cup) return false;
   const chance = clamp(clubTrophyChance(club.prestige, ovr) + trophyChanceBonus, 0, 1);
-
-  if (!skipLeague && rng() < chance) {
-    trophies.push({ competition: club.competitions.league, club, age });
-  }
-  if (club.competitions.cup && rng() < chance * CUP_TROPHY_RELATIVE_CHANCE) {
-    trophies.push({ competition: club.competitions.cup, club, age });
-  }
-  return trophies;
+  return rng() < chance * CUP_TROPHY_RELATIVE_CHANCE;
 }
 
 const NATIONAL_TOURNAMENT_OVR_BASELINE = 80;

@@ -1,7 +1,7 @@
 ---
 type: tech-debt
 tags: [memory, tech-debt]
-updated: [2026-08-16]
+updated: [2026-08-19]
 ---
 
 # Tech Debt
@@ -334,12 +334,118 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
   seconda carriera parta da reputazione 35 (nessun bonus) invece di ~40+ e non mostri il banner
   "Continui la carriera di...".
 
+### Nessun modo per abbandonare/cancellare esplicitamente una carriera allenatore in corso dall'UI
+- **Priorità:** Media
+- **Area:** `src/hooks/useCoachCareerGame.ts`, `src/components/features/coach/CoachCareerGame.tsx`
+- **Data:** 2026-08-18
+- **Descrizione:** il gioco riprende sempre una carriera allenatore non conclusa se ne trova una
+  in `localStorage` (`carriera:coach-save`), per design — stesso comportamento già esistente per
+  il calciatore (`carriera:save`). Non esiste però, in nessuno dei due casi, un modo dall'UI per
+  l'utente di abbandonare/cancellare esplicitamente una carriera in corso e iniziarne una nuova
+  senza prima ritirarsi — l'unico modo trovato in questa sessione per farlo è cancellare la
+  chiave `localStorage` a mano via devtools.
+- **Perché rimandato:** non ancora affrontato, scoperto come effetto collaterale di una
+  segnalazione utente (vedi sotto), non di una sessione dedicata a questo gap.
+- **Impatto:** reale, non solo teorico — ha causato oggi un fraintendimento concreto: l'utente ha
+  segnalato "spunta una carriera di test" dopo aver cliccato sia il nuovo bottone di continuità
+  diretta sia "Allenatore" dal menu come nuova, perché un vecchio `coach-save` con cognome "Test"
+  (mai concluso, lasciato da una sessione di verifica precedente) veniva sempre ripreso al posto
+  di mostrare lo step di creazione. Diagnosticato e risolto rimuovendo manualmente la chiave dal
+  browser reale dell'utente — ma il gap strutturale (nessun modo lato UI di uscirne) resta.
+- **Risoluzione suggerita:** aggiungere un'azione esplicita "Abbandona carriera"/"Nuova carriera"
+  raggiungibile dal menu anche quando c'è un salvataggio allenatore/calciatore in corso non
+  ritirato (con conferma, dato che è distruttiva) — stesso bisogno probabile su entrambi i domini
+  (calciatore e allenatore), da valutare se risolverli insieme.
+
+### Nessun blocco/feature-flag per disabilitare la pubblicazione in classifica durante sviluppo/test locale
+- **Priorità:** Media
+- **Area:** `src/lib/leaderboard/client.ts`, flusso di pubblicazione automatica in `CareerGame.tsx`
+- **Data:** 2026-08-18
+- **Descrizione:** la pubblicazione del punteggio in classifica globale (Supabase) è automatica
+  al ritiro, senza alcun modo integrato nell'app (env var, flag di build, toggle Impostazioni) di
+  disattivarla durante sviluppo/test locale — l'unica mitigazione trovata in questa sessione è un
+  override runtime manuale di `window.fetch` iniettato via devtools/`javascript_tool`, che va
+  reinstallato ad ogni reload e va ricordato esplicitamente ogni volta.
+- **Perché rimandato:** non affrontato prima perché finora il testing in-browser via agenti non
+  era una pratica ricorrente nel progetto.
+- **Impatto:** reale — ha causato **due episodi distinti** in questa sessione di dati di test
+  pubblicati per errore sulla classifica di produzione condivisa con un'altra app dell'utente
+  (nickname "Rossini"/"Ferreira" durante il playtest QA da 20 carriere; verosimilmente anche
+  "QAVerifyBugfix" durante la verifica manuale dei 3 bug), tutti richiedenti pulizia manuale SQL
+  lato utente perché la chiave anon usata dal client non ha permessi di `DELETE`.
+- **Risoluzione suggerita:** un modo semplice e a basso rischio — es. `NEXT_PUBLIC_DISABLE_LEADERBOARD_PUBLISH`
+  letto da `isLeaderboardConfigured()`/dal punto di pubblicazione in `CareerGame.tsx`, attivo solo
+  in build di sviluppo (`npm run dev`) o dietro un flag esplicito — così un agente/sviluppatore
+  che testa in locale non debba ricordarsi di installare un override runtime ogni volta.
+
+### Duplicazione JSX del bottone "Inizia carriera da allenatore" tra CareerSummary e CareerArchive
+- **Priorità:** Bassa
+- **Area:** `src/components/features/career/CareerSummary.tsx`, `CareerArchive.tsx`
+- **Data:** 2026-08-18
+- **Descrizione:** dopo l'aggiunta della continuità diretta (vedi [[sprint]], release v0.15.0), lo
+  stesso identico blocco JSX (bottone ghost + icona `ClipboardList` + copy "Inizia carriera da
+  allenatore" + condizione `isEligibleForCoachContinuity`) esiste ora duplicato in due file
+  invece che estratto in un componente condiviso.
+- **Perché rimandato:** scelta deliberata in fase di piano per minimizzare il rischio (due
+  modifiche isolate, facilmente revisionabili) rispetto a introdurre un'astrazione nuova per due
+  soli call site.
+- **Impatto:** minimo — se in futuro cambia copy/stile del bottone andrà aggiornato in due punti
+  invece di uno.
+- **Risoluzione suggerita:** se emerge un terzo punto d'uso, estrarre un componente
+  `ContinueAsCoachButton` condiviso; con due soli call site non è ancora giustificato.
+
+### Nessuna persistenza "ultima identità" per l'allenatore
+- **Priorità:** Bassa
+- **Area:** `src/components/features/coach/CoachCareerGame.tsx` (`CoachIdentityStep`)
+- **Data:** 2026-08-18
+- **Descrizione:** il calciatore precompila cognome/piede/nazionalità/ruolo dall'ultima carriera
+  iniziata (`src/lib/last-identity.ts`, `saveLastIdentity`/`loadLastIdentity`) — l'allenatore non
+  ha un equivalente: ogni volta che si inizia una carriera allenatore "da zero" (senza
+  continuità), il form (`CoachIdentityStep`, inline in `CoachCareerGame.tsx`) parte sempre vuoto.
+- **Perché rimandato:** scoperto durante l'esplorazione per la feature di continuità diretta, non
+  richiesto esplicitamente dall'utente in questa sessione.
+- **Impatto:** minimo — solo una piccola frizione ripetuta per chi gioca più carriere allenatore
+  di fila senza continuità.
+- **Risoluzione suggerita:** se richiesto, replicare lo stesso pattern di `last-identity.ts` per
+  `CoachIdentity` (cognome/nazionalità, non il sistema tattico che ha senso vari ogni volta).
+
+### Piano "Due classifiche": campionato posizionale non ritarato, non committato, non verificato nel browser
+- **Priorità:** Alta
+- **Area:** `lib/shared/league-season.ts`, `lib/career/*`, `lib/coach-career/*`, working tree
+- **Data:** 2026-08-19
+- **Descrizione:** Fasi 1-3 del piano (motore condiviso + wiring dei due motori) implementate e
+  verificate SOLO via test automatici/harness — vedi [[decisions]] per il dettaglio completo.
+  Restano tre gap distinti prima di poter proseguire: (1) i numeri del sistema posizionale sono
+  chiaramente fuori bersaglio (trofeo di club calciatore 90.5%, mai misurato sopra ~85% prima
+  d'ora; reputazione di picco allenatore 64.2 contro un target precedente di 43.5; promozioni/
+  retrocessioni quasi a zero in entrambi i motori) — è il lavoro esplicito della Fase 4 del
+  piano, non ancora iniziata; (2) **nessuna carriera giocata a mano nel browser** — l'intera
+  superficie nuova (colonna posizione in `CareerTable.tsx`/`CoachHistoryTable.tsx`, banner
+  promozione/retrocessione, brief societario allenatore con la nuova distinzione promozione/
+  Europa) non è mai stata vista renderizzata; (3) **~33 file modificati/nuovi/rimossi nel working
+  tree, nessun commit** — un `git status`/`git diff` prima di qualunque comando distruttivo è
+  d'obbligo finché questo lavoro non viene committato.
+- **Perché rimandato:** l'utente ha chiesto esplicitamente di fermarsi dopo la Fase 3 e rimandare
+  Fase 4/5/6 a una sessione futura.
+- **Impatto:** alto — questo è un cambiamento strutturale al motore di gioco di entrambe le
+  carriere (non un fix isolato), il rischio di regressione silenziosa è più alto della norma per
+  questo progetto finché non passa da una verifica visiva reale.
+- **Risoluzione suggerita:** prima di riprendere, leggere [[decisions]] (voce "Piano 'Due
+  classifiche'...") e il piano completo (`C:\Users\Gioix\.cursor\plans\due_classifiche_8e0866c3.plan.md`),
+  poi Fase 4 (ritaratura via harness, con target numerici concordati con l'utente prima di
+  cambiare le costanti) e un giro di playtest reale nel browser prima di considerare le Fasi 1-3
+  chiuse, non solo "testate".
+
 ## Priorità
-- **Alta:** —
-- **Media:** pass di game-feel v0.11.0 non verificato nel browser (vedi sopra)
+- **Alta:** piano "Due classifiche" non ritarato/non committato/non verificato nel browser (vedi
+  sopra)
+- **Media:** pass di game-feel v0.11.0 non verificato nel browser; nessun modo per abbandonare
+  una carriera allenatore in corso dall'UI; nessun blocco/feature-flag per la pubblicazione in
+  classifica durante test locale (vedi sopra)
 - **Bassa:** pattern `min-h-0` non condizionato ricorrente; classifica globale non verificata
   dall'eseguibile desktop; "Nuova carriera" allenatore su carriera continuity-seedata non
-  verificato dal vivo (vedi sopra)
+  verificato dal vivo; duplicazione bottone continuità allenatore; nessuna persistenza ultima
+  identità allenatore (vedi sopra)
 
 ## Archiviato
 - **Password/blocco proseguimento modalità Allenatore (v0.13.0) non verificati nel browser** —

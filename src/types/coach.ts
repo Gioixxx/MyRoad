@@ -9,6 +9,7 @@ import type {
   Wallet,
 } from "@/types/career";
 import type { TacticalSystem } from "@/lib/career/tactics";
+import type { LeagueZone } from "@/lib/shared/league-season";
 
 export interface CoachIdentity {
   lastName: string;
@@ -27,7 +28,16 @@ export type CupRun = "none" | "quarterfinal" | "semifinal" | "final" | "won";
 export type ContinentalRun = "none" | "group-stage" | "knockout" | "semifinal" | "final" | "won";
 
 export interface CoachSeasonOutcome {
+  /** Etichetta derivata dalla zona — **solo** per la matematica di reputazione/boardConfidence
+   * (rank 0-4 via `LEAGUE_FINISH_RANK`), mai come sorgente di copy: `continental` e `promotion`
+   * condividono lo stesso rank ma sono zone narrativamente diverse, vedi `zone`. */
   leagueFinish: LeagueFinish;
+  /** Zona reale del piazzamento — fonte di verità per copy/UI (vedi piano "Due classifiche",
+   * criticità 2: non leggere `leagueFinish` per testo utente). */
+  zone: LeagueZone;
+  /** Piazzamento 1..leagueSize tirato da `rollLeaguePosition`. */
+  position: number;
+  leagueSize: number;
   cupRun: CupRun;
   continentalRun?: ContinentalRun;
 }
@@ -37,8 +47,15 @@ export interface CoachStint {
   ageFrom: number;
   ageTo: number;
   outcome: CoachSeasonOutcome;
-  /** Reputazione dell'allenatore alla fine di questo ciclo (per la riga storica). */
+  /** Reputazione dell'allenatore alla fine di questa stagione (per la riga storica). */
   reputation: number;
+  /** Raggruppa le stint create nello stesso ciclo (1 stagione Intense, 2 Normal, 3 Express) —
+   * campo opzionale additivo, assente sulle stint pre-migrazione dove una stint = un ciclo per
+   * definizione. Vedi `lib/shared/club-tenure.ts::cyclesAtClub` per come consumarlo. */
+  cycleId?: number;
+  /** Movimento di categoria applicato **in questa stagione specifica** (non a fine ciclo) — una
+   * retrocessione a metà di un ciclo Express fa giocare le stagioni successive nel tier sotto. */
+  clubTierChange?: "promoted" | "relegated" | null;
 }
 
 export type CoachRelationId = "board" | "press" | "captain" | "rival";
@@ -118,6 +135,9 @@ export interface Coach extends CoachIdentity {
   objectiveKindsCelebrated?: CoachCycleObjectiveKind[];
   records: CoachPersonalRecords;
   relations: CoachRelation[];
+  /** Contatore di cicli (non stagioni) — usato solo come sorgente di `CoachStint.cycleId`,
+   * opzionale additivo, assente/`undefined` su un save pre-migrazione (equivale a 0). */
+  cyclesPlayed?: number;
 }
 
 /** Effetto applicabile all'allenatore da un outcome di decisione. */

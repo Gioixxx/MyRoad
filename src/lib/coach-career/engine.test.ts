@@ -87,16 +87,22 @@ describe("signWithClub", () => {
 });
 
 describe("reputationDeltaForSeason / boardConfidenceDeltaForSeason", () => {
-  const titleOutcome: CoachSeasonOutcome = { leagueFinish: "title", cupRun: "none" };
-  const relegatedOutcome: CoachSeasonOutcome = { leagueFinish: "relegated", cupRun: "none" };
+  const titleOutcome: CoachSeasonOutcome = { leagueFinish: "title", zone: "title", position: 1, leagueSize: 20, cupRun: "none" };
+  const relegatedOutcome: CoachSeasonOutcome = {
+    leagueFinish: "relegated",
+    zone: "relegated",
+    position: 20,
+    leagueSize: 20,
+    cupRun: "none",
+  };
 
   it("premia una stagione che sovraperforma il prestigio del club", () => {
-    const delta = reputationDeltaForSeason(titleOutcome, 0, 40, NO_NOISE_RNG);
+    const delta = reputationDeltaForSeason(titleOutcome, 0, NO_NOISE_RNG);
     expect(delta).toBeGreaterThan(0);
   });
 
   it("penalizza una stagione che delude un club di alto prestigio", () => {
-    const delta = reputationDeltaForSeason(relegatedOutcome, 3, 40, NO_NOISE_RNG);
+    const delta = reputationDeltaForSeason(relegatedOutcome, 3, NO_NOISE_RNG);
     expect(delta).toBeLessThan(0);
   });
 
@@ -107,15 +113,30 @@ describe("reputationDeltaForSeason / boardConfidenceDeltaForSeason", () => {
 });
 
 describe("advanceSeasons", () => {
-  it("fa avanzare età e aggiunge una riga a clubHistory per il ciclo", () => {
+  it("fa avanzare età e aggiunge una riga a clubHistory per stagione, tutte con lo stesso cycleId", () => {
     const coach = signWithClub(createCoach(IDENTITY), TEST_CLUB);
     const advanced = advanceSeasons(coach, 2, NO_NOISE_RNG);
 
     expect(advanced.age).toBe(COACH_STARTING_AGE + 2);
-    expect(advanced.clubHistory).toHaveLength(1);
+    expect(advanced.clubHistory).toHaveLength(2);
     expect(advanced.clubHistory[0].ageFrom).toBe(COACH_STARTING_AGE);
-    expect(advanced.clubHistory[0].ageTo).toBe(COACH_STARTING_AGE + 2);
+    expect(advanced.clubHistory[0].ageTo).toBe(COACH_STARTING_AGE + 1);
+    expect(advanced.clubHistory[1].ageFrom).toBe(COACH_STARTING_AGE + 1);
+    expect(advanced.clubHistory[1].ageTo).toBe(COACH_STARTING_AGE + 2);
+    expect(advanced.clubHistory[0].cycleId).toBe(1);
+    expect(advanced.clubHistory[1].cycleId).toBe(1);
+    expect(advanced.cyclesPlayed).toBe(1);
     expect(advanced.wallet.savingsEur).toBeGreaterThan(0);
+  });
+
+  it("incrementa cyclesPlayed (e quindi cycleId) ad ogni chiamata successiva", () => {
+    const coach = signWithClub(createCoach(IDENTITY), TEST_CLUB);
+    const afterFirstCycle = advanceSeasons(coach, 1, NO_NOISE_RNG);
+    const afterSecondCycle = advanceSeasons(afterFirstCycle, 1, NO_NOISE_RNG);
+
+    expect(afterFirstCycle.clubHistory[0].cycleId).toBe(1);
+    expect(afterSecondCycle.clubHistory[1].cycleId).toBe(2);
+    expect(afterSecondCycle.cyclesPlayed).toBe(2);
   });
 
   it("lancia un errore senza club", () => {

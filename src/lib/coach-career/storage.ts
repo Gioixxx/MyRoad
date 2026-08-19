@@ -6,7 +6,11 @@ import { deriveArchetype } from "@/lib/career/traits";
 import { deriveShadowTitle } from "@/lib/career/shadow";
 
 const STORAGE_KEY = "carriera:coach-save";
-const STORAGE_VERSION = 1;
+/** 2 dal wiring "Due classifiche" (`CoachSeasonOutcome.zone`/`position`/`leagueSize`,
+ * `CoachStint.cycleId`/`clubTierChange`) — nessuna migrazione incrementale qui (stesso pattern
+ * "nessun save legacy da migrare" già in uso in questo file): un save v1 viene scartato invece di
+ * essere caricato con `outcome.zone` mancante nonostante il tipo lo dichiari obbligatorio. */
+const STORAGE_VERSION = 2;
 
 export interface SavedCoachGame {
   version: number;

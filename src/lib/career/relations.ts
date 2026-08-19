@@ -1,4 +1,5 @@
 import type { Club, Player, Relation, RelationAffinity, RelationId } from "@/types/career";
+import { cyclesAtClub } from "@/lib/shared/club-tenure";
 
 export const RELATION_LABELS: Record<RelationId, string> = {
   coach: "Mister",
@@ -136,8 +137,8 @@ export function relationsOnSign(player: Player, club: Club, isNewClub: boolean):
 export function maybeSpawnRival(player: Player): Player {
   if (getRelation(player, "rival")) return player;
   if (!player.club) return player;
-  const cyclesAtClub = player.clubHistory.filter((stint) => stint.club.id === player.club!.id).length;
-  if (player.ovr < RIVAL_MIN_OVR && cyclesAtClub < RIVAL_MIN_CYCLES_AT_CLUB) return player;
+  const tenureCycles = cyclesAtClub(player.clubHistory, player.club.id);
+  if (player.ovr < RIVAL_MIN_OVR && tenureCycles < RIVAL_MIN_CYCLES_AT_CLUB) return player;
   return {
     ...player,
     relations: upsertRelation(player.relations ?? [], {

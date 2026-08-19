@@ -314,7 +314,9 @@ export function CoachCareerGame({ onBack, seedEntry }: CoachCareerGameProps) {
 
   const { coach } = state;
   const archetype = deriveArchetype(coach.traits, coach.shadow);
-  const showArchetypeChip = coach.clubHistory.length >= 4 && archetype.primary !== null;
+  // `cyclesPlayed` (cicli di carriera, non stagioni/stint) invece di `clubHistory.length`: dal
+  // wiring "Due classifiche" una stint è per stagione, non per ciclo — vedi piano, criticità 1.
+  const showArchetypeChip = (coach.cyclesPlayed ?? 0) >= 4 && archetype.primary !== null;
   const showRumorsChip = coach.shadow >= SHADOW_RUMOR_THRESHOLD;
   const activeMoment = awaitingOutcome && momentIndex < moments.length ? moments[momentIndex] : null;
   const showOutcomeBanner = awaitingOutcome && !activeMoment && state.lastOutcome;

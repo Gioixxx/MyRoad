@@ -1,6 +1,7 @@
 import type {
   Award,
   Club,
+  ClubStint,
   Decision,
   DecisionCategory,
   DecisionOption,
@@ -9,6 +10,7 @@ import type {
   Player,
   PlayStyleId,
   SeasonTitleEntry,
+  StatLine,
   Trophy,
   CycleObjectiveKind,
 } from "@/types/career";
@@ -20,6 +22,7 @@ import {
   resolveOutcome,
   retire,
   signWithClub,
+  sumStats,
   switchNationality,
   SEASONS_PER_CYCLE,
 } from "./engine";
@@ -84,8 +87,7 @@ import {
   pickDecisionCategory,
   rollNationalCallup,
 } from "./decisions";
-import { rollAward, rollClubTrophies, rollNationalTrophies } from "./trophies";
-import { applyClubTierMovement } from "./club-progression";
+import { rollAward, rollNationalTrophies } from "./trophies";
 import { isRedemptionEligible, shouldTriggerScandal } from "./shadow";
 import { applyTraitsDelta } from "./traits";
 import { applyPotentialDelta, evaluatePotentialGrowth } from "./potential";
@@ -580,28 +582,93 @@ function processInjuries(
   };
 }
 
-/** Sostituisce le stats dell'ultimo stint (e i cumulative di carriera) dopo un infortunio. */
-function applyInjuryStatCut(player: Player): Player {
-  const last = player.clubHistory[player.clubHistory.length - 1];
-  if (!last) return player;
-  const cut = scaleStatLine(last.stats, INJURY_STATS_MULTIPLIER);
+/** Sostituisce le stats di **tutte** le stint del ciclo appena giocato (e i cumulative di
+ * carriera) dopo un infortunio — non solo l'ultima: con una stint per stagione, un infortunio
+ * dichiarato all'inizio del ciclo deve tagliare tutte le N stagioni del ciclo Express/Normal, non
+ * solo l'ultima (altrimenti 2 stagioni su 3 resterebbero a piena resa nonostante l'infortunio). */
+function applyInjuryStatCut(player: Player, seasons: number): Player {
+  const startIndex = player.clubHistory.length - seasons;
+  if (startIndex < 0) return player;
   const history = [...player.clubHistory];
-  history[history.length - 1] = { ...last, stats: cut, ovr: player.ovr };
+  let careerDelta: StatLine = { apps: 0, goals: 0, assists: 0 };
+  for (let i = startIndex; i < history.length; i++) {
+    const stint = history[i];
+    const cut = scaleStatLine(stint.stats, INJURY_STATS_MULTIPLIER);
+    careerDelta = {
+      apps: careerDelta.apps + (cut.apps - stint.stats.apps),
+      goals: careerDelta.goals + (cut.goals - stint.stats.goals),
+      assists: careerDelta.assists + (cut.assists - stint.stats.assists),
+      ...(player.position === "GK"
+        ? {
+            goalsAgainst: (careerDelta.goalsAgainst ?? 0) + ((cut.goalsAgainst ?? 0) - (stint.stats.goalsAgainst ?? 0)),
+            cleanSheets: (careerDelta.cleanSheets ?? 0) + ((cut.cleanSheets ?? 0) - (stint.stats.cleanSheets ?? 0)),
+          }
+        : {}),
+    };
+    history[i] = { ...stint, stats: cut };
+  }
+  // BUG-01: `player.ovr` include già il malus infortunio applicato subito prima da
+  // `applyOvrPenalty` (fuori da questa funzione), ma le stint sono state generate da
+  // `advanceSeasons` PRIMA che il malus fosse noto — solo l'ULTIMA stint (le stagioni precedenti
+  // dello stesso ciclo restano legittimamente quelle che erano) va risincronizzata, altrimenti lo
+  // Storico mostra un OVR diverso da quello reale del giocatore.
+  const lastIndex = history.length - 1;
+  history[lastIndex] = { ...history[lastIndex], ovr: player.ovr };
   return {
     ...player,
     clubHistory: history,
     career: {
-      apps: player.career.apps - last.stats.apps + cut.apps,
-      goals: player.career.goals - last.stats.goals + cut.goals,
-      assists: player.career.assists - last.stats.assists + cut.assists,
+      apps: player.career.apps + careerDelta.apps,
+      goals: player.career.goals + careerDelta.goals,
+      assists: player.career.assists + careerDelta.assists,
       ...(player.position === "GK"
         ? {
-            goalsAgainst: (player.career.goalsAgainst ?? 0) - (last.stats.goalsAgainst ?? 0) + (cut.goalsAgainst ?? 0),
-            cleanSheets: (player.career.cleanSheets ?? 0) - (last.stats.cleanSheets ?? 0) + (cut.cleanSheets ?? 0),
+            goalsAgainst: (player.career.goalsAgainst ?? 0) + (careerDelta.goalsAgainst ?? 0),
+            cleanSheets: (player.career.cleanSheets ?? 0) + (careerDelta.cleanSheets ?? 0),
           }
         : {}),
     },
   };
+}
+
+/** Raccoglie i trofei di campionato/coppa vinti in **ognuna** delle stagioni del ciclo (non solo
+ * l'ultima) — un ciclo Express da 3 stagioni può vincere il campionato nella prima e non nelle
+ * successive. `skipLeagueOnLastStint`/`skipCupOnLastStint`: quando l'ultima stagione ha un evento
+ * forzato (`decisive-match`/`cup-upset`) il cui esito è già l'autorità su quel trofeo specifico,
+ * il roll automatico per posizione/coppa su quella stessa stagione va escluso per non assegnare
+ * lo stesso trofeo due volte (mirror del vecchio parametro `skipLeague` di `rollClubTrophies`). */
+function newTrophiesForCycle(
+  cycleStints: ClubStint[],
+  skipLeagueOnLastStint: boolean,
+  skipCupOnLastStint: boolean,
+): Trophy[] {
+  const trophies: Trophy[] = [];
+  cycleStints.forEach((stint, index) => {
+    const isLast = index === cycleStints.length - 1;
+    if (stint.zone === "title" && !(isLast && skipLeagueOnLastStint)) {
+      trophies.push({ competition: stint.club.competitions.league, club: stint.club, age: stint.ageTo });
+    }
+    if (stint.cupWon && stint.club.competitions.cup && !(isLast && skipCupOnLastStint)) {
+      trophies.push({ competition: stint.club.competitions.cup, club: stint.club, age: stint.ageTo });
+    }
+  });
+  return trophies;
+}
+
+/** Ultimo movimento di categoria tra le stagioni del ciclo, con la lega di provenienza per il
+ * banner "Retrocessione: X → Y" — la lega "da" è quella del club **di quella specifica stagione**
+ * prima del movimento, non uno snapshot preso a inizio ciclo (fix più robusto dello stesso bug
+ * osservato nel QA del 2026-08-18, ora strutturalmente impossibile con una stint per stagione). */
+function lastClubTierMovementInCycle(
+  cycleStints: ClubStint[],
+): { change: "promoted" | "relegated"; fromLeague: string } | null {
+  for (let i = cycleStints.length - 1; i >= 0; i--) {
+    const stint = cycleStints[i];
+    if (stint.clubTierChange) {
+      return { change: stint.clubTierChange, fromLeague: stint.club.competitions.league };
+    }
+  }
+  return null;
 }
 
 /** Applica l'esito di un'opzione scelta dal giocatore: delta, cambio club/ritiro, avanzamento stagioni, trofei/award/nazionale. */
@@ -660,11 +727,16 @@ export function resolveCycle(
   let nextContext = nextLoopContext(category, option, player, context);
   const stintType = nextContext.loanParentClub ? "loan" : "permanent";
   const seasons = SEASONS_PER_CYCLE[speed];
-  nextPlayer = advanceSeasons(nextPlayer, seasons, rng, stintType);
+  // Calcolato sui playStyles di inizio ciclo (non su quelli post-crescita come prima): il roll
+  // coppa ora avviene stagione per stagione dentro `advanceSeasons`, prima che un eventuale
+  // sblocco playstyle di questo stesso ciclo sia noto — differenza minima, un nuovo playstyle
+  // influenza il roll coppa dal ciclo successivo invece che dallo stesso.
+  const trophyChanceBonus = playStyleTrophyBonus(nextPlayer.playStyles);
+  nextPlayer = advanceSeasons(nextPlayer, seasons, rng, stintType, trophyChanceBonus);
   nextPlayer = maybeSpawnRival(nextPlayer);
 
   // Rilevato subito dopo la crescita degli attributi del ciclo, così un playstyle appena
-  // sbloccato si applica già ai roll (infortunio/trofeo/callup) dello stesso ciclo.
+  // sbloccato si applica già ai roll (infortunio/callup) dello stesso ciclo.
   const newPlayStyles = detectNewPlayStyles(nextPlayer);
   if (newPlayStyles.length > 0) {
     nextPlayer = { ...nextPlayer, playStyles: [...nextPlayer.playStyles, ...newPlayStyles] };
@@ -674,20 +746,22 @@ export function resolveCycle(
   const injuryResult = processInjuries(nextPlayer, seasons, rng, injuryFromOutcome);
   nextPlayer = injuryResult.player;
   if (injuryResult.cutStats) {
-    nextPlayer = applyInjuryStatCut(nextPlayer);
+    nextPlayer = applyInjuryStatCut(nextPlayer, seasons);
   }
   nextPlayer = { ...nextPlayer, wallet: accrueSalary(nextPlayer.wallet, seasons) };
 
-  const newTrophies: Trophy[] = nextPlayer.club
-    ? rollClubTrophies(
-        nextPlayer.club,
-        nextPlayer.ovr,
-        nextPlayer.age,
-        rng,
-        playStyleTrophyBonus(nextPlayer.playStyles),
-        category === "decisive-match",
-      )
-    : [];
+  // Le `seasons` stint di questo ciclo (dopo l'eventuale taglio infortunio, che tocca solo le
+  // stats, non `zone`/`cupWon`/`clubTierChange`) — fonte unica per trofei, movimento di
+  // categoria e aggregati (award/record/titolo di stagione) di tutto il resto della funzione.
+  const cycleStints = nextPlayer.clubHistory.slice(-seasons);
+
+  // Trofeo di campionato/coppa: non più un flip a fine ciclo, ma il piazzamento/coppa di ognuna
+  // delle `seasons` stagioni già tirati dentro `advanceSeasons` — vedi `newTrophiesForCycle`.
+  const newTrophies: Trophy[] = newTrophiesForCycle(
+    cycleStints,
+    category === "decisive-match",
+    category === "cup-upset",
+  );
 
   if (category === "continental-final" && nextPlayer.club?.competitions.continental) {
     if (outcome.continentalWin === true) {
@@ -717,20 +791,12 @@ export function resolveCycle(
     });
   }
 
-  let clubTierChange: "promoted" | "relegated" | null = null;
-  let clubTierMovementFromLeague: string | null = null;
-  if (nextPlayer.club) {
-    const wonLeagueTitle = newTrophies.some(
-      (t) => t.competition === nextPlayer.club!.competitions.league,
-    );
-    const preMovementLeague = nextPlayer.club.competitions.league;
-    const movement = applyClubTierMovement(nextPlayer.club, wonLeagueTitle, rng);
-    if (movement.change) {
-      nextPlayer = { ...nextPlayer, club: movement.club };
-      clubTierChange = movement.change;
-      clubTierMovementFromLeague = preMovementLeague;
-    }
-  }
+  // Il movimento di categoria è già stato applicato stagione per stagione dentro
+  // `advanceSeasons` (`nextPlayer.club` riflette già lo stato finale) — qui si legge solo
+  // l'ultimo cambio della finestra di ciclo per riportarlo in UI.
+  const movementInCycle = lastClubTierMovementInCycle(cycleStints);
+  const clubTierChange = movementInCycle?.change ?? null;
+  const clubTierMovementFromLeague = movementInCycle?.fromLeague ?? null;
 
   let nationalCallup = false;
   let nationalGoalsThisCycle = 0;
@@ -762,7 +828,10 @@ export function resolveCycle(
       },
     };
     const confederation = getCountry(nextPlayer.nationality)?.confederation ?? "UEFA";
-    const cycleAgeFrom = nextPlayer.clubHistory[nextPlayer.clubHistory.length - 1]?.ageFrom ?? nextPlayer.age - seasons;
+    // Inizio del CICLO (prima stint della finestra), non il "clubHistory[length-1]" di prima —
+    // con una stint per stagione quella era già solo l'ultima stagione, non l'intero ciclo,
+    // restringendo silenziosamente la finestra di anni controllata per il Mondiale/Europei.
+    const cycleAgeFrom = cycleStints[0]?.ageFrom ?? nextPlayer.age - seasons;
     newTrophies.push(
       ...rollNationalTrophies(true, nextPlayer.ovr, nextPlayer.age, confederation, rng, cycleAgeFrom),
     );
@@ -772,15 +841,23 @@ export function resolveCycle(
     nextPlayer = { ...nextPlayer, trophies: [...nextPlayer.trophies, ...newTrophies] };
   }
 
-  const lastStint = nextPlayer.clubHistory[nextPlayer.clubHistory.length - 1];
-  const newAward = rollAward(nextPlayer, lastStint?.stats ?? { apps: 0, goals: 0, assists: 0 }, nextPlayer.age, rng);
+  // Statistiche aggregate su TUTTE le stagioni del ciclo (non solo l'ultima) — award/record/
+  // titolo di stagione erano già pensati per "quanto reso nel ciclo intero" quando esisteva una
+  // sola stint per ciclo; con una stint per stagione, leggere solo l'ultima li ridurrebbe a 1/N
+  // delle presenze/gol reali su Normal/Express.
+  const cycleStats: StatLine = cycleStints.reduce(
+    (total, stint) => sumStats(total, stint.stats),
+    { apps: 0, goals: 0, assists: 0 } as StatLine,
+  );
+
+  const newAward = rollAward(nextPlayer, cycleStats, nextPlayer.age, rng);
   if (newAward) {
     nextPlayer = { ...nextPlayer, awards: [...nextPlayer.awards, newAward] };
   }
 
   const popularityDelta = popularityDeltaForCycle({
-    goals: lastStint?.stats.goals ?? 0,
-    cleanSheets: lastStint?.stats.cleanSheets,
+    goals: cycleStats.goals,
+    cleanSheets: cycleStats.cleanSheets,
     trophiesWon: newTrophies.length,
     awardsWon: newAward ? 1 : 0,
   });
@@ -793,10 +870,10 @@ export function resolveCycle(
     age: nextPlayer.age,
     ovrBefore,
     ovrAfter: nextPlayer.ovr,
-    goals: lastStint?.stats.goals ?? 0,
-    assists: lastStint?.stats.assists ?? 0,
-    apps: lastStint?.stats.apps ?? 0,
-    cleanSheets: lastStint?.stats.cleanSheets,
+    goals: cycleStats.goals,
+    assists: cycleStats.assists,
+    apps: cycleStats.apps,
+    cleanSheets: cycleStats.cleanSheets,
     trophies: newTrophies,
     award: newAward,
     newInjury: injuryResult.newInjury,

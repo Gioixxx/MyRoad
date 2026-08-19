@@ -16,6 +16,7 @@ import { clubTacticalSystem, tacticalFitMultiplier, type TacticalFit } from "@/l
 import { expectedLeagueFinishRank, LEAGUE_FINISH_RANK, rollCoachSeasonOutcome } from "./season-outcome";
 import { applyCoachRelationsDelta, relationsOnNewJob } from "./coach-relations";
 import { emptyCoachPersonalRecords } from "./coach-satisfaction";
+import { applySeasonToClub } from "@/lib/shared/league-season";
 
 /** Primo incarico "da zero" per una carriera standalone — la continuità da un calciatore
  * ritirato (Fase C) parte invece dall'età di ritiro di quest'ultimo. */
@@ -154,11 +155,15 @@ export function baseExpectedRank(prestige: number): number {
 
 /** Alzato da 2.2 nello stesso giro di taratura di cui sopra — con delta tipicamente piccoli
  * (overperformance frazionaria di rank), un passo troppo debole non riesce mai a superare
- * l'arrotondamento a intero di `advanceSeasons`. */
+ * l'arrotondamento a intero di `advanceOneSeason`. */
 const REPUTATION_OVERPERFORM_STEP = 4;
 const REPUTATION_CUP_WIN_BONUS = 1.5;
 const REPUTATION_CUP_FINAL_BONUS = 0.6;
-/** Dopo i 60, un lieve logorio anche a parità di risultati. */
+/** Dopo i 60, un lieve logorio — applicato **una volta per ciclo**, non per stagione (vedi
+ * `reputationAgeDeclineForCycle`), stesso principio del decay di `boardConfidence` sotto: un
+ * ciclo Express da 3 stagioni non deve logorare 3 volte quanto un ciclo Intense da 1, altrimenti
+ * il ritmo di gioco scelto altera silenziosamente il bilanciamento (criticità trovata in review
+ * del piano "Due classifiche", stesso meccanismo della decay board confidence). */
 const REPUTATION_AGE_DECLINE_START = 60;
 const REPUTATION_AGE_DECLINE_PER_CYCLE = -0.8;
 const REPUTATION_NOISE_RANGE = 1.5;
@@ -166,38 +171,97 @@ const REPUTATION_NOISE_RANGE = 1.5;
 /**
  * Il vero motore nuovo del modo allenatore (non un mirror della curva OVR per età): la
  * reputazione è relativa alle aspettative del club — sovraperformare il prestigio la alza,
- * deludere le aspettative la abbassa.
+ * deludere le aspettative la abbassa. **Per stagione** (chiamata una volta per ogni stagione di
+ * `advanceOneSeason`) — a differenza del logorio per età, qui non c'è raddoppio da correggere:
+ * più stagioni in un ciclo Express significano più occasioni reali di dimostrare il proprio
+ * valore, non un bias sistematico.
  */
-export function reputationDeltaForSeason(
-  outcome: CoachSeasonOutcome,
-  prestige: number,
-  age: number,
-  rng: Rng = Math.random,
-): number {
+export function reputationDeltaForSeason(outcome: CoachSeasonOutcome, prestige: number, rng: Rng = Math.random): number {
   const overperformance = LEAGUE_FINISH_RANK[outcome.leagueFinish] - baseExpectedRank(prestige);
   const noise = (rng() - 0.5) * REPUTATION_NOISE_RANGE;
-  const ageDecline = age >= REPUTATION_AGE_DECLINE_START ? REPUTATION_AGE_DECLINE_PER_CYCLE : 0;
   const cupBonus =
     outcome.cupRun === "won" ? REPUTATION_CUP_WIN_BONUS : outcome.cupRun === "final" ? REPUTATION_CUP_FINAL_BONUS : 0;
-  return overperformance * REPUTATION_OVERPERFORM_STEP + noise + ageDecline + cupBonus;
+  return overperformance * REPUTATION_OVERPERFORM_STEP + noise + cupBonus;
+}
+
+/** Logorio di reputazione per età anagrafica, applicato una sola volta a fine ciclo (non per
+ * stagione) sull'età finale del ciclo — stessa granularità di prima del wiring per-stagione. */
+export function reputationAgeDeclineForCycle(ageAtCycleEnd: number): number {
+  return ageAtCycleEnd >= REPUTATION_AGE_DECLINE_START ? REPUTATION_AGE_DECLINE_PER_CYCLE : 0;
 }
 
 const BOARD_CONFIDENCE_OVERPERFORM_STEP = 9;
-/** Erosione naturale ogni ciclo: la pazienza della società non è infinita. */
-const BOARD_CONFIDENCE_DECAY = -3;
 const BOARD_CONFIDENCE_TROPHY_BONUS = 15;
+/** Erosione naturale della pazienza della società — applicata **una volta per ciclo** in
+ * `advanceSeasons`, non per stagione (altrimenti un ciclo Express eroderebbe la fiducia 3 volte
+ * più in fretta di uno Intense a parità di risultati, vedi piano "Due classifiche"). */
+export const BOARD_CONFIDENCE_DECAY = -3;
 
+/** Solo la componente di sovra/sottoperformance, per stagione — il decay va applicato a parte,
+ * una volta per ciclo (vedi `BOARD_CONFIDENCE_DECAY`). */
 export function boardConfidenceDeltaForSeason(outcome: CoachSeasonOutcome, prestige: number): number {
   const overperformance = LEAGUE_FINISH_RANK[outcome.leagueFinish] - baseExpectedRank(prestige);
   const trophyBonus = outcome.leagueFinish === "title" || outcome.cupRun === "won" ? BOARD_CONFIDENCE_TROPHY_BONUS : 0;
-  return overperformance * BOARD_CONFIDENCE_OVERPERFORM_STEP + BOARD_CONFIDENCE_DECAY + trophyBonus;
+  return overperformance * BOARD_CONFIDENCE_OVERPERFORM_STEP + trophyBonus;
+}
+
+interface OneSeasonResult {
+  stint: CoachStint;
+  nextClub: Club;
+  nextReputation: number;
+  /** Solo overperformance/trofeo — il decay di ciclo si applica una volta sola nel chiamante. */
+  boardConfidenceDelta: number;
 }
 
 /**
- * Fa avanzare l'allenatore di N stagioni al club corrente: una sola `CoachSeasonOutcome`/
- * `CoachStint` per CICLO (non per singola stagione) — stesso precedente già stabilito per il
- * calciatore (`ClubStint` è "una riga per ciclo", il roll trofeo non si ripete per ogni stagione
- * dentro un ciclo Express da 3).
+ * Fa avanzare l'allenatore di **una** stagione al club dato: tira il piazzamento (motore
+ * condiviso `lib/shared/league-season.ts`), aggiorna reputazione, applica l'eventuale movimento
+ * di categoria **prima** di restituire il club per la stagione successiva dello stesso ciclo
+ * (così una retrocessione a metà di un ciclo Express fa giocare le stagioni successive nel tier
+ * sotto) — vedi piano "Due classifiche".
+ */
+function advanceOneSeason(
+  club: Club,
+  reputation: number,
+  reputationCeiling: number,
+  fitMultiplier: number,
+  age: number,
+  cycleId: number,
+  rng: Rng,
+): OneSeasonResult {
+  const ageFrom = age;
+  const ageTo = age + 1;
+
+  const outcome = rollCoachSeasonOutcome(club, reputation, fitMultiplier, rng);
+
+  const repDelta = reputationDeltaForSeason(outcome, club.prestige, rng);
+  const nextReputation = clamp(Math.round(reputation + repDelta), 1, reputationCeiling);
+
+  const boardConfidenceDelta = boardConfidenceDeltaForSeason(outcome, club.prestige);
+
+  const movement = applySeasonToClub(club, outcome.zone);
+
+  const stint: CoachStint = {
+    club,
+    ageFrom,
+    ageTo,
+    outcome,
+    reputation: nextReputation,
+    cycleId,
+    clubTierChange: movement.change,
+  };
+
+  return { stint, nextClub: movement.club, nextReputation, boardConfidenceDelta };
+}
+
+/**
+ * Fa avanzare l'allenatore di N stagioni al club corrente: **una `CoachStint` per stagione**
+ * (era una per ciclo prima del wiring "Due classifiche") — tutte le stint create qui condividono
+ * lo stesso `cycleId`, incrementato una volta per chiamata (non per stagione), usato per contare
+ * i "cicli allo stesso club" altrove (`lib/shared/club-tenure.ts`) senza confonderli con le
+ * stagioni. Decay di `boardConfidence` e logorio di reputazione per età applicati **una sola
+ * volta**, a fine ciclo — non per stagione, altrimenti un ciclo Express eroderebbe 3 volte più in
+ * fretta di uno Intense a parità di risultati.
  */
 export function advanceSeasons(
   coach: Coach,
@@ -215,28 +279,36 @@ export function advanceSeasons(
     throw new Error("Il numero di stagioni deve essere positivo");
   }
 
-  const club = coach.club;
-  const ageFrom = coach.age;
-  const ageTo = ageFrom + seasons;
+  const cycleId = (coach.cyclesPlayed ?? 0) + 1;
+  const fitMultiplier = tacticalFitMultiplier(coachTacticalFit(coach, coach.club)) * outcomeBonusMultiplier;
 
-  const fitMultiplier = tacticalFitMultiplier(coachTacticalFit(coach, club)) * outcomeBonusMultiplier;
-  const outcome = rollCoachSeasonOutcome(club, coach.reputation, fitMultiplier, rng);
+  let club = coach.club;
+  let reputation = coach.reputation;
+  let boardConfidence = coach.boardConfidence;
+  let age = coach.age;
+  const stints: CoachStint[] = [];
 
-  const repDelta = reputationDeltaForSeason(outcome, club.prestige, ageTo, rng);
-  const nextReputation = clamp(Math.round(coach.reputation + repDelta), 1, coach.reputationCeiling);
+  for (let i = 0; i < seasons; i++) {
+    const result = advanceOneSeason(club, reputation, coach.reputationCeiling, fitMultiplier, age, cycleId, rng);
+    stints.push(result.stint);
+    club = result.nextClub;
+    reputation = result.nextReputation;
+    boardConfidence = clamp(Math.round(boardConfidence + result.boardConfidenceDelta), 0, 100);
+    age += 1;
+  }
 
-  const boardDelta = boardConfidenceDeltaForSeason(outcome, club.prestige);
-  const nextBoardConfidence = clamp(Math.round(coach.boardConfidence + boardDelta), 0, 100);
-
-  const stint: CoachStint = { club, ageFrom, ageTo, outcome, reputation: nextReputation };
+  reputation = clamp(Math.round(reputation + reputationAgeDeclineForCycle(age)), 1, coach.reputationCeiling);
+  boardConfidence = clamp(Math.round(boardConfidence + BOARD_CONFIDENCE_DECAY), 0, 100);
 
   return {
     ...coach,
-    age: ageTo,
-    reputation: nextReputation,
-    boardConfidence: nextBoardConfidence,
-    clubHistory: [...coach.clubHistory, stint],
+    age,
+    reputation,
+    boardConfidence,
+    club,
+    clubHistory: [...coach.clubHistory, ...stints],
     wallet: accrueSalary(coach.wallet, seasons),
+    cyclesPlayed: cycleId,
   };
 }
 

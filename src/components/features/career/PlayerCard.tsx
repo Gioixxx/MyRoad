@@ -54,8 +54,9 @@ export function PlayerCard({
 
   const isGoalkeeper = player.position === "GK";
   const archetype = deriveArchetype(player.traits, player.shadow);
-  const showArchetypeChip =
-    player.clubHistory.length >= 4 && archetype.primary !== null;
+  // `cyclesPlayed` (cicli di carriera, non stagioni/stint) invece di `clubHistory.length`: dal
+  // wiring "Due classifiche" una stint è per stagione, non per ciclo — vedi piano, criticità 1.
+  const showArchetypeChip = (player.cyclesPlayed ?? 0) >= 4 && archetype.primary !== null;
   const showRumorsChip = player.shadow >= SHADOW_RUMOR_THRESHOLD;
   const clubFit = player.club ? tacticalFit(player, player.club) : null;
   const prospectLine = compact ? null : prospectStatusLine(player);

@@ -1,4 +1,4 @@
-import type { Club, GameSpeed, Trophy } from "@/types/career";
+import type { GameSpeed, Trophy } from "@/types/career";
 import type {
   Coach,
   CoachAward,
@@ -21,8 +21,8 @@ import {
   sackCoach,
   signWithClub,
 } from "./engine";
-import { applyCoachClubTierMovement } from "./club-progression";
 import { maybeSpawnCoachRival } from "./coach-relations";
+import { cyclesAtClub } from "@/lib/shared/club-tenure";
 import {
   evaluateCoachObjective,
   evaluateCoachSeasonTitle,
@@ -210,18 +210,35 @@ function emptySatisfactionFields(): Pick<
 
 const OBJECTIVE_MET_POPULARITY_BONUS = 3;
 
-function newTrophiesFor(outcome: Coach["clubHistory"][number]["outcome"], club: Club, age: number): Trophy[] {
+/** Raccoglie i trofei vinti in **ognuna** delle stagioni del ciclo (non solo l'ultima) — un
+ * ciclo Express da 3 stagioni può vincere il campionato nella prima e non nelle successive, la
+ * coda overlay li mostra tutti (vedi piano "Due classifiche"). */
+function newTrophiesForCycle(cycleStints: Coach["clubHistory"]): Trophy[] {
   const trophies: Trophy[] = [];
-  if (outcome.leagueFinish === "title") {
-    trophies.push({ competition: club.competitions.league, club, age });
-  }
-  if (outcome.cupRun === "won" && club.competitions.cup) {
-    trophies.push({ competition: club.competitions.cup, club, age });
-  }
-  if (outcome.continentalRun === "won" && club.competitions.continental) {
-    trophies.push({ competition: club.competitions.continental, club, age });
+  for (const stint of cycleStints) {
+    const { outcome, club, ageTo } = stint;
+    if (outcome.zone === "title") {
+      trophies.push({ competition: club.competitions.league, club, age: ageTo });
+    }
+    if (outcome.cupRun === "won" && club.competitions.cup) {
+      trophies.push({ competition: club.competitions.cup, club, age: ageTo });
+    }
+    if (outcome.continentalRun === "won" && club.competitions.continental) {
+      trophies.push({ competition: club.competitions.continental, club, age: ageTo });
+    }
   }
   return trophies;
+}
+
+/** Ultimo movimento di categoria tra le stagioni del ciclo, se ce n'è stato uno — quasi sempre al
+ * più uno per ciclo, ma in teoria un ciclo Express può muoversi due volte (promosso poi
+ * retrocesso), da cui "ultimo" invece di "il primo trovato". */
+function lastClubTierChangeInCycle(cycleStints: Coach["clubHistory"]): "promoted" | "relegated" | null {
+  for (let i = cycleStints.length - 1; i >= 0; i--) {
+    const change = cycleStints[i].clubTierChange;
+    if (change) return change;
+  }
+  return null;
 }
 
 /** Applica l'esito di un'opzione scelta dall'allenatore: delta, esonero/ritiro, avanzamento
@@ -283,7 +300,8 @@ export function resolveCoachCycle(
   nextCoach = advanceSeasons(nextCoach, seasons, rng, option.outcomeBonus ?? 1);
   nextCoach = maybeSpawnCoachRival(nextCoach);
 
-  const lastStint = nextCoach.clubHistory[nextCoach.clubHistory.length - 1];
+  const cycleStints = nextCoach.clubHistory.slice(-seasons);
+  const lastStint = cycleStints[cycleStints.length - 1];
 
   let objectiveResult: CoachCycleResult["objectiveResult"] = null;
   if (pendingObjective && lastStint) {
@@ -312,18 +330,15 @@ export function resolveCoachCycle(
   let brokenRecords: string[] = [];
 
   if (lastStint) {
-    newTrophies = newTrophiesFor(lastStint.outcome, lastStint.club, nextCoach.age);
+    newTrophies = newTrophiesForCycle(cycleStints);
     if (newTrophies.length > 0) {
       nextCoach = { ...nextCoach, trophies: [...nextCoach.trophies, ...newTrophies] };
     }
 
-    if (nextCoach.club) {
-      const movement = applyCoachClubTierMovement(nextCoach.club, lastStint.outcome.leagueFinish);
-      if (movement.change) {
-        nextCoach = { ...nextCoach, club: movement.club };
-        clubTierChange = movement.change;
-      }
-    }
+    // Il movimento di categoria è già stato applicato stagione per stagione dentro
+    // `advanceSeasons` (`nextCoach.club` riflette già lo stato finale) — qui si legge solo
+    // l'ultimo cambio della finestra di ciclo per riportarlo in UI.
+    clubTierChange = lastClubTierChangeInCycle(cycleStints);
 
     const awardType = rollCoachAward(nextCoach.reputation, lastStint.outcome, rng);
     if (awardType) {
@@ -331,7 +346,7 @@ export function resolveCoachCycle(
       nextCoach = { ...nextCoach, awards: [...nextCoach.awards, newAward] };
     }
 
-    const tenureCyclesAtClub = nextCoach.clubHistory.filter((s) => s.club.id === lastStint.club.id).length;
+    const tenureCyclesAtClub = cyclesAtClub(nextCoach.clubHistory, lastStint.club.id);
     const { records, broken } = updateCoachPersonalRecords(
       nextCoach.records,
       nextCoach.reputation,

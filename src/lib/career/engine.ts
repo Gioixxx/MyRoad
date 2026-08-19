@@ -9,7 +9,7 @@ import type {
   Position,
   StatLine,
 } from "@/types/career";
-import { clamp, projectOvr, projectStats, sumOvrDeltaForAge, type Rng } from "./progression";
+import { clamp, ovrDeltaForAge, projectOvr, projectSeasonStats, type Rng } from "./progression";
 import { computeMarketValue } from "./market";
 import { computeReleaseClauseEur, computeSigningBonusEur, resignSalary } from "./wallet";
 import { tacticalFit, tacticalFitMultiplier } from "./tactics";
@@ -24,14 +24,30 @@ import {
   peaksFromAttributes,
 } from "./attributes";
 import { applyRelationsDelta, initialAgentRelation, relationsOnSign } from "./relations";
+import { rollCupTrophy } from "./trophies";
 import { pickWeighted } from "../shared/weighted-random";
+import { leagueForTier } from "@/data/clubs";
+import {
+  applySeasonToClub,
+  expectedLeagueFinishRank,
+  rollLeaguePosition,
+  rulesForLeague,
+  zoneForPosition,
+} from "@/lib/shared/league-season";
 
 export const STARTING_AGE = 16;
 export const STARTING_OVR = 50;
 
-/** Margine massimo (per stagione nel ciclo) con cui gli attributi possono "tirare" l'OVR verso
- * il proprio valore derivato — provvisorio, da tarare con `npm run simulate` (vedi Fase 2). */
-const ATTRIBUTE_PULL_PER_CYCLE = 1.5;
+/** Margine massimo per stagione con cui gli attributi possono "tirare" l'OVR verso il proprio
+ * valore derivato — provvisorio, da tarare con `npm run simulate` (vedi Fase 2). Rinominato da
+ * `ATTRIBUTE_PULL_PER_CYCLE`: il nome mentiva, era già documentato e usato come budget
+ * per-stagione (moltiplicato per `seasons` per l'intero ciclo) — ora che `advanceOneSeason` è
+ * genuinely per-stagione, il nome riflette il valore reale senza bisogno di moltiplicarlo. */
+const ATTRIBUTE_PULL_PER_SEASON = 1.5;
+
+/** Regole di fallback, stesso ruolo di `FALLBACK_LEAGUE_RULES` in `season-outcome.ts` — non
+ * dovrebbe mai servire per un club realmente in gioco. */
+const FALLBACK_LEAGUE_RULES = { size: 20, titleSpots: 1, continentalSpots: 0, promotionSpots: 0, relegationSpots: 0 };
 
 /** Stagioni tra una decisione e l'altra per modalità — osservato sul gioco originale:
  * Normal esplicitamente "every 2 seasons"; Express osservato a passi di 3 (16→19→22...);
@@ -126,7 +142,7 @@ export function switchNationality(player: Player, nationality: string): Player {
   return { ...player, nationality, hasSwitchedNationality: true };
 }
 
-function sumStats(a: StatLine, b: StatLine): StatLine {
+export function sumStats(a: StatLine, b: StatLine): StatLine {
   const result: StatLine = {
     apps: a.apps + b.apps,
     goals: a.goals + b.goals,
@@ -141,16 +157,96 @@ function sumStats(a: StatLine, b: StatLine): StatLine {
   return result;
 }
 
+interface OneSeasonResult {
+  stint: ClubStint;
+  nextClub: Club;
+  nextOvr: number;
+  nextAttributes: ReturnType<typeof distributeAttributeGrowth>;
+}
+
 /**
- * Fa avanzare il giocatore di N stagioni al club corrente: aggiorna età, OVR, valore
- * di mercato, statistiche cumulative e aggiunge una riga a `clubHistory` per il ciclo
- * (replica il comportamento osservato: una riga per ciclo, non un accorpamento per club).
+ * Fa avanzare il giocatore di **una** stagione al club dato: tira il piazzamento (motore
+ * condiviso `lib/shared/league-season.ts`, stessa formula "rating→rank atteso" dell'allenatore
+ * con l'OVR al posto della reputazione), aggiorna OVR/attributi/statistiche di questa sola
+ * stagione, applica l'eventuale movimento di categoria **prima** di restituire il club per la
+ * stagione successiva dello stesso ciclo — mirror di `advanceOneSeason` allenatore.
+ */
+function advanceOneSeason(
+  player: Pick<Player, "position" | "potential" | "trainingFocus" | "playStyles">,
+  club: Club,
+  ovr: number,
+  attributes: OneSeasonResult["nextAttributes"],
+  age: number,
+  cycleId: number,
+  stintType: "permanent" | "loan",
+  fitMultiplier: number,
+  trophyChanceBonus: number,
+  rng: Rng,
+): OneSeasonResult {
+  const ageFrom = age;
+  const ageTo = age + 1;
+
+  const ageBasedOvr = projectOvr(ovr, ageFrom, 1, player.potential, rng);
+
+  // Gli attributi crescono in parallelo (budget derivato dalla stessa curva età-based) e
+  // "tirano" l'OVR verso il proprio valore derivato, ma solo entro un margine bounded per
+  // stagione — mai abbastanza da sovrastare la curva già calibrata o cancellare un ovrDelta
+  // narrativo appena applicato (vedi piano, Fase 2).
+  const growthBudget = ovrDeltaForAge(ageFrom);
+  const nextAttributes = distributeAttributeGrowth({
+    attributes,
+    position: player.position,
+    totalGrowthBudget: growthBudget,
+    focusAttribute: player.trainingFocus,
+    rng,
+  });
+  const derivedOvr = deriveOvrFromAttributes(nextAttributes, player.position);
+  const pull = clamp(derivedOvr - ageBasedOvr, -ATTRIBUTE_PULL_PER_SEASON, ATTRIBUTE_PULL_PER_SEASON);
+  const nextOvr = clamp(Math.round(ageBasedOvr + pull), 35, player.potential);
+
+  const seasonStats = projectSeasonStats(ovr, player.position, club.tier, rng, player.playStyles, fitMultiplier);
+
+  const league = leagueForTier(club.country, club.tier);
+  const rules = league ? rulesForLeague(league) : FALLBACK_LEAGUE_RULES;
+  const expectedRank = expectedLeagueFinishRank(club.prestige, ovr) * fitMultiplier;
+  const position = rollLeaguePosition(expectedRank, rules, rng);
+  const zone = zoneForPosition(position, rules);
+  const cupWon = rollCupTrophy(club, ovr, rng, trophyChanceBonus);
+
+  const movement = applySeasonToClub(club, zone);
+
+  const stint: ClubStint = {
+    club,
+    ageFrom,
+    ageTo,
+    type: stintType,
+    stats: seasonStats,
+    ovr: nextOvr,
+    leaguePosition: position,
+    leagueSize: rules.size,
+    zone,
+    cupWon,
+    cycleId,
+    clubTierChange: movement.change,
+  };
+
+  return { stint, nextClub: movement.club, nextOvr, nextAttributes };
+}
+
+/**
+ * Fa avanzare il giocatore di N stagioni al club corrente: **una `ClubStint` per stagione** (era
+ * una per ciclo prima del wiring "Due classifiche") — tutte le stint create qui condividono lo
+ * stesso `cycleId`, incrementato una volta per chiamata (non per stagione).
  */
 export function advanceSeasons(
   player: Player,
   seasons: number,
   rng: Rng = Math.random,
   stintType: "permanent" | "loan" = "permanent",
+  /** Bonus percentuale additivo alla chance di coppa nazionale (playstyle "Muro difensivo") —
+   * applicato ad ogni stagione del ciclo, stesso ruolo di prima quando era applicato una sola
+   * volta per ciclo dentro `rollClubTrophies` (chiamato da `loop.ts`). */
+  trophyChanceBonus = 0,
 ): Player {
   if (!player.club) {
     throw new Error("Il giocatore deve avere un club per accumulare stagioni");
@@ -159,52 +255,39 @@ export function advanceSeasons(
     throw new Error("Il numero di stagioni deve essere positivo");
   }
 
-  const ageFrom = player.age;
-  const ageTo = ageFrom + seasons;
-  const ageBasedOvr = projectOvr(player.ovr, ageFrom, seasons, player.potential, rng);
-
-  // Gli attributi crescono in parallelo (budget derivato dalla stessa curva età-based) e
-  // "tirano" l'OVR verso il proprio valore derivato, ma solo entro un margine bounded per
-  // ciclo — mai abbastanza da sovrastare la curva già calibrata o cancellare un ovrDelta
-  // narrativo appena applicato (vedi piano, Fase 2).
-  const growthBudget = sumOvrDeltaForAge(ageFrom, seasons);
-  const nextAttributes = distributeAttributeGrowth({
-    attributes: player.attributes,
-    position: player.position,
-    totalGrowthBudget: growthBudget,
-    focusAttribute: player.trainingFocus,
-    rng,
-  });
-  const derivedOvr = deriveOvrFromAttributes(nextAttributes, player.position);
-  const pull = clamp(
-    derivedOvr - ageBasedOvr,
-    -ATTRIBUTE_PULL_PER_CYCLE * seasons,
-    ATTRIBUTE_PULL_PER_CYCLE * seasons,
-  );
-  const nextOvr = clamp(Math.round(ageBasedOvr + pull), 35, player.potential);
-
+  const cycleId = (player.cyclesPlayed ?? 0) + 1;
   const fitMultiplier = tacticalFitMultiplier(tacticalFit(player, player.club));
-  const seasonStats = projectStats(
-    player.ovr,
-    player.position,
-    player.club.tier,
-    seasons,
-    rng,
-    player.playStyles,
-    fitMultiplier,
-  );
 
-  const stint: ClubStint = {
-    club: player.club,
-    ageFrom,
-    ageTo,
-    type: stintType,
-    stats: seasonStats,
-    ovr: nextOvr,
-  };
+  let club = player.club;
+  let ovr = player.ovr;
+  let attributes = player.attributes;
+  let age = player.age;
+  let career = player.career;
+  const stints: ClubStint[] = [];
+
+  for (let i = 0; i < seasons; i++) {
+    const result = advanceOneSeason(
+      player,
+      club,
+      ovr,
+      attributes,
+      age,
+      cycleId,
+      stintType,
+      fitMultiplier,
+      trophyChanceBonus,
+      rng,
+    );
+    stints.push(result.stint);
+    club = result.nextClub;
+    ovr = result.nextOvr;
+    attributes = result.nextAttributes;
+    career = sumStats(career, result.stint.stats);
+    age += 1;
+  }
 
   const nextPeaks = (() => {
-    const current = peaksFromAttributes(nextAttributes);
+    const current = peaksFromAttributes(attributes);
     const prev = player.attributePeaks ?? current;
     return {
       pace: Math.max(prev.pace, current.pace),
@@ -214,13 +297,15 @@ export function advanceSeasons(
 
   return {
     ...player,
-    age: ageTo,
-    ovr: nextOvr,
-    attributes: nextAttributes,
+    age,
+    ovr,
+    attributes,
     attributePeaks: nextPeaks,
-    marketValueEur: computeMarketValue(nextOvr, ageTo),
-    career: sumStats(player.career, seasonStats),
-    clubHistory: [...player.clubHistory, stint],
+    marketValueEur: computeMarketValue(ovr, age),
+    career,
+    club,
+    clubHistory: [...player.clubHistory, ...stints],
+    cyclesPlayed: cycleId,
   };
 }
 

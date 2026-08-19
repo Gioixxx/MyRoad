@@ -509,7 +509,12 @@ describe("resolveCycle", () => {
       label: "Possesso palla",
       outcomes: [{ weight: 100, effect: {}, resultText: "Il piano non basta: il titolo sfuma all'ultimo." }],
     };
-    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "decisive-match", option, "normal", () => 0);
+    // Intense (1 stagione): quell'unica stagione è anche l'ultima, quindi il roll automatico di
+    // campionato per posizione viene escluso del tutto su `decisive-match` (vedi
+    // `newTrophiesForCycle`/`skipLeagueOnLastStint`) — con "normal" (2 stagioni) la prima
+    // stagione, non toccata dall'evento forzato, potrebbe vincere il campionato per conto suo con
+    // un rng che favorisce sempre il piazzamento migliore, confondendo l'assert.
+    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "decisive-match", option, "intense", () => 0);
 
     expect(result.newTrophies.some((t) => t.competition === JUVENTUS.competitions.league)).toBe(false);
   });
@@ -521,8 +526,8 @@ describe("resolveCycle", () => {
     expect(result.player.relations.some((rel) => rel.id === "rival")).toBe(true);
   });
 
-  it("dovrebbe promuovere il club se il campionato del tier corrente è vinto", () => {
-    const player = playerAt(SAMPDORIA);
+  it("dovrebbe promuovere il club se il piazzamento di campionato è tra i primi (rng al minimo = rumore più favorevole)", () => {
+    const player = { ...playerAt(SAMPDORIA), ovr: 95 };
     const option = { id: "stay", label: "Resta", outcomes: [{ weight: 100, effect: {}, resultText: "Resti." }] };
     const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "lifestyle", option, "normal", () => 0);
 
@@ -531,13 +536,13 @@ describe("resolveCycle", () => {
     expect(result.player.club?.competitions.league).toBe("Serie A");
   });
 
-  it("dovrebbe retrocedere il club se il campionato non è vinto e il roll è sfavorevole", () => {
-    // Prestige 0 mantiene la probabilità di vincere il campionato esattamente a 0 (chance di
-    // trofeo di club = prestige*0.08 + bonus OVR, che resta 0 finché l'OVR non supera 60),
-    // isolando così il roll di retrocessione dal roll di trofeo pur usando lo stesso rng.
+  it("dovrebbe retrocedere il club se il piazzamento di campionato è tra gli ultimi (rng al massimo = rumore più sfavorevole)", () => {
+    // Intense (1 stagione): con "normal" (2 stagioni) e un rng costante al peggio per entrambe,
+    // la Juventus a prestigio 0 retrocede due volte nello stesso ciclo (Serie A → B → C),
+    // corretto ma non quello che questo test vuole isolare (una singola transizione).
     const player = playerAt({ ...JUVENTUS, prestige: 0 });
     const option = { id: "stay", label: "Resta", outcomes: [{ weight: 100, effect: {}, resultText: "Resti." }] };
-    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "lifestyle", option, "normal", () => 0);
+    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "lifestyle", option, "intense", () => 0.999);
 
     expect(result.clubTierChange).toBe("relegated");
     expect(result.player.club?.tier).toBe(2);
@@ -558,7 +563,12 @@ describe("resolveCycle", () => {
       club: { ...JUVENTUS, prestige: 0 as const },
       outcomes: [{ weight: 100, effect: {}, resultText: "Firmi un nuovo contratto." }],
     };
-    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "transfer", option, "normal", () => 0);
+    // Intense (1 stagione): stesso motivo del test di retrocessione sopra — con "normal" (2
+    // stagioni) e rng costante al peggio, la seconda stagione può retrocedere una seconda volta
+    // (Serie B → Serie C), e la soglia è abbastanza sottile da poter oscillare in base agli
+    // attributi di partenza (rollati con `Math.random` non seedato in `createPlayer`/`playerAt`),
+    // rendendo il test intermittente — una sola stagione isola la singola transizione voluta.
+    const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "transfer", option, "intense", () => 0.999);
 
     expect(result.clubTierChange).toBe("relegated");
     expect(result.player.club?.competitions.league).toBe("Serie B");
