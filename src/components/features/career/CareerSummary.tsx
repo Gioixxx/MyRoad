@@ -267,13 +267,13 @@ export function CareerSummary({
       ) : null}
 
       {/* Detail panels — fill remaining viewport, scroll inside */}
-      <div className="grid min-h-0 min-w-0 gap-3 lg:flex-1 lg:grid-cols-2 lg:overflow-hidden">
-        <Card className="flex min-h-0 min-w-0 flex-col p-3 sm:p-4 lg:overflow-hidden">
+      <div className="grid min-w-0 gap-3 lg:min-h-0 lg:flex-1 lg:grid-cols-2 lg:overflow-hidden">
+        <Card className="flex min-w-0 flex-col p-3 sm:p-4 lg:min-h-0 lg:overflow-hidden">
           <h3 className="font-display mb-2 shrink-0 text-sm tracking-[0.15em] text-(--color-text-muted) uppercase">
             Club
           </h3>
           {clubs.length > 0 ? (
-            <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+            <div className="min-w-0 overflow-x-hidden lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
               <ul className="divide-y divide-(--color-border) md:hidden">
                 {clubs.map((c) => (
                   <li
