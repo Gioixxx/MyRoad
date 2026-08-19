@@ -727,3 +727,300 @@ Registro scelte tecniche con motivazioni.
   `STORAGE_VERSION` calciatore 15, allenatore 2. **Non toccato**: schema Supabase (Fase 5, il
   piano stesso richiede l'esecuzione SQL manuale dell'utente prima del deploy client), harness
   retuning (Fase 4), release/versione.
+
+### Piano "Due classifiche" — Fase 4 (ritaratura con l'harness), NON committata
+- **Data:** 2026-08-19
+- **Decisione:** su richiesta dell'utente di proseguire il piano, eseguita la Fase 4 (bilanciamento
+  post-wiring per-stagione) seguendo lo stesso standard "misura → aggiusta → rimisura" già
+  consolidato nel progetto, con `npm run simulate`/`npm run coach-simulate` come unica fonte di
+  verità (mai a tavolino, come richiesto esplicitamente dal piano). Nuovo script di debug ad-hoc
+  (`scripts/debug-position-tuning.ts`, rimosso a fine sessione insieme al suo config vitest
+  temporaneo) per isolare `rollLeaguePosition`/`zoneForPosition` da tutto il resto del motore e
+  campionare la distribuzione di zona per singola combinazione prestigio/rating/lega — necessario
+  perché i sintomi aggregati (trofeo di club 91%, reputazione di picco allenatore 65-68) non
+  bastavano da soli a capire quale delle 3 costanti in gioco (spread del rumore, peso prestigio,
+  step di overperformance) fosse la causa.
+  1. **Scoperta chiave, non anticipata dal piano**: il titolo di lega per un club di prestigio 3
+     con rating alto restava sopra il 40%/stagione per **qualunque** `POSITION_NOISE_SPREAD`
+     testato (sweep 0.2→2.0) — non un problema di rumore ma di `expectedPosition` troppo vicino al
+     vertice (~2 su una lega da 20 squadre) col peso prestigio 0.55: `round()` + clamp a 1 assorbe
+     strutturalmente circa metà della probabilità sulla posizione 1 quando il valore atteso è già a
+     una sola posizione di distanza dal bordo, a prescindere da quanto rumore si aggiunga attorno.
+     Fix: **`EXPECTED_FINISH_PRESTIGE_WEIGHT` abbassato da 0.55 a 0.4** (in
+     `lib/shared/league-season.ts`, condiviso calciatore/allenatore) — sposta l'`expectedPosition`
+     di un club prestigio 3/rating 85 da ~2 a ~4, portando il titolo/stagione al 15-25% indicato
+     dal piano **senza** toccare `POSITION_NOISE_SPREAD` (confermato a 0.5, il valore iniziale —
+     lo spread non era la causa). Prestigio 0 non è toccato dal fix (il peso moltiplica solo il
+     prestigio), quindi il rischio di retrocessione a basso prestigio resta quello di prima.
+  2. **Reputazione di picco allenatore — trade-off deliberato, non un match esatto col vecchio
+     target**: `REPUTATION_OVERPERFORM_STEP` dimezzato da 4 a 2 (il ragionamento "2 stagioni/ciclo
+     su Normal quindi dimezzare" del piano) — insufficiente da solo (64.7→61.4 con lo stesso giro
+     che ha anche abbassato il peso prestigio sopra, che se applicato da solo aveva perfino
+     PEGGIORATO la media a 68.4). Un secondo giro di misurazione ha esplorato l'intera gamma
+     0.4-4: sotto ~1.2 la media si avvicina di più al vecchio target ante-refactor (~43-45 a step
+     0.4-0.5) ma **trofei/award crollano quasi a zero** (0.00-0.01 medi/carriera, contro 0.4/0.3
+     prima di questa sessione) — quasi nessuna carriera raggiunge più una reputazione abbastanza
+     alta da avere una vera chance di titolo/premio, lo stesso tipo di "meccanica morta" già
+     diagnosticato e corretto nella sessione Fase C del 2026-08-16 (vedi voce sopra). Scelto
+     **step=2** come compromesso deliberato: media resta più alta del vecchio target single-roll
+     (~61 contro ~43.5) ma trofei/award restano vivi (0.08/0.12 medi, ~23% delle carriere sopra
+     reputazione 70) — preferita la raggiungibilità del contenuto di fine carriera a un numero
+     medio più fedele a un sistema ormai strutturalmente diverso (season-level, non più
+     cycle-level). Non ulteriormente iterato oltre questo giro, stesso principio "non riaperto
+     senza nuovi dati" già consolidato nel progetto per tarature analoghe.
+  3. **Coppa nazionale calciatore**: `CUP_TROPHY_RELATIVE_CHANCE` dimezzato da 0.7 a 0.35 in
+     `trophies.ts` (stesso ragionamento "ora un roll a stagione invece che a ciclo" del piano),
+     non ulteriormente iterato — l'effetto si vede solo indirettamente nell'aggregato "trofei
+     medi per carriera" (calciatore, sotto).
+  4. **Promozioni/retrocessioni restano vicine a zero in aggregato** (0.00-0.01 calciatore,
+     0.00 promozioni/0.16 retrocessioni allenatore) — **non un difetto di questo giro di
+     taratura**: confermato con l'harness di debug che, isolando `rollLeaguePosition` per singola
+     combinazione, la zona di promozione/retrocessione è raggiungibile e ha probabilità plausibili
+     ovunque esista un secondo tier modellato in `data/clubs.ts`. Il problema reale è a monte,
+     preesistente al piano "Due classifiche": **solo 4 dei ~26 paesi del catalogo (Italia/
+     Inghilterra/Spagna/Brasile) hanno un secondo tier di campionato modellato** — per tutti gli
+     altri `relegationSpots`/`promotionSpots` sono strutturalmente 0 (vedi
+     `relegationSpotsFor`/`league-rules.ts`), quindi la stragrande maggioranza delle carriere
+     simulate (nazionalità/club distribuiti su tutto il catalogo) non ha mai la possibilità di
+     promuovere/retrocedere a prescindere da qualunque costante di posizione. Stesso item di
+     backlog già aperto prima di questa sessione ("Promozione/retrocessione estesa oltre i 4 paesi
+     multi-tier attuali") — non risolvibile con una taratura di costanti, richiede nuovi dati
+     club/lega. Non riaperto in questo giro.
+  5. **Fix di un test reso obsoleto dalla taratura**: `loop.test.ts` (allenatore) forzava
+     `leagueFinish: "title"` con un rng costante a 0.5 (rumore zero) sfruttando il fatto che col
+     vecchio peso prestigio 0.55 il rank atteso si clampava esattamente a 4 (posizione 1
+     garantita) a prestigio 3/reputazione 99 — con peso 0.4 questo non è più vero (il rank atteso
+     massimo raggiungibile è 3.675, mai clampato). Fix: rng costante a 0 (rumore negativo massimo)
+     invece di 0.5, che garantisce la clamp a posizione 1 a prescindere dal preciso valore atteso —
+     più robusto del valore precedente rispetto a future ritarature dello stesso tipo.
+- **Perché:** stesso standard già consolidato nel progetto per ogni sessione di bilanciamento
+  (misura con l'harness, aggiusta, rimisura, fermati quando il risultato non è più chiaramente
+  degenere) — qui applicato per la prima volta a un problema dove il sintomo aggregato non
+  indicava da solo quale delle 3 costanti in gioco fosse la causa, da cui il nuovo script di debug
+  isolato (poi rimosso, coerente con la stessa convenzione di script di debug ad-hoc "usa e getta"
+  già vista altrove nel progetto, es. Fase C allenatore 2026-08-16).
+- **Alternative:** calibrare `POSITION_NOISE_SPREAD` per `size` di lega, come suggerito dal piano
+  — esplorata ma scartata come causa principale (il titolo restava >36% a qualunque spread
+  testato finché il peso prestigio non è stato corretto): resta un residuo di calibrazione più
+  fine non applicato in questo giro (es. la promozione da leghe a 24 squadre come la Championship
+  resta raggiungibile solo per prestigio/rating già alti per quella categoria) — non un difetto
+  bloccante, lasciato per una sessione futura se emergesse un problema concreto in game.
+- **Impatto:** `src/lib/shared/league-season.ts` (`EXPECTED_FINISH_PRESTIGE_WEIGHT` 0.55→0.4,
+  `POSITION_NOISE_SPREAD` confermato 0.5), `src/lib/coach-career/engine.ts`
+  (`REPUTATION_OVERPERFORM_STEP` 4→2), `src/lib/career/trophies.ts` (`CUP_TROPHY_RELATIVE_CHANCE`
+  0.7→0.35), `src/lib/coach-career/loop.test.ts` (1 fixture aggiornata). 610/610 test verdi (era
+  610, stessa suite, 1 test riparato), `tsc --noEmit` pulito, lint invariato (solo i 5 warning
+  `react-hooks/set-state-in-effect` pre-esistenti, nessuno nuovo). Risultati post-taratura
+  (`npm run simulate`/`npm run coach-simulate`, 2000 carriere ciascuno): **trofeo di club
+  calciatore 91.2%→74.5%** (target piano ~72%, vicino), **reputazione di picco allenatore
+  64.7→61.4** (target informale ~43.5 non raggiunto per la scelta deliberata del punto 2 sopra),
+  trofei/award allenatore rimasti vivi (0.08/0.12 medi, non azzerati), promozioni/retrocessioni
+  invariate vicino a zero per il gap di dati pre-esistente (punto 4). **Nessuna carriera giocata a
+  mano nel browser in questo giro** — solo harness/test automatici, stesso gap già aperto per le
+  Fasi 1-3 (vedi [[tech-debt]]). **Nessun commit, nessun rilascio** — lavoro nel working tree
+  insieme alle Fasi 1-3 già presenti. Restano da fare: Fase 5 (schema Supabase classifica a
+  punteggio + publish allenatore), Fase 6 (esecuzione SQL live + release), e un giro di playtest
+  reale nel browser prima di considerare l'intero piano "Due classifiche" chiuso.
+
+### Piano "Due classifiche" — Fase 5 (classifica globale a punteggio) implementata, Fase 6 bloccata sull'azione manuale utente
+- **Data:** 2026-08-19
+- **Decisione:** su richiesta dell'utente di proseguire con Fase 5/6, implementata la classifica a
+  punteggio descritta nel piano — due piste (Calciatori/Allenatori), un solo numero
+  (`career_score`, calcolato in SQL, mai inviato dal client) al posto delle 4 categorie/Pareto a 4
+  assi della vecchia classifica, e la pubblicazione dell'allenatore (**assente prima d'ora**).
+  1. **Schema incrementale nuovo** (`supabase/career-ranks.sql`, non eseguito sul DB live in questa
+     sessione — vedi sotto): tabella `myroad_career_ranks` (non un allargamento della tabella
+     vecchia, stesso motivo già nel piano — i CHECK su `retired_age`/`peak_ovr` obbligatorio
+     litigano con l'allenatore), colonna generata `nickname_key` (`lower(trim(nickname))`, usata
+     come chiave dell'unique index invece di un calcolo lato client sempre a rischio di
+     disallineamento) e `career_score` (generata, pesi calciatore/allenatore diversi solo sul
+     moltiplicatore trofeo — 40 vs 50 — il resto della formula condiviso). RLS abilitata **senza
+     nessuna policy per `anon`** sulla tabella base (né lettura né scrittura) — a differenza della
+     tabella vecchia (che aveva una policy INSERT diretta), qui l'unica via di scrittura è una RPC.
+  2. **"Upsert nativo" tramite RPC, non un trigger BEFORE INSERT dedicato**: `myroad_submit_career_rank`
+     (SECURITY DEFINER) esegue un vero `INSERT ... ON CONFLICT (track, nickname_key) DO UPDATE ...
+     WHERE excluded.career_score > career_score` — un solo asse di confronto non giustifica più la
+     complessità PL/pgSQL procedurale del trigger `myroad_leaderboard_keep_best` (Pareto a 4 assi)
+     della classifica vecchia. Il trigger di unicità nickname (`myroad_claim_nickname`, riusato
+     senza ridefinirlo — resta globale, non per-pista, così lo stesso dispositivo non può comparire
+     come persone diverse tra le due classifiche) continua a scattare correttamente anche sul path
+     ON CONFLICT DO UPDATE: in Postgres un BEFORE INSERT row trigger si attiva sempre per la riga
+     proposta, prima che il conflitto/update venga anche solo determinato.
+  3. **Deviazione deliberata dal piano: niente `security_invoker = true` sulla vista pubblica**
+     (`myroad_career_ranks_public`) — il piano lo suggeriva come "cintura" aggiuntiva oltre alla
+     `revoke` esplicita, ma analizzandolo prima di scriverlo si è trovato un problema reale non
+     considerato nel testo del piano: su Postgres 15+, una vista `security_invoker` valuta i
+     privilegi/RLS del **chiamante** sulla tabella sottostante, il che richiede `grant select` (più
+     una policy RLS permissiva) su `anon` **sulla tabella base stessa**, non solo sulla vista —
+     ma PostgREST espone automaticamente ogni oggetto su cui `anon` ha un grant come proprio
+     endpoint REST, quindi quel grant riaprirebbe `/rest/v1/myroad_career_ranks` con `device_id`
+     incluso nel payload: esattamente la fuga di dati che la vista esiste per evitare (la stessa
+     classe di bug già trovata e corretta il 2026-08-13/14 sulla vista vecchia, ma dal lato
+     opposto — lì mancava la `revoke` in scrittura, qui sarebbe stata la lettura ad aprirsi).
+     Scelto invece il comportamento di **default** (owner-security, come `myroad_leaderboard_public`
+     già in produzione) — sicuro in lettura perché la vista seleziona solo colonne pubbliche, e
+     sicuro in scrittura perché `anon` non ha (e non deve mai avere) alcun grant INSERT/UPDATE/
+     DELETE su di essa, applicato esplicitamente con la stessa `revoke` del piano. La classe di bug
+     che `security_invoker` avrebbe dovuto prevenire (scrittura che bypassa la RLS della tabella
+     base attraverso la vista) è comunque strutturalmente impossibile qui per un motivo diverso e
+     più robusto: **tutte** le scritture passano dalla RPC SECURITY DEFINER, `anon` non ha mai
+     alcun grant diretto sulla tabella base da bypassare.
+  4. **Backfill**: una riga per dispositivo dalla vecchia `myroad_leaderboard_entries` (solo pista
+     "player", l'allenatore parte vuoto) — scelta la carriera con lo score più alto secondo la
+     **nuova** formula (non semplicemente il `peak_ovr` più alto, che mescolerebbe statistiche di
+     carriere Pareto-incomparabili diverse dello stesso dispositivo). Le tabelle/viste vecchie
+     (`myroad_leaderboard_entries`, `myroad_leaderboard_by_*`) restano nel DB intatte, il client
+     smette solo di leggerle/scriverle.
+  5. **Client**: `src/lib/leaderboard/types.ts`/`client.ts` riscritti da zero (categoria→pista,
+     4 funzioni di fetch/submit per-categoria→`fetchLeaderboard(track)`/
+     `submitPlayerCareerRank`/`submitCoachCareerRank`), `Leaderboard.tsx` da 3 tab (OVR/trofei/
+     ricchezza, Pareto) a 2 tab (Calciatori/Allenatori, un punteggio in evidenza per riga). Ruolo
+     mostrato in classifica per il calciatore ora è l'etichetta italiana già tradotta
+     (`POSITION_LABELS[entry.position]`, es. "ATT") invece del codice grezzo ("ST") che la vecchia
+     `Leaderboard.tsx` traduceva lato render — spostata la traduzione lato submit perché il nuovo
+     schema ha un `role_label` testuale generico (condiviso con "Allenatore" per l'altra pista),
+     non più un campo `position` tipizzato.
+  6. **Pubblicazione allenatore, prima assente**: stesso pattern `useRef` + `publishStatus` di
+     `CareerGame.tsx`, aggiunto a `CoachCareerGame.tsx`/`CoachSummary.tsx`. Il nickname è
+     obbligatorio per iniziare una carriera calciatore ma non esisteva alcun equivalente per
+     l'allenatore — `CoachIdentityStep` ora mostra un campo nickname (stesso pattern onBlur/
+     `checkNicknameAvailable` di `IdentityForm.tsx`) **solo se il nickname nelle Impostazioni è
+     ancora vuoto** (allenatore standalone su un dispositivo nuovo, mai giocato prima come
+     calciatore) — se è già impostato (caso comune, il calciatore lo richiede da tempo) viene
+     riusato in silenzio senza richiederlo di nuovo.
+  7. **Bug di test scoperto verificando il fix di Fase 4** (non nuovo, preesistente ma non ancora
+     osservato): `loop.test.ts` → "dovrebbe promuovere il club se il piazzamento di campionato è
+     tra i primi" è risultato intermittente girando la suite più volte dopo l'abbassamento di
+     `EXPECTED_FINISH_PRESTIGE_WEIGHT` (Fase 4, 0.55→0.4, vedi sopra) — causa: `playerAt()` nei
+     test usa `Math.random` non seedato per gli attributi del giocatore, che determinano il fit
+     tattico (`tacticalFit`, "ottimo"/"neutro"/"scarso") con quel club; un fit "scarso"
+     (moltiplicatore 0.92 sul rank atteso) poteva far mancare per pura sfortuna la soglia di
+     promozione che il test assumeva garantita dal solo `rng` costante passato a `resolveCycle`.
+     Con il margine più stretto introdotto dal peso ritarato in Fase 4, la probabilità di questo
+     esito sfavorevole è salita abbastanza da farlo emergere in una sessione normale (prima
+     presumibilmente troppo raro per essere notato). Fix: attributi mappati (`pace`/`shooting`/
+     `passing`/`defending`/`physical`) impostati tutti uguali nel fixture del test — sia il sistema
+     "preferito" sia quello "più debole" del giocatore risolvono allora allo stesso valore per
+     costruzione (nessun confronto stretto `>`/`<` scatta mai in un pareggio), quindi il fit
+     tattico è sempre "neutro" a prescindere dal roll casuale degli attributi, eliminando la fonte
+     di flakiness senza toccare la logica di produzione.
+- **Perché:** la deviazione su `security_invoker` è stata presa PRIMA di scrivere il file SQL,
+  non scoperta durante un test contro il DB reale come le due vulnerabilità precedenti di questo
+  progetto (2026-08-13/14, 2026-08-16) — analizzando il meccanismo Postgres in anticipo si è
+  visto che avrebbe riaperto esattamente la stessa classe di problema che l'accorgimento voleva
+  prevenire, applicato al lato lettura invece che scrittura. L'RPC "upsert nativo" preserva
+  comunque l'intento del piano (niente trigger PL/pgSQL dedicato per un solo asse di confronto)
+  usando il meccanismo SQL nativo `ON CONFLICT ... WHERE`, solo esposto via RPC invece che POST
+  diretto alla tabella (che comunque `anon` non potrebbe fare, RLS senza policy).
+- **Alternative:** `security_invoker = true` + `grant select` sulla tabella base con una policy
+  RLS che nasconde `device_id` — scartata, RLS filtra RIGHE non COLONNE, non esiste un modo di
+  nascondere una singola colonna via RLS; l'unica alternativa reale sarebbe stata una vista
+  invocata con un ruolo intermedio dedicato (non `anon` diretto) — sproporzionata per un progetto
+  hobby quando il pattern owner-security già in produzione (`myroad_leaderboard_public`) risolve
+  lo stesso problema in modo più semplice.
+- **Impatto:** `supabase/career-ranks.sql` (nuovo, **non ancora eseguito sul DB Supabase live** —
+  azione manuale utente richiesta prima che submit/fetch funzionino in produzione, stesso rituale
+  di `one-row-per-device.sql`/`nickname-uniqueness.sql`), `src/lib/leaderboard/{types,client}.ts`
+  (riscritti), `src/components/features/career/Leaderboard.tsx` (riscritto), `CareerGame.tsx`
+  (`submitLeaderboardEntry`→`submitPlayerCareerRank`), `src/components/features/coach/
+  {CoachCareerGame,CoachSummary}.tsx` (publish + nickname allenatore, nuovi), `src/lib/career/
+  loop.test.ts` (1 fixture riparata, vedi punto 7). 613 test verdi (era 610, +3: 2 nuovi
+  `buildCoachSubmitPayload` + 1 submit coach in `client.test.ts`, `Leaderboard.test.tsx`
+  riscritto per le 2 piste), `tsc --noEmit` pulito, lint invariato (solo i 5 warning
+  `react-hooks/set-state-in-effect` pre-esistenti, nessuno nuovo). **Nessun test UI dedicato per
+  `CoachCareerGame`/`CoachSummary`** (il progetto non ne ha mai avuti, coerente con la copertura
+  già accettata altrove per componenti allenatore — vedi [[tech-debt]]). **Fase 6 (esecuzione SQL
+  live + verifica REST + release) bloccata**: richiede che l'utente esegua
+  `supabase/career-ranks.sql` nell'SQL editor del progetto Supabase — finché non succede, submit/
+  fetch della nuova classifica falliscono in produzione (le viste/RPC non esistono ancora) e non è
+  possibile verificarli dal vivo. **Nessuna carriera giocata a mano nel browser** anche per questa
+  Fase 5 — stesso gap delle Fasi 1-4, vedi [[tech-debt]].
+
+- **Aggiornamento stessa sessione — Fase 6, verifica REST live dopo l'esecuzione utente di
+  `career-ranks.sql`**: l'utente ha eseguito la migrazione sul progetto Supabase reale; verificato
+  con richieste REST dirette (non solo lette dal codice) contro il DB live, stesso standard già
+  seguito per la classifica vecchia il 2026-08-13/14: (1) vista pubblica `myroad_career_ranks_public`
+  raggiungibile (200) e già popolata dal backfill (3 righe player pre-esistenti, `career_score`
+  calcolato correttamente); (2) tabella base `myroad_career_ranks` **non leggibile da anon** — un
+  GET diretto torna 200 con `[]` (RLS filtra a zero righe, non un endpoint assente — comportamento
+  corretto, non un mancato grant che si confonderebbe con un 404); (3) INSERT diretto sulla tabella
+  base rifiutato (401, RLS violation) — solo la RPC può scrivere; (4) UPDATE/DELETE diretti sulla
+  tabella base tornano 204 ma **senza alcun effetto reale** (verificato rileggendo la riga
+  interessata, invariata) — 204 "vuoto" perché RLS nasconde tutte le righe ad anon anche per
+  update/delete, non perché l'operazione sia riuscita; (5) scrittura diretta sulla vista pubblica
+  rifiutata (401 "permission denied for view") — conferma che il pattern owner-security + revoke
+  esplicita (la deviazione dal `security_invoker` del piano, vedi sopra) blocca la stessa classe di
+  vulnerabilità trovata sulla vista vecchia il 2026-08-13/14, senza bisogno di quell'accorgimento;
+  (6) RPC `myroad_submit_career_rank`: prima pubblicazione di test crea la riga con `career_score`
+  esatto (formula verificata a mano); un secondo submit con punteggio più basso è un no-op (la riga
+  resta quella con lo score alto); un terzo submit con punteggio più alto sostituisce correttamente
+  tutti i campi; (7) lo stesso nickname da un **altro** device è rifiutato (409 NICKNAME_TAKEN, il
+  trigger riagganciato funziona); (8) lo stesso nickname dallo **stesso** device ma pista diversa
+  (`coach`) crea una seconda riga distinta, come da design (una per `(track, nickname_key)`); (9)
+  il filtro `track=eq.coach` nella query della classifica isola correttamente le righe.
+  **Bug reale trovato durante questa verifica**: il backfill di `career-ranks.sql` aveva copiato
+  `position` (codice grezzo, es. "LW"/"CAM") direttamente in `role_label` per le righe
+  pre-esistenti, invece dell'etichetta italiana tradotta che il client ora invia per le nuove
+  pubblicazioni (`POSITION_LABELS[entry.position]`, vedi sopra) — visibile subito interrogando la
+  vista pubblica popolata. Corretto con un fixup SQL separato e idempotente
+  (`supabase/career-ranks-fixup.sql`, **non ancora eseguito dall'utente** a fine di questa voce),
+  che include anche la pulizia delle righe di verifica (nickname "QARankVerify", entrambe le
+  piste) e il rilascio della relativa rivendicazione nickname — dati di test inseriti durante
+  questa stessa verifica REST, anon non ha DELETE quindi la pulizia richiede lo stesso rituale
+  manuale già consolidato nel progetto per questa classe di dati (vedi [[conventions]]). Fase 6
+  ora sbloccata (schema live verificato funzionante).
+
+- **Aggiornamento stessa sessione — fixup eseguito e riverificato**: l'utente ha eseguito
+  `supabase/career-ranks-fixup.sql`; riverificato via REST diretti — `role_label` ora mostra le
+  etichette italiane tradotte per le 3 righe pre-esistenti (AS/TRQ/MED, non più LW/CAM/CDM), i
+  dati di test "QARankVerify" sono spariti dalla vista pubblica, e la RPC `myroad_nickname_available`
+  conferma che quel nickname è di nuovo libero (rivendicazione rilasciata correttamente). Schema
+  Supabase live ora pienamente pulito e funzionante.
+
+- **Aggiornamento stessa sessione — playtest reale nel browser (Claude in Chrome)**: prima
+  carriera calciatore e prima carriera allenatore mai giocate a mano su tutto il lavoro "Due
+  classifiche" (Fasi 1-5). **Prima di qualunque azione che potesse arrivare al ritiro/
+  pubblicazione**, installato l'override `window.fetch` che blocca le richieste verso
+  `supabase.co` (stessa convenzione già in [[conventions]] dopo gli incidenti di dati di test
+  reali pubblicati in produzione durante il QA del 2026-08-18) — verificato con
+  `read_network_requests` **due volte** (dopo ogni ritiro) che zero richieste reali siano partite.
+  Calciatore (ritmo Rapida/Express, Torino→Como, 16→31 anni): colonna posizione per stagione
+  (`CareerTable`) verificata su 10 stagioni con piazzamenti realistici mai fuori 1-20; overlay
+  traguardo OVR e overlay "Obiettivo raggiunto" (quest'ultimo mai visto prima, introdotto v0.9.0);
+  cambio nazionalità (rifiutato), cambio ruolo funzionale (ATT→TRQ, accettato — anche questo mai
+  visto prima, vedi [[tech-debt]]); infortunio; convocazione in nazionale; trasferimento con fit
+  tattico; ritiro esplicito; `CareerSummary` completo (Hall of Fame, titoli di stagione, storico
+  club multi-club, bottone "Inizia carriera da allenatore"); **pubblicazione automatica in
+  classifica confermata** ("Punteggio pubblicato in classifica ✓"). Continuità Fase C: form
+  allenatore precompilato, nickname riusato in silenzio (campo nascosto, già impostato nelle
+  Impostazioni) — comportamento esatto atteso da `needsNickname` in `CoachIdentityStep`.
+  Allenatore (Torino→Tottenham Hotspur, Serie A→Premier League): colonna posizione/coppa per
+  stagione (`CoachHistoryTable`) verificata su 8 stagioni; decisione "corsa in coppa"; rinnovo/
+  trasferimento di fine stagione. **Ritiro automatico verificato forzando l'età a 74→76 via
+  localStorage** (accelerare oltre COACH_RETIREMENT_AUTOMATIC_AGE senza cliccare decine di cicli
+  manuali, stessa tecnica già consolidata in [[conventions]]) — scattato correttamente al ciclo
+  successivo. `CoachSummary` completo con **pubblicazione automatica allenatore confermata per la
+  prima volta in assoluto** (funzionalità introdotta in questa stessa sessione, Fase 5) — "Punteggio
+  pubblicato in classifica ✓", nessuna chiamata reale. "Nuova carriera" allenatore standalone (senza
+  continuità): form vuoto corretto, nickname ancora nascosto (già impostato). `Leaderboard.tsx`:
+  toggle Calciatori/Allenatori verificato con dati reali (override esteso temporaneamente per
+  permettere le sole GET di lettura sulla vista pubblica, mai scritture) — pista Allenatori vuota
+  corretta (nessun allenatore reale mai pubblicato), pista Calciatori mostra le 3 righe del
+  backfill con **etichette ruolo tradotte** (AS/TRQ/MED, conferma visiva del fixup) e punteggio in
+  evidenza ordinato correttamente. **Osservazione minore, non un bug confermato**: un'offerta di
+  trasferimento per la Juventus (Serie A) mostrava l'hint "Salto di categoria" — non approfondito,
+  plausibilmente il tier del club del giocatore in quel momento specifico, non necessariamente
+  un difetto.
+  **Pulizia post-verifica**: rimosse solo le voci "Verifica-*" create in questa sessione
+  dall'archivio locale REALE del browser dell'utente (Claude in Chrome opera sul profilo reale,
+  non isolato), lasciando intatti i dati preesistenti (es. un'entry "Andersson" nell'archivio
+  allenatore); rimosso il save calciatore concluso.
+- **Perché:** ultimo gap esplicito prima di poter considerare il piano "Due classifiche"
+  realmente pronto per commit/release — tutto il lavoro precedente (Fasi 1-5) era verificato solo
+  via test automatici, harness statistici o richieste REST dirette, mai osservato renderizzato
+  davvero.
+- **Impatto:** nessun file di codice toccato in questo giro (solo verifica), nessuna richiesta di
+  scrittura reale contro Supabase. Piano "Due classifiche" ora verificato end-to-end su tutti i
+  livelli (unit test, harness statistico, REST diretti, browser reale) — pronto per commit delle
+  Fasi 4-5 e valutazione release, restano solo Fase 6 vera e propria (SQL live già eseguito e
+  verificato in un giro precedente di questa stessa sessione) e la decisione di procedere.

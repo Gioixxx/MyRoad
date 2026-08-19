@@ -153,10 +153,24 @@ export function baseExpectedRank(prestige: number): number {
   return EXPECTED_FINISH_RANK_BY_PRESTIGE[prestige] ?? EXPECTED_FINISH_RANK_BY_PRESTIGE[0];
 }
 
-/** Alzato da 2.2 nello stesso giro di taratura di cui sopra — con delta tipicamente piccoli
- * (overperformance frazionaria di rank), un passo troppo debole non riesce mai a superare
- * l'arrotondamento a intero di `advanceOneSeason`. */
-const REPUTATION_OVERPERFORM_STEP = 4;
+/** Dimezzato da 4 nella taratura Fase 4 del piano "Due classifiche": con `advanceOneSeason`
+ * chiamata una volta per stagione (2 stagioni/ciclo su Normal, l'unico ritmo dell'allenatore
+ * standalone, più il bonus coppa/continentale anch'esso ora tirato per stagione) il delta di
+ * overperformance si sommava 2 volte per ciclo invece di 1 come prima del wiring per-stagione —
+ * a step invariato la reputazione di picco media era salita da ~43.5 (target del 2026-08-16,
+ * singolo roll/ciclo) a ~64-68 su 2000 carriere simulate (`npm run coach-simulate`), saturando
+ * molto più rapidamente verso il tetto individuale (`reputationCeiling`, media ~71).
+ *
+ * **Scelta deliberata di non scendere oltre 2** (un giro di misurazione ha provato l'intera
+ * gamma 0.4-4): sotto ~1.2 la media si avvicina di più al vecchio target (~43-45 a step 0.4-0.5)
+ * ma **trofei/award crollano quasi a zero** (0.00-0.01 medi/carriera contro lo 0.4/0.3 di prima
+ * del wiring) — quasi nessuna carriera raggiunge più una reputazione abbastanza alta da avere
+ * una vera chance di titolo/premio. A step 2 la media resta più alta del vecchio target (~61,
+ * non ~43.5) ma trofei/award restano vivi (0.08/0.12 medi, ~22% delle carriere sopra
+ * reputazione 70) — preferita la reachability del contenuto di fine carriera a un numero medio
+ * più fedele al vecchio sistema (single-roll/ciclo, meccanica ormai diversa). Vedi
+ * `.claude/memory/decisions.md` per il dettaglio completo del giro di taratura. */
+const REPUTATION_OVERPERFORM_STEP = 2;
 const REPUTATION_CUP_WIN_BONUS = 1.5;
 const REPUTATION_CUP_FINAL_BONUS = 0.6;
 /** Dopo i 60, un lieve logorio — applicato **una volta per ciclo**, non per stagione (vedi

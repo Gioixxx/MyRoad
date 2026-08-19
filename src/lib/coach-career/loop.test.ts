@@ -154,9 +154,11 @@ describe("resolveCoachCycle", () => {
     const decision = generateTacticalIdentityDecision(coach);
     const option = decision.options.find((o) => o.newSystem === coach.preferredSystem)!;
 
-    // rng costante a 0.5 azzera il rumore di rollCoachSeasonOutcome (noise = (0.5-0.5)*range = 0):
-    // con prestigio 3 e reputazione 99 il rank atteso arrotonda sempre a "title".
-    const result = resolveCoachCycle(coach, INITIAL_COACH_LOOP_CONTEXT, "tactical-identity", option, "normal", () => 0.5);
+    // rng costante a 0 massimizza il rumore negativo di rollLeaguePosition (noise = (0-0.5)*spread,
+    // il minimo possibile): con prestigio 3 e reputazione 99 il piazzamento si clampa sempre a 1
+    // ("title"), a prescindere dal preciso rank atteso 0-4 (che con `EXPECTED_FINISH_PRESTIGE_WEIGHT`
+    // ritarato in Fase 4 non è più sufficiente da solo a garantirlo a rumore zero, vedi decisions.md).
+    const result = resolveCoachCycle(coach, INITIAL_COACH_LOOP_CONTEXT, "tactical-identity", option, "normal", () => 0);
 
     expect(result.coach.clubHistory[0].outcome.leagueFinish).toBe("title");
     expect(result.newTrophies.some((t) => t.competition === strongClub.competitions.league)).toBe(true);

@@ -9,7 +9,7 @@ import { useLeaderboardSettings } from "@/hooks/useLeaderboardSettings";
 import { usePrefersReducedMotion } from "@/hooks/useMotion";
 import { AWARD_LABELS } from "@/lib/career/award-labels";
 import { buildArchiveEntry, loadArchive } from "@/lib/career/storage";
-import { submitLeaderboardEntry } from "@/lib/leaderboard/client";
+import { submitPlayerCareerRank } from "@/lib/leaderboard/client";
 import { isValidNickname } from "@/lib/leaderboard/settings";
 import type { PublishStatus } from "@/lib/leaderboard/types";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -368,7 +368,7 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
 
     setPublishStatus("loading");
     const entry = buildArchiveEntry(state.player);
-    submitLeaderboardEntry(entry, nickname, deviceId).then((result) => {
+    submitPlayerCareerRank(entry, nickname, deviceId).then((result) => {
       if (result.ok) {
         setPublishStatus("done");
       } else {

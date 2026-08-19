@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ArchivedCareer } from "@/types/career";
-import { buildSubmitPayload } from "./client";
+import type { ArchivedCoachCareer } from "@/types/coach";
+import { buildCoachSubmitPayload, buildPlayerSubmitPayload } from "./client";
 
-const ENTRY: ArchivedCareer = {
+const PLAYER_ENTRY: ArchivedCareer = {
   id: "rossi-123",
   lastName: "Rossi",
   nationality: "Italy",
@@ -22,38 +23,77 @@ const ENTRY: ArchivedCareer = {
   shadowTitle: null,
 };
 
-describe("leaderboard/client — buildSubmitPayload", () => {
-  it("mappa ogni campo di ArchivedCareer sulla colonna snake_case corretta", () => {
-    const payload = buildSubmitPayload(ENTRY, "  Fenomeno99  ", "device-abc");
+const COACH_ENTRY: ArchivedCoachCareer = {
+  id: "bianchi-456",
+  lastName: "Bianchi",
+  nationality: "Italy",
+  peakReputation: 72,
+  trophyCount: 2,
+  awardCount: 1,
+  retiredAge: 68,
+  retiredAtIso: "2026-01-01T00:00:00.000Z",
+  finalSavingsEur: 3_000_000,
+  finalPopularity: 55,
+  careerTitle: "Stratega",
+  clubsManaged: 3,
+  bestLeagueFinish: "title",
+  archetypeId: "leader",
+  shadowTitle: null,
+};
+
+describe("leaderboard/client — buildPlayerSubmitPayload", () => {
+  it("mappa ogni campo di ArchivedCareer sui parametri della RPC (pista player)", () => {
+    const payload = buildPlayerSubmitPayload(PLAYER_ENTRY, "  Fenomeno99  ", "device-abc");
 
     expect(payload).toEqual({
-      device_id: "device-abc",
-      nickname: "Fenomeno99",
-      app_version: expect.any(String),
-      client_entry_id: "rossi-123",
-      last_name: "Rossi",
-      nationality: "Italy",
-      position: "ST",
-      peak_ovr: 88,
-      trophy_count: 4,
-      award_count: 1,
-      retired_age: 34,
-      retired_at_iso: "2026-01-01T00:00:00.000Z",
-      career_apps: 320,
-      career_goals: 210,
-      career_assists: 60,
-      final_savings_eur: 5_000_000,
-      final_popularity: 82,
-      career_title: "Leggenda",
-      archetype_id: "leader",
-      shadow_title: null,
+      p_device_id: "device-abc",
+      p_nickname: "Fenomeno99",
+      p_track: "player",
+      p_peak_rating: 88,
+      p_trophy_count: 4,
+      p_award_count: 1,
+      p_final_savings_eur: 5_000_000,
+      p_last_name: "Rossi",
+      p_nationality: "Italy",
+      p_role_label: "ATT",
+      p_career_title: "Leggenda",
+      p_archetype_id: "leader",
+      p_app_version: expect.any(String),
+      p_client_entry_id: "rossi-123",
     });
   });
 
-  it("normalizza archetypeId/shadowTitle assenti a null", () => {
-    const payload = buildSubmitPayload({ ...ENTRY, archetypeId: undefined, shadowTitle: undefined }, "Nick", "d");
-    expect(payload.archetype_id).toBeNull();
-    expect(payload.shadow_title).toBeNull();
+  it("normalizza archetypeId assente a null", () => {
+    const payload = buildPlayerSubmitPayload({ ...PLAYER_ENTRY, archetypeId: undefined }, "Nick", "d");
+    expect(payload.p_archetype_id).toBeNull();
+  });
+});
+
+describe("leaderboard/client — buildCoachSubmitPayload", () => {
+  it("mappa ogni campo di ArchivedCoachCareer sui parametri della RPC (pista coach)", () => {
+    const payload = buildCoachSubmitPayload(COACH_ENTRY, "  Mister99  ", "device-xyz");
+
+    expect(payload).toEqual({
+      p_device_id: "device-xyz",
+      p_nickname: "Mister99",
+      p_track: "coach",
+      p_peak_rating: 72,
+      p_trophy_count: 2,
+      p_award_count: 1,
+      p_final_savings_eur: 3_000_000,
+      p_last_name: "Bianchi",
+      p_nationality: "Italy",
+      p_role_label: "Allenatore",
+      p_career_title: "Stratega",
+      p_archetype_id: "leader",
+      p_app_version: expect.any(String),
+      p_client_entry_id: "bianchi-456",
+    });
+  });
+
+  it("normalizza archetypeId assente a null", () => {
+    const payload = buildCoachSubmitPayload({ ...COACH_ENTRY, archetypeId: undefined }, "Nick", "d");
+    expect(payload.p_archetype_id).toBeNull();
   });
 });
 
@@ -82,35 +122,52 @@ describe("leaderboard/client — rete (env stubbate, modulo reimportato)", () =>
       expect(mod.isLeaderboardConfigured()).toBe(true);
     });
 
-    it("submitLeaderboardEntry chiama l'endpoint corretto con gli header giusti", async () => {
-      const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 201 });
+    it("submitPlayerCareerRank chiama l'RPC di submit con gli header/parametri giusti", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
       vi.stubGlobal("fetch", fetchMock);
 
       const mod = await import("./client");
-      const result = await mod.submitLeaderboardEntry(ENTRY, "Nick", "device-abc");
+      const result = await mod.submitPlayerCareerRank(PLAYER_ENTRY, "Nick", "device-abc");
 
       expect(result).toEqual({ ok: true, value: true });
       expect(fetchMock).toHaveBeenCalledTimes(1);
       const [url, init] = fetchMock.mock.calls[0];
-      expect(url).toBe("https://test.supabase.co/rest/v1/myroad_leaderboard_entries");
+      expect(url).toBe("https://test.supabase.co/rest/v1/rpc/myroad_submit_career_rank");
       expect(init.method).toBe("POST");
       expect(init.headers.apikey).toBe("test-anon-key");
       expect(init.headers.Authorization).toBe("Bearer test-anon-key");
       expect(init.headers.Prefer).toBe("return=minimal");
-      expect(JSON.parse(init.body).nickname).toBe("Nick");
+      const body = JSON.parse(init.body);
+      expect(body.p_nickname).toBe("Nick");
+      expect(body.p_track).toBe("player");
     });
 
-    it("submitLeaderboardEntry ritorna ok:false su risposta non-ok, senza lanciare", async () => {
+    it("submitCoachCareerRank chiama la stessa RPC con track='coach'", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const mod = await import("./client");
+      const result = await mod.submitCoachCareerRank(COACH_ENTRY, "Mister99", "device-xyz");
+
+      expect(result).toEqual({ ok: true, value: true });
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe("https://test.supabase.co/rest/v1/rpc/myroad_submit_career_rank");
+      const body = JSON.parse(init.body);
+      expect(body.p_nickname).toBe("Mister99");
+      expect(body.p_track).toBe("coach");
+    });
+
+    it("submitPlayerCareerRank ritorna ok:false su risposta non-ok, senza lanciare", async () => {
       vi.stubGlobal(
         "fetch",
         vi.fn().mockResolvedValue({ ok: false, status: 400, text: async () => "" }),
       );
       const mod = await import("./client");
-      const result = await mod.submitLeaderboardEntry(ENTRY, "Nick", "device-abc");
+      const result = await mod.submitPlayerCareerRank(PLAYER_ENTRY, "Nick", "device-abc");
       expect(result).toEqual({ ok: false, error: "http-400" });
     });
 
-    it("submitLeaderboardEntry riconosce il rifiuto per nickname già in uso (trigger myroad_claim_nickname)", async () => {
+    it("submitPlayerCareerRank riconosce il rifiuto per nickname già in uso (trigger myroad_claim_nickname)", async () => {
       vi.stubGlobal(
         "fetch",
         vi.fn().mockResolvedValue({
@@ -120,7 +177,7 @@ describe("leaderboard/client — rete (env stubbate, modulo reimportato)", () =>
         }),
       );
       const mod = await import("./client");
-      const result = await mod.submitLeaderboardEntry(ENTRY, "Nick", "device-abc");
+      const result = await mod.submitPlayerCareerRank(PLAYER_ENTRY, "Nick", "device-abc");
       expect(result).toEqual({ ok: false, error: "nickname-taken" });
     });
 
@@ -146,71 +203,62 @@ describe("leaderboard/client — rete (env stubbate, modulo reimportato)", () =>
       });
     });
 
-    it("submitLeaderboardEntry ritorna ok:false su errore di rete, senza lanciare", async () => {
+    it("submitPlayerCareerRank ritorna ok:false su errore di rete, senza lanciare", async () => {
       vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
       const mod = await import("./client");
-      await expect(mod.submitLeaderboardEntry(ENTRY, "Nick", "device-abc")).resolves.toEqual({
+      await expect(mod.submitPlayerCareerRank(PLAYER_ENTRY, "Nick", "device-abc")).resolves.toEqual({
         ok: false,
         error: "network",
       });
     });
 
-    it("fetchLeaderboardCategory costruisce la query string corretta per categoria", async () => {
+    it("fetchLeaderboard costruisce la query string corretta per pista", async () => {
       const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
       vi.stubGlobal("fetch", fetchMock);
 
       const mod = await import("./client");
-      await mod.fetchLeaderboardCategory("mostTrophies", 10);
+      await mod.fetchLeaderboard("coach", 10);
 
       const [url] = fetchMock.mock.calls[0];
       expect(url).toBe(
-        "https://test.supabase.co/rest/v1/myroad_leaderboard_by_trophies?select=*&order=trophy_count.desc,created_at.desc&limit=10",
+        "https://test.supabase.co/rest/v1/myroad_career_ranks_public?select=*&track=eq.coach&order=career_score.desc,created_at.desc&limit=10",
       );
     });
 
-    it("fetchLeaderboardCategory punta alla vista per-dispositivo della categoria, non al dump pubblico", async () => {
+    it("fetchLeaderboard punta alla vista pubblica, non alla tabella base", async () => {
       const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
       vi.stubGlobal("fetch", fetchMock);
 
       const mod = await import("./client");
-      await mod.fetchLeaderboardCategory("highestOvr");
-      await mod.fetchLeaderboardCategory("richest");
-      await mod.fetchLeaderboardCategory("mostPopular");
+      await mod.fetchLeaderboard("player");
 
-      const urls = fetchMock.mock.calls.map(([url]) => url as string);
-      expect(urls[0]).toContain("/rest/v1/myroad_leaderboard_by_ovr?");
-      expect(urls[1]).toContain("/rest/v1/myroad_leaderboard_by_savings?");
-      expect(urls[2]).toContain("/rest/v1/myroad_leaderboard_by_popularity?");
-      expect(urls.every((url) => !url.includes("myroad_leaderboard_public"))).toBe(true);
+      const [url] = fetchMock.mock.calls[0] as [string];
+      expect(url).toContain("/rest/v1/myroad_career_ranks_public?");
+      expect(url).not.toContain("myroad_career_ranks?");
     });
 
-    it("fetchLeaderboardCategory mappa le righe raw in LeaderboardListItem", async () => {
+    it("fetchLeaderboard mappa le righe raw in LeaderboardListItem", async () => {
       const row = {
         id: "row-1",
         created_at: "2026-01-01T00:00:00.000Z",
         nickname: "Nick",
-        app_version: "0.11.1",
-        last_name: "Rossi",
-        nationality: "Italy",
-        position: "ST",
-        peak_ovr: 88,
+        track: "player",
+        peak_rating: 88,
         trophy_count: 4,
         award_count: 1,
-        retired_age: 34,
-        retired_at_iso: "2026-01-01T00:00:00.000Z",
-        career_apps: 320,
-        career_goals: 210,
-        career_assists: 60,
         final_savings_eur: 5_000_000,
-        final_popularity: 82,
+        last_name: "Rossi",
+        nationality: "Italy",
+        role_label: "ATT",
         career_title: "Leggenda",
         archetype_id: "leader",
-        shadow_title: null,
+        app_version: "0.16.0",
+        career_score: 2200,
       };
       vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => [row] }));
 
       const mod = await import("./client");
-      const result = await mod.fetchLeaderboardCategory("highestOvr");
+      const result = await mod.fetchLeaderboard("player");
 
       expect(result.ok).toBe(true);
       if (result.ok) {
@@ -219,23 +267,22 @@ describe("leaderboard/client — rete (env stubbate, modulo reimportato)", () =>
           nickname: "Nick",
           lastName: "Rossi",
           nationality: "Italy",
-          position: "ST",
-          peakOvr: 88,
+          roleLabel: "ATT",
+          peakRating: 88,
           trophyCount: 4,
           awardCount: 1,
-          retiredAge: 34,
           finalSavingsEur: 5_000_000,
-          finalPopularity: 82,
           careerTitle: "Leggenda",
           archetypeId: "leader",
+          careerScore: 2200,
         });
       }
     });
 
-    it("fetchLeaderboardCategory ritorna ok:false su risposta non-ok, senza lanciare", async () => {
+    it("fetchLeaderboard ritorna ok:false su risposta non-ok, senza lanciare", async () => {
       vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
       const mod = await import("./client");
-      const result = await mod.fetchLeaderboardCategory("richest");
+      const result = await mod.fetchLeaderboard("coach");
       expect(result).toEqual({ ok: false, error: "http-500" });
     });
   });

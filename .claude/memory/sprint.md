@@ -842,23 +842,61 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   parte ora pulito. Vedi [[tech-debt]] per il gap strutturale sottostante (nessun modo per
   l'utente di abbandonare esplicitamente una carriera allenatore in corso dall'UI).
 
-- [ ] **Piano "Due classifiche" — Fasi 1-3 implementate, 4/5/6 da fare in una sessione futura**
+- [x] **Piano "Due classifiche" — Fasi 1-6 fatte e verificate su tutti i livelli, commit/release da fare**
   (2026-08-18/19): campionato posizionale condiviso (`lib/shared/league-season.ts`) + wiring
-  allenatore + wiring calciatore completati e verificati (610/610 test, `tsc` pulito, harness
+  allenatore + wiring calciatore completati e verificati (613/613 test, `tsc` pulito, harness
   senza crash) — vedi [[decisions]] per il dettaglio completo (4 criticità trovate e corrette nel
   piano prima di implementare, 2 bug di raddoppio in cadenza per-stagione trovati e corretti
   proattivamente nel motore allenatore, 3 bug reali trovati implementando quello calciatore
   — `cycleAgeFrom`, injury stat cut multi-stagione, `summarizeClubHistory` stintCount — e una
   decisione presa in corsa: niente accesso continentale "guadagnato per stagione", troppo
-  invasivo). **Nessun commit, nessun rilascio** — working tree con ~33 file toccati. Piano
-  completo (fuori dal repo): `C:\Users\Gioix\.cursor\plans\due_classifiche_8e0866c3.plan.md`.
-  - [ ] Fase 4 — ritaratura con `npm run simulate`/`npm run coach-simulate`: numeri attualmente
-    fuori bersaglio per costruzione (trofeo di club calciatore 90.5%, reputazione di picco
-    allenatore 64.2, promozioni/retrocessioni quasi a zero) — vedi [[tech-debt]].
-  - [ ] Fase 5 — `supabase/career-ranks.sql` (nuova tabella, upsert nativo, trigger nickname
-    riagganciato, vista con `security_invoker`) + client/UI classifica a punteggio + publish
-    allenatore (oggi assente) — non ancora iniziata.
-  - [ ] Fase 6 — esecuzione SQL live (azione manuale utente) + merge/release.
+  invasivo). Fasi 1-3 **committate** lo stesso giorno (`de5ca3e`, non ancora pushato su origin);
+  Fasi 4-5 ancora nel working tree. Piano completo (fuori dal repo):
+  `C:\Users\Gioix\.cursor\plans\due_classifiche_8e0866c3.plan.md`.
+  - [x] Fase 4 — ritaratura con `npm run simulate`/`npm run coach-simulate` (stessa sessione,
+    2026-08-19): `EXPECTED_FINISH_PRESTIGE_WEIGHT` 0.55→0.4 (causa reale del titolo troppo
+    frequente, non lo spread del rumore come ipotizzato dal piano — vedi [[decisions]]),
+    `REPUTATION_OVERPERFORM_STEP` allenatore 4→2, `CUP_TROPHY_RELATIVE_CHANCE` calciatore
+    0.7→0.35. Risultato: trofeo di club calciatore 91.2%→74.5% (vicino al target ~72%),
+    reputazione di picco allenatore 64.7→61.4 (trade-off deliberato — il vecchio target ~43.5
+    avrebbe azzerato trofei/award allenatore, vedi [[decisions]]), promozioni/retrocessioni
+    confermate vicine a zero per un gap di dati pre-esistente (solo 4/26 paesi con un secondo
+    tier modellato, item di backlog separato).
+  - [x] Fase 5 — classifica globale a punteggio (stessa sessione, 2026-08-19):
+    `supabase/career-ranks.sql` (nuovo — tabella `myroad_career_ranks`, RPC
+    `myroad_submit_career_rank` come "upsert nativo" `ON CONFLICT ... WHERE`, vista pubblica
+    `myroad_career_ranks_public`, backfill dalla classifica vecchia), `lib/leaderboard/{types,
+    client}.ts` riscritti (2 categorie/Pareto → 2 piste/punteggio unico), `Leaderboard.tsx`
+    riscritto, pubblicazione allenatore aggiunta (**prima assente**) a `CoachCareerGame.tsx`/
+    `CoachSummary.tsx` con campo nickname condizionale in `CoachIdentityStep`. **Deviazione
+    deliberata dal piano**: niente `security_invoker = true` sulla vista pubblica — avrebbe
+    richiesto un grant `anon` sulla tabella base che riaprirebbe `device_id` via l'endpoint REST
+    automatico di PostgREST, la stessa classe di fuga dati che l'accorgimento voleva prevenire;
+    usato invece il pattern owner-security già in produzione (`myroad_leaderboard_public`), sicuro
+    qui perché tutte le scritture passano dall'RPC SECURITY DEFINER (anon non ha mai un grant
+    diretto sulla tabella da bypassare) — vedi [[decisions]] per il ragionamento completo. 613
+    test verdi (era 610, +3; 1 fixture di `loop.test.ts` riparata, resa flaky dall'abbassamento
+    del peso prestigio in Fase 4), `tsc`/lint puliti.
+  - [x] Fase 6 (parziale) — esecuzione SQL live fatta dall'utente + verifica REST diretta contro
+    il progetto Supabase reale (stessa sessione, 2026-08-19): vista pubblica raggiungibile e
+    popolata dal backfill, tabella base irraggiungibile da anon (lettura e scrittura), RPC di
+    submit/keep-best/unicità nickname/piste separate tutte confermate con richieste dirette (9
+    controlli, vedi [[decisions]] per il dettaglio). **Bug reale trovato**: il backfill non
+    traduceva `role_label` (codice grezzo tipo "LW" invece di "AS") — fix in
+    `supabase/career-ranks-fixup.sql` (nuovo, idempotente, include anche la pulizia dei dati di
+    test "QARankVerify" inseriti durante la verifica), **eseguito dall'utente e riverificato**
+    (etichette tradotte, dati di test rimossi, nickname rilasciato). Schema Supabase live ora
+    pienamente pulito e funzionante.
+  - [x] Playtest reale nel browser (stessa sessione, 2026-08-19, Claude in Chrome con override
+    `fetch` anti-scrittura verso Supabase): prima carriera calciatore e prima carriera allenatore
+    mai giocate a mano su tutto il lavoro "Due classifiche", entrambe fino al ritiro. Colonna
+    posizione per stagione verificata su entrambi i motori, overlay mai visti prima ("Obiettivo
+    raggiunto", cambio ruolo ATT→TRQ), continuità Fase C, ritiro automatico allenatore (forzato
+    via localStorage), **pubblicazione automatica in classifica confermata per entrambe le
+    modalità** (l'allenatore per la prima volta in assoluto), toggle Calciatori/Allenatori con
+    dati reali (etichette tradotte dal fixup, punteggio in evidenza). Nessun bug trovato — vedi
+    [[decisions]] per il dettaglio completo. **Restano**: commit di Fasi 4-5 e valutazione
+    release — vedi [[tech-debt]].
 
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo

@@ -29,8 +29,12 @@ export function clubTrophyChance(prestige: number, ovr: number): number {
   return clamp(base + ovrBonus, 0, CLUB_TROPHY_CHANCE_CAP);
 }
 
-/** Probabilità della coppa nazionale relativa a quella del campionato — meno prestigiosa, quindi più rara. */
-const CUP_TROPHY_RELATIVE_CHANCE = 0.7;
+/** Probabilità della coppa nazionale relativa a quella del campionato — meno prestigiosa, quindi
+ * più rara. Dimezzato da 0.7 nella taratura Fase 4 del piano "Due classifiche": `rollCupTrophy`
+ * è ora chiamata una volta per stagione (dentro `advanceOneSeason`) invece che una volta per
+ * ciclo — un ciclo Express (3 stagioni) tirava quindi 3 volte invece di 1 a parità di soglia,
+ * gonfiando la coppa nazionale rispetto al resto. Vedi `.claude/memory/decisions.md`. */
+const CUP_TROPHY_RELATIVE_CHANCE = 0.35;
 
 /**
  * Tira la coppa nazionale di **una** stagione — il trofeo di campionato non passa più da qui (lo

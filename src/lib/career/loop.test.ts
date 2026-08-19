@@ -527,7 +527,18 @@ describe("resolveCycle", () => {
   });
 
   it("dovrebbe promuovere il club se il piazzamento di campionato è tra i primi (rng al minimo = rumore più favorevole)", () => {
-    const player = { ...playerAt(SAMPDORIA), ovr: 95 };
+    // Attributi mappati (passing/defending/pace/physical) tutti uguali: sia il sistema "preferito"
+    // sia quello "peggiore" del giocatore risolvono per costruzione allo stesso valore (il primo
+    // della reduce, mai sostituito da confronti stretti > / <), quindi il fit tattico con
+    // qualunque club è sempre "neutro" (mai "ottimo" né "scarso") — senza questo, `playerAt` usa
+    // `Math.random` non seedato per gli attributi e il fit tattico "scarso" (moltiplicatore 0.92
+    // sul rank atteso) può far mancare la soglia di promozione per pura fortuna del roll, rendendo
+    // il test intermittente indipendentemente dall'rng passato a `resolveCycle`.
+    const player = {
+      ...playerAt(SAMPDORIA),
+      ovr: 95,
+      attributes: { kind: "outfield" as const, pace: 70, shooting: 70, passing: 70, defending: 70, physical: 70 },
+    };
     const option = { id: "stay", label: "Resta", outcomes: [{ weight: 100, effect: {}, resultText: "Resti." }] };
     const result = resolveCycle(player, INITIAL_LOOP_CONTEXT, "lifestyle", option, "normal", () => 0);
 

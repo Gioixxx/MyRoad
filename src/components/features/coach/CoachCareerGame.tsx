@@ -4,13 +4,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ArchivedCareer, GameSpeed } from "@/types/career";
 import type { ArchivedCoachCareer, CoachDecision, CoachIdentity } from "@/types/coach";
 import { useCoachCareerGame, type CoachCycleOutcomeSummary } from "@/hooks/useCoachCareerGame";
+import { useLeaderboardSettings } from "@/hooks/useLeaderboardSettings";
 import { seedCoachFromArchivedCareer } from "@/lib/coach-career/bridge";
-import { loadCoachArchive } from "@/lib/coach-career/storage";
+import { buildCoachArchiveEntry, loadCoachArchive } from "@/lib/coach-career/storage";
 import { TACTICAL_SYSTEM_LABELS, type TacticalSystem } from "@/lib/career/tactics";
 import { deriveArchetype, ARCHETYPE_LABELS } from "@/lib/career/traits";
 import { SHADOW_RUMOR_THRESHOLD } from "@/lib/career/shadow";
 import { formatAffinity } from "@/lib/career/relations";
 import { COACH_RELATION_LABELS } from "@/lib/coach-career/coach-relations";
+import { checkNicknameAvailable, isLeaderboardConfigured, submitCoachCareerRank } from "@/lib/leaderboard/client";
+import { isValidNickname } from "@/lib/leaderboard/settings";
+import type { PublishStatus } from "@/lib/leaderboard/types";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
@@ -31,22 +35,56 @@ interface CoachCareerGameProps {
 const TACTICAL_SYSTEMS: TacticalSystem[] = ["possesso", "pressing", "contropiede", "diretto"];
 const DEFAULT_SPEED: GameSpeed = "normal";
 
+type NicknameAvailability = "idle" | "checking" | "available" | "taken" | "unknown";
+
 function CoachIdentityStep({
   seedEntry,
   onSubmit,
   onBack,
   onShowArchive,
+  nickname,
+  onNicknameChange,
+  deviceId,
 }: {
   seedEntry?: ArchivedCareer | null;
   onSubmit: (identity: CoachIdentity) => void;
   onBack: () => void;
   onShowArchive?: () => void;
+  /** Nickname per la classifica globale — già obbligatorio per iniziare una carriera calciatore,
+   * qui riusato in silenzio se già impostato. Il campo compare solo quando manca (allenatore
+   * standalone su un dispositivo nuovo, vedi piano "Due classifiche" Fase 5). */
+  nickname: string;
+  onNicknameChange: (nickname: string) => void;
+  deviceId: string;
 }) {
   const [lastName, setLastName] = useState(seedEntry?.lastName ?? "");
   const [nationality, setNationality] = useState<string | null>(seedEntry?.nationality ?? null);
   const [preferredSystem, setPreferredSystem] = useState<TacticalSystem>("possesso");
+  const [nicknameAvailability, setNicknameAvailability] = useState<NicknameAvailability>("idle");
+  const [nicknameError, setNicknameError] = useState<string | undefined>();
 
-  const canSubmit = lastName.trim().length > 0 && nationality !== null;
+  const needsNickname = isLeaderboardConfigured() && !nickname.trim();
+
+  function handleNicknameBlur() {
+    if (!needsNickname || !isValidNickname(nickname)) return;
+    setNicknameAvailability("checking");
+    checkNicknameAvailable(nickname, deviceId).then((result) => {
+      setNicknameAvailability(!result.ok ? "unknown" : result.value ? "available" : "taken");
+    });
+  }
+
+  const canSubmit =
+    lastName.trim().length > 0 &&
+    nationality !== null &&
+    (!needsNickname || (isValidNickname(nickname) && nicknameAvailability !== "taken"));
+
+  function handleSubmit() {
+    if (needsNickname && !isValidNickname(nickname)) {
+      setNicknameError("Inserisci un nickname (2-20 caratteri) per la classifica globale.");
+      return;
+    }
+    if (nationality) onSubmit({ lastName: lastName.trim(), nationality, preferredSystem });
+  }
 
   return (
     <Card className="animate-step-in flex flex-col gap-4 p-5 sm:p-7">
@@ -75,6 +113,34 @@ function CoachIdentityStep({
         <span className="text-(--color-text-muted)">Nazionalità</span>
         <NationalitySelect value={nationality} onChange={setNationality} />
       </label>
+
+      {needsNickname ? (
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-(--color-text-muted)">Nickname (classifica globale)</span>
+          <input
+            value={nickname}
+            onChange={(e) => {
+              onNicknameChange(e.target.value);
+              setNicknameAvailability("idle");
+              setNicknameError(undefined);
+            }}
+            onBlur={handleNicknameBlur}
+            maxLength={20}
+            placeholder="Es. Mister99"
+            className="input-recessed rounded-md px-3 py-2 text-sm"
+          />
+          {nicknameError ? <p className="text-xs text-(--color-error)">{nicknameError}</p> : null}
+          {!nicknameError && nicknameAvailability === "checking" ? (
+            <p className="text-xs text-(--color-text-muted)">Controllo disponibilità…</p>
+          ) : null}
+          {!nicknameError && nicknameAvailability === "taken" ? (
+            <p className="text-xs text-(--color-error)">Nickname già in uso da un altro giocatore.</p>
+          ) : null}
+          {!nicknameError && nicknameAvailability === "available" ? (
+            <p className="text-xs text-(--color-success)">Nickname disponibile.</p>
+          ) : null}
+        </label>
+      ) : null}
 
       <fieldset className="flex flex-col gap-1.5 text-sm">
         <legend className="text-(--color-text-muted)">Identità tattica di partenza</legend>
@@ -108,10 +174,7 @@ function CoachIdentityStep({
             </Button>
           ) : null}
         </div>
-        <Button
-          disabled={!canSubmit}
-          onClick={() => nationality && onSubmit({ lastName: lastName.trim(), nationality, preferredSystem })}
-        >
+        <Button disabled={!canSubmit} onClick={handleSubmit}>
           Inizia la carriera
         </Button>
       </div>
@@ -208,6 +271,9 @@ export function CoachCareerGame({ onBack, seedEntry }: CoachCareerGameProps) {
   const [momentIndex, setMomentIndex] = useState(0);
   const [awaitingOutcome, setAwaitingOutcome] = useState(false);
   const seenOutcome = useRef<CoachCycleOutcomeSummary | null>(null);
+  const { nickname, deviceId, setNickname } = useLeaderboardSettings();
+  const [publishStatus, setPublishStatus] = useState<PublishStatus>("idle");
+  const autoPublishRef = useRef(false);
 
   // Cattura seedEntry una sola volta al mount: "Nuova carriera" dopo un ritiro non deve
   // ri-applicare il bonus di continuità Fase C una seconda volta (page.tsx non rimonta mai
@@ -221,8 +287,34 @@ export function CoachCareerGame({ onBack, seedEntry }: CoachCareerGameProps) {
     setArchiveEntries(loadCoachArchive());
   }, []);
 
+  // Pubblicazione automatica in classifica al ritiro — stesso pattern guard-via-ref di
+  // CareerGame.tsx (calciatore), qui per la prima volta per l'allenatore (vedi piano "Due
+  // classifiche" Fase 5, prima non pubblicava affatto).
+  useEffect(() => {
+    if (!state?.retired || autoPublishRef.current) return;
+    autoPublishRef.current = true;
+
+    if (!isValidNickname(nickname)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- invio automatico, vedi sopra
+      setPublishStatus("skipped-no-nickname");
+      return;
+    }
+
+    setPublishStatus("loading");
+    const entry = buildCoachArchiveEntry(state.coach);
+    submitCoachCareerRank(entry, nickname, deviceId).then((result) => {
+      if (result.ok) {
+        setPublishStatus("done");
+      } else {
+        setPublishStatus(result.error === "nickname-taken" ? "error-nickname-taken" : "error");
+      }
+    });
+  }, [state?.retired, state?.coach, nickname, deviceId]);
+
   const handleStart = useCallback(
     (identity: CoachIdentity) => {
+      autoPublishRef.current = false;
+      setPublishStatus("idle");
       const seed = activeSeed ? seedCoachFromArchivedCareer(activeSeed) : undefined;
       startCareer(identity, DEFAULT_SPEED, seed);
     },
@@ -293,6 +385,9 @@ export function CoachCareerGame({ onBack, seedEntry }: CoachCareerGameProps) {
         onSubmit={handleStart}
         onBack={onBack}
         onShowArchive={archiveEntries.length > 0 ? handleShowArchiveView : undefined}
+        nickname={nickname}
+        onNicknameChange={setNickname}
+        deviceId={deviceId}
       />
     );
   }
@@ -308,6 +403,7 @@ export function CoachCareerGame({ onBack, seedEntry }: CoachCareerGameProps) {
         onRestart={handleRestart}
         onShowArchive={freshArchive.length > 0 ? handleShowArchiveView : undefined}
         archive={freshArchive}
+        publishStatus={publishStatus}
       />
     );
   }

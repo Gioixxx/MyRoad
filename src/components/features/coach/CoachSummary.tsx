@@ -8,8 +8,11 @@ import {
   coachHallOfFameWinsFor,
   pickBestCoachCareerTitle,
 } from "@/lib/coach-career/coach-satisfaction";
+import { isLeaderboardConfigured } from "@/lib/leaderboard/client";
+import type { PublishStatus } from "@/lib/leaderboard/types";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { cn } from "@/lib/utils";
 import { CompetitionBadge } from "@/components/features/career/CompetitionBadge";
 import { OvrBadge } from "@/components/features/career/OvrBadge";
 import { PopularityMeter } from "@/components/features/career/PopularityMeter";
@@ -29,6 +32,15 @@ const HOF_WIN_LABELS: Record<"highestReputation" | "mostTrophies" | "richest" | 
   mostPopular: "Più popolare",
 };
 
+const PUBLISH_STATUS_TEXT: Partial<Record<PublishStatus, string>> = {
+  loading: "Pubblico il tuo punteggio in classifica…",
+  done: "Punteggio pubblicato in classifica ✓",
+  error: "Impossibile pubblicare il punteggio in classifica.",
+  "error-nickname-taken":
+    "Questo nickname è già usato da un altro giocatore. Cambialo nelle Impostazioni per comparire in classifica.",
+  "skipped-no-nickname": "Imposta un nickname per comparire in classifica.",
+};
+
 function EmptyShowcase({ children }: { children: string }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-(--color-border) px-2 py-2 text-center lg:gap-1.5 lg:py-4">
@@ -43,9 +55,11 @@ interface CoachSummaryProps {
   onRestart: () => void;
   onShowArchive?: () => void;
   archive?: ArchivedCoachCareer[];
+  /** Pubblicazione automatica in classifica alla fine della carriera — vedi CoachCareerGame.tsx. */
+  publishStatus: PublishStatus;
 }
 
-export function CoachSummary({ coach, onRestart, onShowArchive, archive = [] }: CoachSummaryProps) {
+export function CoachSummary({ coach, onRestart, onShowArchive, archive = [], publishStatus }: CoachSummaryProps) {
   const trophies = [...coach.trophies].sort((a, b) => a.age - b.age);
   const awards = [...coach.awards].sort((a, b) => a.age - b.age);
   const bestTitle = pickBestCoachCareerTitle(coach.seasonTitles);
@@ -60,6 +74,7 @@ export function CoachSummary({ coach, onRestart, onShowArchive, archive = [] }: 
 
   const provisionalEntry: ArchivedCoachCareer = buildCoachArchiveEntry(coach);
   const hofWins = coachHallOfFameWinsFor(provisionalEntry, archive);
+  const publishStatusText = isLeaderboardConfigured() ? PUBLISH_STATUS_TEXT[publishStatus] : undefined;
 
   return (
     <div className="animate-step-in flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto lg:overflow-hidden">
@@ -104,6 +119,16 @@ export function CoachSummary({ coach, onRestart, onShowArchive, archive = [] }: 
             <Button variant="ghost" onClick={onShowArchive} className="px-0 text-xs">
               Le mie carriere
             </Button>
+          ) : null}
+          {publishStatusText ? (
+            <p
+              className={cn(
+                "text-[11px]",
+                publishStatus === "error" ? "text-(--color-error)" : "text-(--color-text-muted)",
+              )}
+            >
+              {publishStatusText}
+            </p>
           ) : null}
         </div>
       </Card>

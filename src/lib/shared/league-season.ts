@@ -22,8 +22,20 @@ export type LeagueZone =
 /** Punti di "rank atteso" per stella di prestigio del club — condiviso tra i due motori
  * (calciatore/allenatore), ognuno passa la propria nozione di "rating" (OVR per il calciatore,
  * reputazione per l'allenatore) sullo stesso divisore, così le due carriere si comportano in modo
- * comparabile a parità di prestigio/rating relativo. */
-const EXPECTED_FINISH_PRESTIGE_WEIGHT = 0.55;
+ * comparabile a parità di prestigio/rating relativo.
+ *
+ * **Abbassato da 0.55 nella taratura Fase 4 del piano "Due classifiche"**: con 0.55, un club di
+ * prestigio 3 e un giocatore/allenatore già forte (rating ~85) aveva un `expectedPosition` così
+ * vicino al vertice (~2 su una lega da 20) che il titolo restava sopra il 40% a stagione per
+ * QUALUNQUE `POSITION_NOISE_SPREAD` testato (0.2-2.0, vedi debug ad-hoc rimosso a fine sessione)
+ * — non un problema di rumore ma di `expectedPosition` troppo ridotto a "distanza 1" dal vertice,
+ * dove l'arrotondamento+clamp assorbe strutturalmente circa metà della massa di probabilità sulla
+ * posizione 1 a prescindere dallo spread. A 0.4 lo stesso club/rating atterra su
+ * `expectedPosition` ~4 (non ~2), portando il titolo/stagione al 15-25% indicato dal piano per un
+ * club di prestigio 3 mantenendo `POSITION_NOISE_SPREAD` invariato (0.5). Prestigio 0 non tocca
+ * questo termine (il peso moltiplica solo il prestigio) quindi il rischio di retrocessione a
+ * prestigio basso resta quello di prima. Vedi `.claude/memory/decisions.md` per il dettaglio. */
+const EXPECTED_FINISH_PRESTIGE_WEIGHT = 0.4;
 const EXPECTED_FINISH_RATING_DIVISOR = 40;
 
 /** Rank atteso continuo (0-4, non ancora discretizzato in una zona) per un club di un dato
@@ -33,10 +45,15 @@ export function expectedLeagueFinishRank(prestige: number, rating: number): numb
   return prestige * EXPECTED_FINISH_PRESTIGE_WEIGHT + rating / EXPECTED_FINISH_RATING_DIVISOR;
 }
 
-/** Spread del rumore di posizione, come frazione di `rules.size` — valore iniziale, da ritarare
- * con `npm run simulate`/`npm run coach-simulate` per fascia di prestigio e per `size` (un
- * campionato da 24 squadre non si comporta come uno da 18 a parità di sigma, vedi piano "Due
- * classifiche"). */
+/** Spread del rumore di posizione, come frazione di `rules.size` — confermato a 0.5 (valore
+ * iniziale) nella taratura Fase 4: il problema del titolo troppo frequente per i club di
+ * prestigio 3 (vedi `EXPECTED_FINISH_PRESTIGE_WEIGHT` sopra) non dipendeva da questo spread, che
+ * quindi non è stato toccato. Resta un sigma globale, non calibrato per `size` di lega come
+ * suggerito dal piano (un campionato da 24 con 2 posti promozione ha una zona molto più stretta
+ * di uno da 20 con 7 posti Europa) — con questo spread la promozione da leghe a 24 squadre (es.
+ * Championship) resta raggiungibile solo per prestigio/rating già alti per lo standard di quella
+ * categoria, non un vero difetto ma un residuo di calibrazione più fine lasciato per una sessione
+ * futura se emergesse un problema concreto in game (vedi `.claude/memory/tech-debt.md`). */
 const POSITION_NOISE_SPREAD = 0.5;
 
 /**

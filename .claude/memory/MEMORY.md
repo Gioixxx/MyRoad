@@ -1,14 +1,14 @@
 ---
 type: memory
 tags: [memory, index]
-updated: [2026-08-17]
+updated: [2026-08-19]
 ---
 
 # My Road - L'Ascesa — Next.js
 > Contesto persistente. Aggiornato da /remember. Vault Obsidian: vedi workflows/obsidian-vault.md.
 > Progetto rinominato da "Carriera" a "My Road - L'Ascesa" il 2026-08-07 — vedi [[decisions]] per il dettaglio del rename (repo GitHub, launcher/exe, UI). La cartella locale del repo resta fisicamente `C:\Dev\Carriera` (non rinominata, solo il nome logico del progetto/repo GitHub).
 
-**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android) · Supabase (classifica)  **Sprint:** piano "Due classifiche" in corso (campionato posizionale condiviso calciatore/allenatore + futura classifica globale a punteggio) — Fasi 1-3 (motore condiviso + wiring dei due motori) implementate, Fasi 4-6 (ritaratura harness, schema DB, release) da fare in una sessione futura  **Aggiornamento:** 2026-08-19 (⚠️ working tree con ~33 file modificati/nuovi/rimossi, **nessun commit**, non verificato nel browser — vedi [[decisions]], [[sprint]] e [[tech-debt]] prima di continuare; piano completo fuori dal repo in `C:\Users\Gioix\.cursor\plans\due_classifiche_8e0866c3.plan.md`)
+**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android) · Supabase (classifica)  **Sprint:** piano "Due classifiche" — motore + classifica a punteggio implementati e verificati su tutti i livelli (test/harness/REST live/browser reale), resta solo commit/release  **Aggiornamento:** 2026-08-19 (Fasi 1-3 **committate** — `de5ca3e`, non ancora pushato su origin — Fasi 4-5 ancora nel working tree; schema Supabase live eseguito, verificato via REST e ripulito; **playtest reale nel browser completato** — prima carriera calciatore e prima carriera allenatore giocate a mano fino al ritiro, pubblicazione in classifica confermata per entrambe, nessun bug trovato — vedi [[decisions]] per il dettaglio; piano completo fuori dal repo in `C:\Users\Gioix\.cursor\plans\due_classifiche_8e0866c3.plan.md`)
 
 ## Contesto
 Clone testuale di "Copero — Simulador de carrera" (https://copero.com.ar/juegos/simulador-carrera):
@@ -88,12 +88,16 @@ Vedi [[decisions]], [[sprint]] e [[tech-debt]].
 - @adr.md — [[adr]] — ADR formali
 
 ## Segnalibri critici
-- **⚠️ Working tree non committato dal 2026-08-19 (piano "Due classifiche")**: ~33 file
-  modificati/nuovi/rimossi (motore condiviso posizione/zone, wiring calciatore+allenatore
-  riscritti, 2 moduli `club-progression.ts` eliminati) — `git status`/`git diff` **prima** di
-  qualunque comando che potrebbe scartarli (checkout/restore/reset/clean). Nessuna carriera
-  giocata a mano nel browser su questo lavoro, solo test automatici/harness — vedi [[decisions]]
-  e [[tech-debt]] prima di riprendere o rilasciare.
+- **Piano "Due classifiche" (2026-08-19): Fasi 1-3 committate (`de5ca3e`, non pushato su
+  origin), Fasi 4-5 (ritaratura harness + classifica a punteggio) ancora nel working tree, non
+  committate** — `git status`/`git diff` **prima** di qualunque comando che potrebbe scartarli
+  (checkout/restore/reset/clean). `supabase/career-ranks.sql` + `career-ranks-fixup.sql`
+  **eseguiti dall'utente sul progetto Supabase live e verificati con richieste REST dirette**
+  (vista/RPC/RLS/unicità nickname/piste separate, backfill con etichette tradotte, nessun dato di
+  test residuo — vedi [[decisions]]). **Playtest reale completato** (Claude in Chrome, prima
+  carriera calciatore + prima carriera allenatore fino al ritiro, pubblicazione in classifica
+  confermata per entrambe, nessun bug trovato) — vedi [[decisions]] per il dettaglio. Piano
+  verificato su tutti i livelli, resta solo committare Fasi 4-5 e valutare release.
 - **Modalità Allenatore sbloccata al pubblico dal 2026-08-18** (era dietro password `coach2026`
   dal 2026-08-16) — completata con riepilogo di fine carriera (`CoachSummary.tsx`), archivio/Hall
   of Fame dedicati (`CoachArchive.tsx`, Fase D) e "Nuova carriera" riattivato dopo il ritiro

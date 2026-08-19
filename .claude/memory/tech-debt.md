@@ -170,25 +170,6 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
 - **Impatto:** rischio basso — un eventuale refactor futuro di `targetPrestige`/`eligibleClubs` potrebbe silenziosamente rompere la soglia senza che nessun test lo segnali, richiedendo di nuovo una verifica manuale nel browser per accorgersene.
 - **Risoluzione suggerita:** aggiungere in `decisions.test.ts` un test che chiami `generateTransferWindow`/`generateEndOfCycle` (o esponga `eligibleClubs` per il test) con un player OVR 84+ e assert che nessuna opzione abbia `club.country` in `EMERGING_MARKET_COUNTRIES`, più un test simmetrico sotto soglia che confermi che restano eleggibili.
 
-### Cambio ruolo funzionale (position-change) non osservato dal vivo nel browser
-- **Priorità:** Bassa
-- **Area:** `src/lib/career/decisions.ts` (`generatePositionChangeDecision`), `src/lib/career/engine.ts` (`changePosition`)
-- **Data:** 2026-08-10
-- **Descrizione:** durante il playtest della sessione "Potenziale + Attributi + PlayStyles" (vedi
-  [[decisions]]) sono state osservate dal vivo tutte le altre meccaniche nuove (potenziale, focus
-  di allenamento, sblocco PlayStyle, declino attributi da veterano), ma non la decisione di
-  cambio ruolo (categoria `"position-change"`, peso base 8 su ~13 categorie — non innescata nella
-  singola carriera giocata). Coperta da test unitari (`decisions.test.ts`/`loop.test.ts`) ma mai
-  vista renderizzata in UI con un vero cambio di `player.position` osservato in game.
-- **Perché rimandato:** RNG-gated come altri eventi minori; la sessione si è chiusa dopo una
-  copertura già ampia delle altre meccaniche.
-- **Impatto:** rischio basso — la logica è semplice (mappa di adiacenza statica + un campo
-  assegnato), ma un bug di rendering (es. le opzioni con `newPosition` che non mostrano il
-  ruolo target in modo leggibile) sarebbe visibile solo giocando abbastanza a lungo.
-- **Risoluzione suggerita:** in un futuro giro di playtest, giocare finché non compare "Cambio di
-  ruolo" e verificare che `player.position` cambi davvero e che il cartellino/pannello attributi
-  si aggiornino di conseguenza (nuovi pesi di ruolo, nuova posizione mostrata).
-
 ### Raggiungibilità diretta di Shadow/scandalo e archetipi sotto l'obiettivo indicativo (vincolo di frequenza di tocco)
 - **Priorità:** Bassa
 - **Area:** `lib/career/shadow.ts`, `lib/career/traits.ts`, `lib/career/decisions.ts`, `lib/career/loop.ts`
@@ -409,36 +390,33 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
 - **Risoluzione suggerita:** se richiesto, replicare lo stesso pattern di `last-identity.ts` per
   `CoachIdentity` (cognome/nazionalità, non il sistema tattico che ha senso vari ogni volta).
 
-### Piano "Due classifiche": campionato posizionale non ritarato, non committato, non verificato nel browser
-- **Priorità:** Alta
-- **Area:** `lib/shared/league-season.ts`, `lib/career/*`, `lib/coach-career/*`, working tree
-- **Data:** 2026-08-19
-- **Descrizione:** Fasi 1-3 del piano (motore condiviso + wiring dei due motori) implementate e
-  verificate SOLO via test automatici/harness — vedi [[decisions]] per il dettaglio completo.
-  Restano tre gap distinti prima di poter proseguire: (1) i numeri del sistema posizionale sono
-  chiaramente fuori bersaglio (trofeo di club calciatore 90.5%, mai misurato sopra ~85% prima
-  d'ora; reputazione di picco allenatore 64.2 contro un target precedente di 43.5; promozioni/
-  retrocessioni quasi a zero in entrambi i motori) — è il lavoro esplicito della Fase 4 del
-  piano, non ancora iniziata; (2) **nessuna carriera giocata a mano nel browser** — l'intera
-  superficie nuova (colonna posizione in `CareerTable.tsx`/`CoachHistoryTable.tsx`, banner
-  promozione/retrocessione, brief societario allenatore con la nuova distinzione promozione/
-  Europa) non è mai stata vista renderizzata; (3) **~33 file modificati/nuovi/rimossi nel working
-  tree, nessun commit** — un `git status`/`git diff` prima di qualunque comando distruttivo è
-  d'obbligo finché questo lavoro non viene committato.
-- **Perché rimandato:** l'utente ha chiesto esplicitamente di fermarsi dopo la Fase 3 e rimandare
-  Fase 4/5/6 a una sessione futura.
-- **Impatto:** alto — questo è un cambiamento strutturale al motore di gioco di entrambe le
-  carriere (non un fix isolato), il rischio di regressione silenziosa è più alto della norma per
-  questo progetto finché non passa da una verifica visiva reale.
-- **Risoluzione suggerita:** prima di riprendere, leggere [[decisions]] (voce "Piano 'Due
-  classifiche'...") e il piano completo (`C:\Users\Gioix\.cursor\plans\due_classifiche_8e0866c3.plan.md`),
-  poi Fase 4 (ritaratura via harness, con target numerici concordati con l'utente prima di
-  cambiare le costanti) e un giro di playtest reale nel browser prima di considerare le Fasi 1-3
-  chiuse, non solo "testate".
+### Piano "Due classifiche": tutto verificato (test/harness/REST/browser reale), da committare
+- **Priorità:** Media
+- **Area:** `lib/shared/league-season.ts`, `lib/career/*`, `lib/coach-career/*`, `lib/leaderboard/*`,
+  `supabase/career-ranks*.sql`, working tree
+- **Data:** 2026-08-19 (aggiornato stesso giorno, sessione playtest)
+- **Descrizione:** Fasi 1-3 **committate** (`de5ca3e`, non ancora pushato su origin). Fasi 4-5
+  (ritaratura + classifica a punteggio) completate e **verificate a fondo su tutti i livelli**:
+  613 test verdi, `tsc`/lint puliti, harness statistico senza crash, schema Supabase live
+  verificato via REST diretti (9 controlli + fixup), e infine un **playtest reale nel browser**
+  (Claude in Chrome, override `fetch` per bloccare scritture reali verso Supabase durante il
+  test) — prima carriera calciatore e prima carriera allenatore mai giocate a mano su questo
+  lavoro, entrambe fino al ritiro con pubblicazione in classifica confermata. Vedi [[decisions]]
+  per il dettaglio completo di cosa è stato osservato (colonna posizione per stagione, overlay
+  mai visti prima, cambio ruolo, continuità Fase C, ritiro automatico allenatore, toggle
+  Calciatori/Allenatori con dati reali). Nessun bug trovato in questo giro. **Restano solo**:
+  (1) **nulla di tutto questo è committato** — un `git status`/`git diff` prima di qualunque
+  comando distruttivo resta d'obbligo, e il commit delle Fasi 1-3 (`de5ca3e`) non è ancora pushato
+  su origin; (2) release (bump versione, build exe/apk) non ancora valutata.
+- **Perché rimandato:** il commit/release è un passo deliberatamente separato dalla verifica,
+  in attesa di conferma esplicita dell'utente.
+- **Impatto:** basso ormai — non più un rischio di regressione silenziosa (verificato su tutti i
+  livelli), resta solo l'azione meccanica di committare/rilasciare.
+- **Risoluzione suggerita:** committare Fasi 4-5, decidere se/quando pushare `de5ca3e` +
+  il nuovo commit su origin, e se procedere con una release versionata.
 
 ## Priorità
-- **Alta:** piano "Due classifiche" non ritarato/non committato/non verificato nel browser (vedi
-  sopra)
+- **Media:** piano "Due classifiche" (tutto verificato, da committare) — vedi sopra
 - **Media:** pass di game-feel v0.11.0 non verificato nel browser; nessun modo per abbandonare
   una carriera allenatore in corso dall'UI; nessun blocco/feature-flag per la pubblicazione in
   classifica durante test locale (vedi sopra)
@@ -448,6 +426,10 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
   identità allenatore (vedi sopra)
 
 ## Archiviato
+- **Cambio ruolo funzionale (position-change) non osservato dal vivo nel browser** — risolto
+  2026-08-19, playtest del piano "Due classifiche": osservato dal vivo un cambio ATT→TRQ (Como,
+  31 anni) — opzione "Diventa TRQ" con hint leggibile, `player.position` aggiornato correttamente
+  (mostrato sul cartellino), nessun bug di rendering — vedi [[decisions]].
 - **Password/blocco proseguimento modalità Allenatore (v0.13.0) non verificati nel browser** —
   risolto 2026-08-16: gate password verificato dal vivo (password errata → "Password errata.",
   `coach2026` → accesso concesso, sia dal menu sia dal flusso di continuità Fase C). Blocco del

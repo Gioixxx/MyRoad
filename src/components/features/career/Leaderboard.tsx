@@ -3,26 +3,22 @@
 import { useCallback, useEffect, useState } from "react";
 import { Trophy as TrophyIcon } from "lucide-react";
 import { countries } from "@/data/countries";
-import { DEFAULT_LIMIT, fetchLeaderboardCategory, isLeaderboardConfigured } from "@/lib/leaderboard/client";
+import { DEFAULT_LIMIT, fetchLeaderboard, isLeaderboardConfigured } from "@/lib/leaderboard/client";
 import {
-  LEADERBOARD_CATEGORY_LABELS,
-  type LeaderboardCategory,
+  LEADERBOARD_TRACK_LABELS,
   type LeaderboardListItem,
+  type LeaderboardTrack,
 } from "@/lib/leaderboard/types";
 import { ARCHETYPE_LABELS } from "@/lib/career/traits";
-import { POSITION_LABELS } from "@/lib/career/position-labels";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { CountryFlag } from "./CountryFlag";
-import { OvrBadge } from "./OvrBadge";
 
 interface LeaderboardProps {
   onBack: () => void;
 }
 
-// "mostPopular" resta nel data model/tipo (vedi lib/leaderboard/types.ts) ma è nascosta dalla UI
-// su richiesta esplicita dell'utente ("la classifica popolarità è inutile in questo momento").
-const CATEGORIES: LeaderboardCategory[] = ["highestOvr", "mostTrophies", "richest"];
+const TRACKS: LeaderboardTrack[] = ["player", "coach"];
 
 const SAVINGS_FORMATTER = new Intl.NumberFormat("it-IT", {
   style: "currency",
@@ -31,30 +27,17 @@ const SAVINGS_FORMATTER = new Intl.NumberFormat("it-IT", {
   maximumFractionDigits: 1,
 });
 
-function secondaryStat(category: LeaderboardCategory, entry: LeaderboardListItem): string {
-  switch (category) {
-    case "highestOvr":
-      return `OVR ${entry.peakOvr}`;
-    case "mostTrophies":
-      return `${entry.trophyCount} ${entry.trophyCount === 1 ? "trofeo" : "trofei"}`;
-    case "richest":
-      return SAVINGS_FORMATTER.format(entry.finalSavingsEur);
-    case "mostPopular":
-      return `Pop ${entry.finalPopularity}`;
-  }
-}
-
 type Status = "loading" | "error" | "ready";
 
 export function Leaderboard({ onBack }: LeaderboardProps) {
-  const [category, setCategory] = useState<LeaderboardCategory>("highestOvr");
+  const [track, setTrack] = useState<LeaderboardTrack>("player");
   const [status, setStatus] = useState<Status>("loading");
   const [entries, setEntries] = useState<LeaderboardListItem[]>([]);
   const configured = isLeaderboardConfigured();
 
-  const load = useCallback((cat: LeaderboardCategory) => {
+  const load = useCallback((t: LeaderboardTrack) => {
     setStatus("loading");
-    fetchLeaderboardCategory(cat).then((result) => {
+    fetchLeaderboard(t).then((result) => {
       if (result.ok) {
         setEntries(result.value);
         setStatus("ready");
@@ -66,9 +49,9 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
 
   useEffect(() => {
     if (!configured) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch al cambio categoria
-    load(category);
-  }, [category, configured, load]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch al cambio pista
+    load(track);
+  }, [track, configured, load]);
 
   return (
     <div className="flex min-w-0 flex-col items-center gap-5 text-center">
@@ -86,19 +69,19 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
       ) : (
         <>
           <div className="flex flex-wrap justify-center gap-2">
-            {CATEGORIES.map((c) => (
+            {TRACKS.map((t) => (
               <button
-                key={c}
+                key={t}
                 type="button"
-                onClick={() => setCategory(c)}
+                onClick={() => setTrack(t)}
                 className={cn(
                   "rounded-full border px-3 py-1.5 text-xs font-semibold tracking-wide uppercase transition-colors",
-                  c === category
+                  t === track
                     ? "border-(--color-accent) bg-(--color-accent)/15 text-(--color-accent)"
                     : "border-(--color-border) text-(--color-text-muted) hover:text-(--color-text)",
                 )}
               >
-                {LEADERBOARD_CATEGORY_LABELS[c]}
+                {LEADERBOARD_TRACK_LABELS[t]}
               </button>
             ))}
           </div>
@@ -111,7 +94,7 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
             ) : status === "error" ? (
               <div className="flex flex-col items-center gap-2 px-3 py-8 text-center">
                 <p className="text-sm text-(--color-text-muted)">Impossibile caricare la classifica.</p>
-                <Button variant="secondary" onClick={() => load(category)} className="text-xs">
+                <Button variant="secondary" onClick={() => load(track)} className="text-xs">
                   Riprova
                 </Button>
               </div>
@@ -150,9 +133,8 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                             {entry.lastName.toUpperCase()}
                           </span>
                           <span className="shrink-0 rounded bg-(--color-surface-raised) px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-text-muted) uppercase">
-                            {POSITION_LABELS[entry.position]}
+                            {entry.roleLabel}
                           </span>
-                          <OvrBadge ovr={entry.peakOvr} size="sm" />
                           {entry.archetypeId ? (
                             <span className="shrink-0 rounded bg-(--color-surface-raised) px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-(--color-text-muted) uppercase">
                               {ARCHETYPE_LABELS[entry.archetypeId]}
@@ -160,9 +142,15 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                           ) : null}
                         </div>
                       </div>
-                      <p className="pl-7 text-xs text-(--color-text-muted) sm:pl-0">
-                        {secondaryStat(category, entry)}
-                      </p>
+                      <div className="flex shrink-0 flex-col items-end pl-7 sm:pl-0">
+                        <p className="font-display text-sm leading-none text-(--color-ovr-gold)">
+                          {entry.careerScore.toLocaleString("it-IT")}
+                        </p>
+                        <p className="text-[11px] text-(--color-text-muted)">
+                          {entry.peakRating} · {entry.trophyCount} {entry.trophyCount === 1 ? "trofeo" : "trofei"} ·{" "}
+                          {SAVINGS_FORMATTER.format(entry.finalSavingsEur)}
+                        </p>
+                      </div>
                     </li>
                   );
                 })}

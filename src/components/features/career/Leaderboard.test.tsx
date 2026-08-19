@@ -3,14 +3,14 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { LeaderboardListItem } from "@/lib/leaderboard/types";
 import { Leaderboard } from "./Leaderboard";
 
-const { isLeaderboardConfigured, fetchLeaderboardCategory } = vi.hoisted(() => ({
+const { isLeaderboardConfigured, fetchLeaderboard } = vi.hoisted(() => ({
   isLeaderboardConfigured: vi.fn(),
-  fetchLeaderboardCategory: vi.fn(),
+  fetchLeaderboard: vi.fn(),
 }));
 
 vi.mock("@/lib/leaderboard/client", () => ({
   isLeaderboardConfigured,
-  fetchLeaderboardCategory,
+  fetchLeaderboard,
   DEFAULT_LIMIT: 20,
 }));
 
@@ -20,15 +20,14 @@ function sampleItem(overrides: Partial<LeaderboardListItem> = {}): LeaderboardLi
     nickname: "Fenomeno99",
     lastName: "Rossi",
     nationality: "Italy",
-    position: "ST",
-    peakOvr: 88,
+    roleLabel: "ATT",
+    peakRating: 88,
     trophyCount: 3,
     awardCount: 1,
-    retiredAge: 38,
     finalSavingsEur: 5_000_000,
-    finalPopularity: 70,
     careerTitle: "Campione",
     archetypeId: undefined,
+    careerScore: 2100,
     ...overrides,
   };
 }
@@ -36,54 +35,57 @@ function sampleItem(overrides: Partial<LeaderboardListItem> = {}): LeaderboardLi
 describe("Leaderboard", () => {
   beforeEach(() => {
     isLeaderboardConfigured.mockReset();
-    fetchLeaderboardCategory.mockReset();
+    fetchLeaderboard.mockReset();
   });
 
   it("mostra lo stato 'non disponibile' quando non configurata", () => {
     isLeaderboardConfigured.mockReturnValue(false);
     render(<Leaderboard onBack={vi.fn()} />);
     expect(screen.getByText(/classifica non disponibile/i)).toBeInTheDocument();
-    expect(fetchLeaderboardCategory).not.toHaveBeenCalled();
+    expect(fetchLeaderboard).not.toHaveBeenCalled();
   });
 
   it("mostra 'Carico la classifica…' mentre la richiesta è in corso", async () => {
     isLeaderboardConfigured.mockReturnValue(true);
-    fetchLeaderboardCategory.mockReturnValue(new Promise(() => {})); // mai risolta
+    fetchLeaderboard.mockReturnValue(new Promise(() => {})); // mai risolta
     render(<Leaderboard onBack={vi.fn()} />);
     expect(screen.getByText(/carico la classifica/i)).toBeInTheDocument();
   });
 
   it("mostra lo stato vuoto quando non ci sono voci", async () => {
     isLeaderboardConfigured.mockReturnValue(true);
-    fetchLeaderboardCategory.mockResolvedValue({ ok: true, value: [] });
+    fetchLeaderboard.mockResolvedValue({ ok: true, value: [] });
     render(<Leaderboard onBack={vi.fn()} />);
     await waitFor(() => expect(screen.getByText(/sii il primo/i)).toBeInTheDocument());
   });
 
   it("mostra un messaggio di errore con bottone Riprova", async () => {
     isLeaderboardConfigured.mockReturnValue(true);
-    fetchLeaderboardCategory.mockResolvedValue({ ok: false, error: "network" });
+    fetchLeaderboard.mockResolvedValue({ ok: false, error: "network" });
     render(<Leaderboard onBack={vi.fn()} />);
     await waitFor(() => expect(screen.getByText(/impossibile caricare/i)).toBeInTheDocument());
     expect(screen.getByRole("button", { name: /riprova/i })).toBeInTheDocument();
   });
 
-  it("elenca le voci ricevute con nickname e statistiche", async () => {
+  it("elenca le voci ricevute con nickname e punteggio", async () => {
     isLeaderboardConfigured.mockReturnValue(true);
-    fetchLeaderboardCategory.mockResolvedValue({ ok: true, value: [sampleItem()] });
+    fetchLeaderboard.mockResolvedValue({ ok: true, value: [sampleItem()] });
     render(<Leaderboard onBack={vi.fn()} />);
     await waitFor(() => expect(screen.getByText("Fenomeno99")).toBeInTheDocument());
-    expect(screen.getByText("OVR 88")).toBeInTheDocument();
+    // Non `toLocaleString("it-IT")` esatto (2.100): l'ambiente Node/jsdom di test non ha sempre
+    // i dati ICU per il locale it-IT, il separatore delle migliaia può mancare — verificare solo
+    // che il numero (2100) compaia, non la sua punteggiatura.
+    expect(screen.getByText(/2.?100/)).toBeInTheDocument();
   });
 
-  it("cambiare categoria rifà la fetch con la nuova categoria", async () => {
+  it("cambiare pista rifà la fetch con la nuova pista", async () => {
     isLeaderboardConfigured.mockReturnValue(true);
-    fetchLeaderboardCategory.mockResolvedValue({ ok: true, value: [] });
+    fetchLeaderboard.mockResolvedValue({ ok: true, value: [] });
     render(<Leaderboard onBack={vi.fn()} />);
-    await waitFor(() => expect(fetchLeaderboardCategory).toHaveBeenCalledWith("highestOvr"));
+    await waitFor(() => expect(fetchLeaderboard).toHaveBeenCalledWith("player"));
 
-    fireEvent.click(screen.getByRole("button", { name: /più trofei/i }));
-    await waitFor(() => expect(fetchLeaderboardCategory).toHaveBeenCalledWith("mostTrophies"));
+    fireEvent.click(screen.getByRole("button", { name: /allenatori/i }));
+    await waitFor(() => expect(fetchLeaderboard).toHaveBeenCalledWith("coach"));
   });
 
   it("chiama onBack quando si clicca 'Torna'", () => {
