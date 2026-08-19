@@ -7,7 +7,7 @@ export const APP_VERSION: string = packageVersion;
  * ISO date of the current tagged release. Update together with the version bump
  * when cutting a GitHub Release.
  */
-export const APP_RELEASE_DATE_ISO = "2026-08-18";
+export const APP_RELEASE_DATE_ISO = "2026-08-19";
 
 export function formatReleaseDate(isoDate: string = APP_RELEASE_DATE_ISO): string {
   const [year, month, day] = isoDate.split("-").map(Number);
