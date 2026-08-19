@@ -842,7 +842,7 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
   parte ora pulito. Vedi [[tech-debt]] per il gap strutturale sottostante (nessun modo per
   l'utente di abbandonare esplicitamente una carriera allenatore in corso dall'UI).
 
-- [x] **Piano "Due classifiche" — Fasi 1-6 fatte e verificate su tutti i livelli, commit/release da fare**
+- [x] **Piano "Due classifiche" — completato, verificato su tutti i livelli e rilasciato come v0.16.0**
   (2026-08-18/19): campionato posizionale condiviso (`lib/shared/league-season.ts`) + wiring
   allenatore + wiring calciatore completati e verificati (613/613 test, `tsc` pulito, harness
   senza crash) — vedi [[decisions]] per il dettaglio completo (4 criticità trovate e corrette nel
@@ -895,8 +895,13 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
     via localStorage), **pubblicazione automatica in classifica confermata per entrambe le
     modalità** (l'allenatore per la prima volta in assoluto), toggle Calciatori/Allenatori con
     dati reali (etichette tradotte dal fixup, punteggio in evidenza). Nessun bug trovato — vedi
-    [[decisions]] per il dettaglio completo. **Restano**: commit di Fasi 4-5 e valutazione
-    release — vedi [[tech-debt]].
+    [[decisions]] per il dettaglio completo.
+  - [x] Commit + push + release v0.16.0 (stessa sessione, 2026-08-19): 3 commit su `main`
+    (`f4d0806` housekeeping memoria pendente, `56400f4` Fase 4+5, `07a6f3c` bump versione),
+    tag `v0.16.0`, push su origin. `dist/MyRoad.exe` (FileVersion 0.16.0.0) e `dist/MyRoad.apk`
+    (versionCode 1600, firma verificata) allegati alla [release GitHub
+    v0.16.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.16.0). Deploy GitHub Pages verde.
+    **Piano "Due classifiche" chiuso e rilasciato** — vedi [[decisions]] per il dettaglio completo.
 
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo

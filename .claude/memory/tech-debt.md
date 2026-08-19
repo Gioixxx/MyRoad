@@ -390,33 +390,7 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
 - **Risoluzione suggerita:** se richiesto, replicare lo stesso pattern di `last-identity.ts` per
   `CoachIdentity` (cognome/nazionalità, non il sistema tattico che ha senso vari ogni volta).
 
-### Piano "Due classifiche": tutto verificato (test/harness/REST/browser reale), da committare
-- **Priorità:** Media
-- **Area:** `lib/shared/league-season.ts`, `lib/career/*`, `lib/coach-career/*`, `lib/leaderboard/*`,
-  `supabase/career-ranks*.sql`, working tree
-- **Data:** 2026-08-19 (aggiornato stesso giorno, sessione playtest)
-- **Descrizione:** Fasi 1-3 **committate** (`de5ca3e`, non ancora pushato su origin). Fasi 4-5
-  (ritaratura + classifica a punteggio) completate e **verificate a fondo su tutti i livelli**:
-  613 test verdi, `tsc`/lint puliti, harness statistico senza crash, schema Supabase live
-  verificato via REST diretti (9 controlli + fixup), e infine un **playtest reale nel browser**
-  (Claude in Chrome, override `fetch` per bloccare scritture reali verso Supabase durante il
-  test) — prima carriera calciatore e prima carriera allenatore mai giocate a mano su questo
-  lavoro, entrambe fino al ritiro con pubblicazione in classifica confermata. Vedi [[decisions]]
-  per il dettaglio completo di cosa è stato osservato (colonna posizione per stagione, overlay
-  mai visti prima, cambio ruolo, continuità Fase C, ritiro automatico allenatore, toggle
-  Calciatori/Allenatori con dati reali). Nessun bug trovato in questo giro. **Restano solo**:
-  (1) **nulla di tutto questo è committato** — un `git status`/`git diff` prima di qualunque
-  comando distruttivo resta d'obbligo, e il commit delle Fasi 1-3 (`de5ca3e`) non è ancora pushato
-  su origin; (2) release (bump versione, build exe/apk) non ancora valutata.
-- **Perché rimandato:** il commit/release è un passo deliberatamente separato dalla verifica,
-  in attesa di conferma esplicita dell'utente.
-- **Impatto:** basso ormai — non più un rischio di regressione silenziosa (verificato su tutti i
-  livelli), resta solo l'azione meccanica di committare/rilasciare.
-- **Risoluzione suggerita:** committare Fasi 4-5, decidere se/quando pushare `de5ca3e` +
-  il nuovo commit su origin, e se procedere con una release versionata.
-
 ## Priorità
-- **Media:** piano "Due classifiche" (tutto verificato, da committare) — vedi sopra
 - **Media:** pass di game-feel v0.11.0 non verificato nel browser; nessun modo per abbandonare
   una carriera allenatore in corso dall'UI; nessun blocco/feature-flag per la pubblicazione in
   classifica durante test locale (vedi sopra)
@@ -426,6 +400,12 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
   identità allenatore (vedi sopra)
 
 ## Archiviato
+- **Piano "Due classifiche" (campionato posizionale + classifica globale a punteggio)** —
+  risolto/rilasciato 2026-08-19: verificato su tutti i livelli (613 test, harness statistico,
+  REST diretti contro Supabase live, playtest reale nel browser per calciatore e allenatore),
+  nessun bug trovato nel playtest finale, committato (3 commit) e rilasciato come **v0.16.0**
+  (`dist/MyRoad.exe`/`dist/MyRoad.apk` verificati e allegati, deploy GitHub Pages verde) — vedi
+  [[decisions]] per il dettaglio completo di ogni fase.
 - **Cambio ruolo funzionale (position-change) non osservato dal vivo nel browser** — risolto
   2026-08-19, playtest del piano "Due classifiche": osservato dal vivo un cambio ATT→TRQ (Como,
   31 anni) — opzione "Diventa TRQ" con hint leggibile, `player.position` aggiornato correttamente

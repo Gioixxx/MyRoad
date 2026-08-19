@@ -1024,3 +1024,36 @@ Registro scelte tecniche con motivazioni.
   livelli (unit test, harness statistico, REST diretti, browser reale) — pronto per commit delle
   Fasi 4-5 e valutazione release, restano solo Fase 6 vera e propria (SQL live già eseguito e
   verificato in un giro precedente di questa stessa sessione) e la decisione di procedere.
+
+### Piano "Due classifiche" — commit, push e release v0.16.0 pubblicata
+- **Data:** 2026-08-19
+- **Decisione:** su richiesta esplicita dell'utente ("commit e push e rilascia versione"), chiuso
+  l'intero piano "Due classifiche" con 3 commit su `main`: (1) `f4d0806` — housekeeping di memoria
+  già pendente da prima di questa sessione (submodule `.claude/libs` + note tecniche QA 2026-08-18
+  in `conventions.md`, mai committate); (2) `56400f4` — tutto il lavoro di Fase 4 (ritaratura) e
+  Fase 5 (classifica a punteggio, `supabase/career-ranks*.sql`, client/UI, pubblicazione
+  allenatore) più l'aggiornamento di [[decisions]]/[[tech-debt]]/[[sprint]]/[[MEMORY]]; (3)
+  `07a6f3c` — bump versione (`package.json`/`package-lock.json` 0.15.0→**0.16.0**, minor: nuova
+  feature — classifica a punteggio — non solo fix, coerente col criterio già usato per bundle di
+  questo volume), `APP_RELEASE_DATE_ISO` aggiornato. Tag annotato `v0.16.0`, push `main` + tag su
+  origin (`77b0513..07a6f3c`). `dist/MyRoad.exe` (FileVersion 0.16.0.0, dotnet publish self-
+  contained win-x64) e `dist/MyRoad.apk` (versionCode 1600/versionName 0.16.0 via `aapt2 dump
+  badging`, firma verificata con `apksigner verify --print-certs` — stesso certificato
+  `CN=Giuseppe Mantello` del keystore stabile del progetto) rigenerati e allegati alla [release
+  GitHub v0.16.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.16.0). Deploy GitHub Pages
+  verificato verde dopo il push (`gh run list`). Le Fasi 1-3 (`de5ca3e`, committate in una sessione
+  precedente lo stesso giorno) erano già su `main` ma mai pushate/taggate prima d'ora — questo
+  rilascio le include.
+- **Perché:** primo rilascio pubblico del piano "Due classifiche" — chiude un ciclo di lavoro
+  iniziato il 2026-08-18 (motore condiviso) e verificato su ogni livello disponibile nel corso di
+  questa stessa giornata (test unitari, harness statistico, REST diretti contro Supabase live,
+  playtest reale nel browser) prima di essere considerato pronto per il rilascio.
+- **Alternative:** nessuna — commit/push/release erano il passo esplicitamente richiesto
+  dall'utente dopo aver confermato che tutte le verifiche precedenti erano a posto.
+- **Impatto:** `main` ora a `07a6f3c` (era `77b0513`), tag `v0.16.0` pubblico. Nessun problema
+  incontrato nel giro di build/release (a differenza di alcune release passate con incidenti su
+  auto-updater/versione stantia) — verificato ogni artefatto prima di allegarlo (FileVersion exe,
+  versionCode/firma APK) per non ripetere l'incidente "APK v0.9.0 stantio" del 2026-08-12.
+  **Non verificato in questo giro**: nessun nuovo playtest oltre a quello già fatto nella sessione
+  precedente immediatamente prima del rilascio (stesso giorno) — non necessario, nessun codice è
+  cambiato tra la verifica e il rilascio, solo bump di versione.
