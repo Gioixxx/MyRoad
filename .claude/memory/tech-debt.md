@@ -1,7 +1,7 @@
 ---
 type: tech-debt
 tags: [memory, tech-debt]
-updated: [2026-08-19]
+updated: [2026-08-21]
 ---
 
 # Tech Debt
@@ -390,10 +390,32 @@ Registro debito tecnico con priorità. Aggiornato da /session-end. Origine spess
 - **Risoluzione suggerita:** se richiesto, replicare lo stesso pattern di `last-identity.ts` per
   `CoachIdentity` (cognome/nazionalità, non il sistema tattico che ha senso vari ogni volta).
 
+### Dettaglio trofei/premi in classifica globale — non verificato con un playtest reale nel browser
+- **Priorità:** Media
+- **Area:** `src/components/features/career/Leaderboard.tsx`, `src/lib/career/trophy-breakdown.ts`
+- **Data:** 2026-08-21
+- **Descrizione:** la feature (release v0.18.0, riga di classifica espandibile con dettaglio
+  trofei/premi aggregato per competizione/tipo) è stata verificata con 650 test automatici,
+  `tsc`/eslint puliti, e una checklist approfondita di richieste REST dirette contro il progetto
+  Supabase live (vista con le nuove colonne, RPC a 14/16 parametri, CHECK di dimensione, RLS) —
+  ma nessuna carriera è stata giocata a mano nel browser per vedere il pannello espanso
+  renderizzato con dati veri (trofei/premi misti, ordine count-desc, fallback "Dettaglio non
+  disponibile" su una voce reale pre-migrazione).
+- **Perché rimandato:** sessione di implementazione + rilascio, non di playtest — stessa
+  convenzione già seguita altre volte nel progetto per sessioni di questo tipo.
+- **Impatto:** rischio medio — è UI nuova (riga espandibile, prima istanza di questo pattern
+  nella classifica) non ancora osservata a schermo; un bug di rendering (es. ordine sbagliato,
+  wrap del testo con nomi lunghi, label premio mancante per un tipo) sarebbe visibile solo
+  giocando.
+- **Risoluzione suggerita:** giocare/forzare una carriera fino al ritiro con più trofei di tipi
+  diversi (club+coppa+nazionale) e almeno un premio, verificare il pannello espanso in Classifica
+  per entrambe le piste.
+
 ## Priorità
 - **Media:** pass di game-feel v0.11.0 non verificato nel browser; nessun modo per abbandonare
   una carriera allenatore in corso dall'UI; nessun blocco/feature-flag per la pubblicazione in
-  classifica durante test locale (vedi sopra)
+  classifica durante test locale; dettaglio trofei/premi in classifica non verificato nel browser
+  (vedi sopra)
 - **Bassa:** pattern `min-h-0` non condizionato ricorrente; classifica globale non verificata
   dall'eseguibile desktop; "Nuova carriera" allenatore su carriera continuity-seedata non
   verificato dal vivo; duplicazione bottone continuità allenatore; nessuna persistenza ultima
