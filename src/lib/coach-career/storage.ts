@@ -4,6 +4,7 @@ import type { CoachLoopContext } from "./loop";
 import { pickBestCoachCareerTitle } from "./coach-satisfaction";
 import { deriveArchetype } from "@/lib/career/traits";
 import { deriveShadowTitle } from "@/lib/career/shadow";
+import { summarizeAwards, summarizeTrophies } from "@/lib/career/trophy-breakdown";
 
 const STORAGE_KEY = "carriera:coach-save";
 /** 2 dal wiring "Due classifiche" (`CoachSeasonOutcome.zone`/`position`/`leagueSize`,
@@ -72,6 +73,8 @@ export function buildCoachArchiveEntry(coach: Coach): ArchivedCoachCareer {
     peakReputation: coach.records.peakReputation,
     trophyCount: coach.trophies.length,
     awardCount: coach.awards.length,
+    trophyBreakdown: summarizeTrophies(coach.trophies),
+    awardBreakdown: summarizeAwards(coach.awards),
     retiredAge: coach.age,
     retiredAtIso: new Date().toISOString(),
     finalSavingsEur: coach.wallet.savingsEur,

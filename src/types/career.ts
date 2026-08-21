@@ -1,4 +1,5 @@
 import type { LeagueZone } from "@/lib/shared/league-season";
+import type { AwardBreakdownEntry, TrophyBreakdownEntry } from "@/lib/career/trophy-breakdown";
 
 export type Position =
   | "GK"
@@ -366,6 +367,10 @@ export interface ArchivedCareer {
   peakOvr: number;
   trophyCount: number;
   awardCount: number;
+  /** Trofei aggregati per competizione — assente per voci create prima di questo campo. */
+  trophyBreakdown?: TrophyBreakdownEntry[];
+  /** Premi aggregati per tipo — assente per voci create prima di questo campo. */
+  awardBreakdown?: AwardBreakdownEntry<AwardType>[];
   retiredAge: number;
   retiredAtIso: string;
   careerApps: number;

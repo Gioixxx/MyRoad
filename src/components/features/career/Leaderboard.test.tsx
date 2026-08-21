@@ -28,6 +28,8 @@ function sampleItem(overrides: Partial<LeaderboardListItem> = {}): LeaderboardLi
     careerTitle: "Campione",
     archetypeId: undefined,
     careerScore: 2100,
+    trophyBreakdown: [{ competition: "Serie A", count: 2, isNational: false }],
+    awardBreakdown: [{ type: "top-scorer", count: 1 }],
     ...overrides,
   };
 }
@@ -94,5 +96,53 @@ describe("Leaderboard", () => {
     render(<Leaderboard onBack={onBack} />);
     fireEvent.click(screen.getByRole("button", { name: /torna/i }));
     expect(onBack).toHaveBeenCalled();
+  });
+
+  it("il dettaglio trofei/premi è nascosto finché non si espande la riga", async () => {
+    isLeaderboardConfigured.mockReturnValue(true);
+    fetchLeaderboard.mockResolvedValue({ ok: true, value: [sampleItem()] });
+    render(<Leaderboard onBack={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText("Fenomeno99")).toBeInTheDocument());
+
+    expect(screen.queryByText(/2× Serie A/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /mostra dettaglio trofei/i }));
+    expect(screen.getByText(/2× Serie A/)).toBeInTheDocument();
+    expect(screen.getByText(/1× Capocannoniere/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /nascondi dettaglio trofei/i }));
+    expect(screen.queryByText(/2× Serie A/)).not.toBeInTheDocument();
+  });
+
+  it("mostra 'Dettaglio non disponibile' per una voce senza breakdown (pubblicata prima della migrazione)", async () => {
+    isLeaderboardConfigured.mockReturnValue(true);
+    fetchLeaderboard.mockResolvedValue({
+      ok: true,
+      value: [sampleItem({ trophyBreakdown: [], awardBreakdown: [] })],
+    });
+    render(<Leaderboard onBack={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText("Fenomeno99")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: /mostra dettaglio trofei/i }));
+    expect(screen.getByText(/dettaglio non disponibile/i)).toBeInTheDocument();
+  });
+
+  it("usa le etichette premio dell'allenatore quando la pista è 'coach'", async () => {
+    isLeaderboardConfigured.mockReturnValue(true);
+    fetchLeaderboard.mockResolvedValue({
+      ok: true,
+      value: [
+        sampleItem({
+          awardBreakdown: [{ type: "manager-of-the-year", count: 1 }],
+          roleLabel: "Allenatore",
+        }),
+      ],
+    });
+    render(<Leaderboard onBack={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /allenatori/i }));
+    await waitFor(() => expect(screen.getByText("Fenomeno99")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: /mostra dettaglio trofei/i }));
+    expect(screen.getByText(/1× Allenatore dell'anno/)).toBeInTheDocument();
   });
 });

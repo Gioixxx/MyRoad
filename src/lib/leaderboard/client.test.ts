@@ -21,6 +21,8 @@ const PLAYER_ENTRY: ArchivedCareer = {
   careerTitle: "Leggenda",
   archetypeId: "leader",
   shadowTitle: null,
+  trophyBreakdown: [{ competition: "Serie A", count: 3, isNational: false }],
+  awardBreakdown: [{ type: "ballon-dor", count: 1 }],
 };
 
 const COACH_ENTRY: ArchivedCoachCareer = {
@@ -39,6 +41,8 @@ const COACH_ENTRY: ArchivedCoachCareer = {
   bestLeagueFinish: "title",
   archetypeId: "leader",
   shadowTitle: null,
+  trophyBreakdown: [{ competition: "Champions League", count: 1, isNational: false }],
+  awardBreakdown: [{ type: "manager-of-the-year", count: 1 }],
 };
 
 describe("leaderboard/client — buildPlayerSubmitPayload", () => {
@@ -60,12 +64,24 @@ describe("leaderboard/client — buildPlayerSubmitPayload", () => {
       p_archetype_id: "leader",
       p_app_version: expect.any(String),
       p_client_entry_id: "rossi-123",
+      p_trophy_breakdown: [{ competition: "Serie A", count: 3, isNational: false }],
+      p_award_breakdown: [{ type: "ballon-dor", count: 1 }],
     });
   });
 
   it("normalizza archetypeId assente a null", () => {
     const payload = buildPlayerSubmitPayload({ ...PLAYER_ENTRY, archetypeId: undefined }, "Nick", "d");
     expect(payload.p_archetype_id).toBeNull();
+  });
+
+  it("normalizza trophyBreakdown/awardBreakdown assenti ad array vuoti (voci d'archivio precedenti a questo campo)", () => {
+    const payload = buildPlayerSubmitPayload(
+      { ...PLAYER_ENTRY, trophyBreakdown: undefined, awardBreakdown: undefined },
+      "Nick",
+      "d",
+    );
+    expect(payload.p_trophy_breakdown).toEqual([]);
+    expect(payload.p_award_breakdown).toEqual([]);
   });
 });
 
@@ -88,12 +104,24 @@ describe("leaderboard/client — buildCoachSubmitPayload", () => {
       p_archetype_id: "leader",
       p_app_version: expect.any(String),
       p_client_entry_id: "bianchi-456",
+      p_trophy_breakdown: [{ competition: "Champions League", count: 1, isNational: false }],
+      p_award_breakdown: [{ type: "manager-of-the-year", count: 1 }],
     });
   });
 
   it("normalizza archetypeId assente a null", () => {
     const payload = buildCoachSubmitPayload({ ...COACH_ENTRY, archetypeId: undefined }, "Nick", "d");
     expect(payload.p_archetype_id).toBeNull();
+  });
+
+  it("normalizza trophyBreakdown/awardBreakdown assenti ad array vuoti (voci d'archivio precedenti a questo campo)", () => {
+    const payload = buildCoachSubmitPayload(
+      { ...COACH_ENTRY, trophyBreakdown: undefined, awardBreakdown: undefined },
+      "Nick",
+      "d",
+    );
+    expect(payload.p_trophy_breakdown).toEqual([]);
+    expect(payload.p_award_breakdown).toEqual([]);
   });
 });
 
@@ -254,6 +282,8 @@ describe("leaderboard/client — rete (env stubbate, modulo reimportato)", () =>
         archetype_id: "leader",
         app_version: "0.16.0",
         career_score: 2200,
+        trophy_breakdown: [{ competition: "Serie A", count: 3, isNational: false }],
+        award_breakdown: [{ type: "ballon-dor", count: 1 }],
       };
       vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => [row] }));
 
@@ -275,6 +305,8 @@ describe("leaderboard/client — rete (env stubbate, modulo reimportato)", () =>
           careerTitle: "Leggenda",
           archetypeId: "leader",
           careerScore: 2200,
+          trophyBreakdown: [{ competition: "Serie A", count: 3, isNational: false }],
+          awardBreakdown: [{ type: "ballon-dor", count: 1 }],
         });
       }
     });
@@ -284,6 +316,37 @@ describe("leaderboard/client — rete (env stubbate, modulo reimportato)", () =>
       const mod = await import("./client");
       const result = await mod.fetchLeaderboard("coach");
       expect(result).toEqual({ ok: false, error: "http-500" });
+    });
+
+    it("fetchLeaderboard normalizza trophy_breakdown/award_breakdown assenti ad array vuoti (righe pubblicate prima di questo campo)", async () => {
+      const row = {
+        id: "row-old",
+        created_at: "2026-01-01T00:00:00.000Z",
+        nickname: "Vecchio",
+        track: "player",
+        peak_rating: 80,
+        trophy_count: 2,
+        award_count: 0,
+        final_savings_eur: 1_000_000,
+        last_name: "Verdi",
+        nationality: "Italy",
+        role_label: "DC",
+        career_title: "Onesto",
+        archetype_id: null,
+        app_version: "0.16.0",
+        career_score: 1600,
+        // trophy_breakdown/award_breakdown assenti: riga pre-esistente al cambio schema.
+      };
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => [row] }));
+
+      const mod = await import("./client");
+      const result = await mod.fetchLeaderboard("player");
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value[0].trophyBreakdown).toEqual([]);
+        expect(result.value[0].awardBreakdown).toEqual([]);
+      }
     });
   });
 });

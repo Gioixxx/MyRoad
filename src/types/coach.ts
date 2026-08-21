@@ -9,6 +9,7 @@ import type {
   Wallet,
 } from "@/types/career";
 import type { TacticalSystem } from "@/lib/career/tactics";
+import type { AwardBreakdownEntry, TrophyBreakdownEntry } from "@/lib/career/trophy-breakdown";
 import type { LeagueZone } from "@/lib/shared/league-season";
 
 export interface CoachIdentity {
@@ -204,6 +205,10 @@ export interface ArchivedCoachCareer {
   peakReputation: number;
   trophyCount: number;
   awardCount: number;
+  /** Trofei aggregati per competizione — assente per voci create prima di questo campo. */
+  trophyBreakdown?: TrophyBreakdownEntry[];
+  /** Premi aggregati per tipo — assente per voci create prima di questo campo. */
+  awardBreakdown?: AwardBreakdownEntry<CoachAwardType>[];
   retiredAge: number;
   retiredAtIso: string;
   finalSavingsEur: number;

@@ -76,6 +76,23 @@ describe("archivio", () => {
     expect(entry.lastName).toBe("Conti");
     expect(entry.retiredAge).toBe(60);
     expect(entry.clubsManaged).toBe(1);
+    expect(entry.trophyBreakdown).toEqual([]);
+    expect(entry.awardBreakdown).toEqual([]);
+  });
+
+  it("buildCoachArchiveEntry aggrega trophies/awards in trophyBreakdown/awardBreakdown", () => {
+    const coach = {
+      ...createCoach(IDENTITY),
+      trophies: [
+        { competition: "Serie A", club: TEST_CLUB, age: 45 },
+        { competition: "Serie A", club: TEST_CLUB, age: 47 },
+      ],
+      awards: [{ type: "manager-of-the-season" as const, age: 46 }],
+    };
+    const entry = buildCoachArchiveEntry(coach);
+
+    expect(entry.trophyBreakdown).toEqual([{ competition: "Serie A", count: 2, isNational: false }]);
+    expect(entry.awardBreakdown).toEqual([{ type: "manager-of-the-season", count: 1 }]);
   });
 
   it("appendToCoachArchive persiste e antepone le nuove voci", () => {

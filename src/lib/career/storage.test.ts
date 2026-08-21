@@ -416,11 +416,40 @@ describe("loadArchive / appendToArchive", () => {
     expect(entry.peakOvr).toBe(player.ovr);
     expect(entry.trophyCount).toBe(0);
     expect(entry.awardCount).toBe(0);
+    expect(entry.trophyBreakdown).toEqual([]);
+    expect(entry.awardBreakdown).toEqual([]);
     expect(entry.finalSavingsEur).toBe(player.wallet.savingsEur);
     expect(entry.finalPopularity).toBe(player.popularity);
     expect(entry.careerTitle).toBe("Carriera solida");
     expect(entry.archetypeId).toBeUndefined();
     expect(entry.shadowTitle).toBeNull();
+  });
+
+  it("buildArchiveEntry dovrebbe aggregare trophies/awards in trophyBreakdown/awardBreakdown", () => {
+    const club: Player["trophies"][number]["club"] = {
+      id: "juventus",
+      name: "Juventus",
+      country: "Italia",
+      tier: 1,
+      prestige: 3,
+      competitions: { league: "Serie A", cup: "Coppa Italia", continental: "Champions League" },
+      crestUrl: "",
+    };
+    const player: Player = {
+      ...samplePlayer(),
+      trophies: [
+        { competition: "Serie A", club, age: 20 },
+        { competition: "Mondiale", age: 24 },
+      ],
+      awards: [{ type: "top-scorer", age: 22 }],
+    };
+    const entry = buildArchiveEntry(player);
+
+    expect(entry.trophyBreakdown).toEqual([
+      { competition: "Mondiale", count: 1, isNational: true },
+      { competition: "Serie A", count: 1, isNational: false },
+    ]);
+    expect(entry.awardBreakdown).toEqual([{ type: "top-scorer", count: 1 }]);
   });
 
   it("buildArchiveEntry dovrebbe popolare archetypeId/shadowTitle da traits/shadow", () => {

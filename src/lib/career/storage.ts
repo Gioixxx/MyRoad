@@ -6,6 +6,7 @@ import { NEUTRAL_TRAITS, deriveArchetype } from "./traits";
 import { deriveShadowTitle } from "./shadow";
 import { createAttributesFromOvr, peaksFromAttributes } from "./attributes";
 import { ensureCoreRelations } from "./relations";
+import { summarizeAwards, summarizeTrophies } from "./trophy-breakdown";
 
 const STORAGE_KEY = "carriera:save";
 /** 15 dal wiring "Due classifiche" (`Player.cyclesPlayed`, campi opzionali su `ClubStint` —
@@ -236,6 +237,8 @@ export function buildArchiveEntry(player: Player): ArchivedCareer {
     peakOvr: peakOvr(player),
     trophyCount: player.trophies.length,
     awardCount: player.awards.length,
+    trophyBreakdown: summarizeTrophies(player.trophies),
+    awardBreakdown: summarizeAwards(player.awards),
     retiredAge: player.age,
     retiredAtIso: new Date().toISOString(),
     careerApps: player.career.apps,

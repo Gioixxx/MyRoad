@@ -2,6 +2,7 @@ import type { ArchivedCareer } from "@/types/career";
 import type { ArchivedCoachCareer } from "@/types/coach";
 import { APP_VERSION } from "@/constants/app-info";
 import { POSITION_LABELS } from "@/lib/career/position-labels";
+import type { AwardBreakdownEntry, TrophyBreakdownEntry } from "@/lib/career/trophy-breakdown";
 import {
   toLeaderboardListItem,
   type LeaderboardEntryRow,
@@ -47,6 +48,8 @@ interface SubmitCareerRankPayload {
   p_archetype_id: string | null;
   p_app_version: string;
   p_client_entry_id: string;
+  p_trophy_breakdown: TrophyBreakdownEntry[];
+  p_award_breakdown: AwardBreakdownEntry<string>[];
 }
 
 export function buildPlayerSubmitPayload(
@@ -71,6 +74,8 @@ export function buildPlayerSubmitPayload(
     p_archetype_id: entry.archetypeId ?? null,
     p_app_version: APP_VERSION,
     p_client_entry_id: entry.id,
+    p_trophy_breakdown: entry.trophyBreakdown ?? [],
+    p_award_breakdown: entry.awardBreakdown ?? [],
   };
 }
 
@@ -96,6 +101,8 @@ export function buildCoachSubmitPayload(
     p_archetype_id: entry.archetypeId ?? null,
     p_app_version: APP_VERSION,
     p_client_entry_id: entry.id,
+    p_trophy_breakdown: entry.trophyBreakdown ?? [],
+    p_award_breakdown: entry.awardBreakdown ?? [],
   };
 }
 

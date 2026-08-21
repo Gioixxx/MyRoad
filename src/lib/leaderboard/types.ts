@@ -1,4 +1,5 @@
 import type { ArchetypeId } from "@/types/career";
+import type { AwardBreakdownEntry, TrophyBreakdownEntry } from "@/lib/career/trophy-breakdown";
 
 /** Stato della pubblicazione automatica in classifica alla fine di una carriera (calciatore o
  * allenatore — stesso tipo condiviso, vedi CareerGame.tsx/CoachCareerGame.tsx). */
@@ -38,6 +39,8 @@ export interface LeaderboardEntryRow {
   archetype_id: string | null;
   app_version: string;
   career_score: number;
+  trophy_breakdown: TrophyBreakdownEntry[];
+  award_breakdown: AwardBreakdownEntry<string>[];
 }
 
 /** Forma UI-facing (camelCase), quella che consuma il componente Leaderboard. */
@@ -54,6 +57,8 @@ export interface LeaderboardListItem {
   careerTitle: string;
   archetypeId: ArchetypeId | undefined;
   careerScore: number;
+  trophyBreakdown: TrophyBreakdownEntry[];
+  awardBreakdown: AwardBreakdownEntry<string>[];
 }
 
 export function toLeaderboardListItem(row: LeaderboardEntryRow): LeaderboardListItem {
@@ -70,5 +75,7 @@ export function toLeaderboardListItem(row: LeaderboardEntryRow): LeaderboardList
     careerTitle: row.career_title,
     archetypeId: (row.archetype_id ?? undefined) as ArchetypeId | undefined,
     careerScore: row.career_score,
+    trophyBreakdown: row.trophy_breakdown ?? [],
+    awardBreakdown: row.award_breakdown ?? [],
   };
 }
