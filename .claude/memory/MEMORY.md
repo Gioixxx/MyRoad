@@ -1,14 +1,14 @@
 ---
 type: memory
 tags: [memory, index]
-updated: [2026-08-19]
+updated: [2026-08-21]
 ---
 
 # My Road - L'Ascesa — Next.js
 > Contesto persistente. Aggiornato da /remember. Vault Obsidian: vedi workflows/obsidian-vault.md.
 > Progetto rinominato da "Carriera" a "My Road - L'Ascesa" il 2026-08-07 — vedi [[decisions]] per il dettaglio del rename (repo GitHub, launcher/exe, UI). La cartella locale del repo resta fisicamente `C:\Dev\Carriera` (non rinominata, solo il nome logico del progetto/repo GitHub).
 
-**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android) · Supabase (classifica)  **Sprint:** piano "Due classifiche" completato e **rilasciato come v0.16.0** (2026-08-19) — campionato posizionale condiviso calciatore/allenatore + classifica globale a punteggio a due piste  **Aggiornamento:** 2026-08-19 (3 commit su `main` — `f4d0806`/`56400f4`/`07a6f3c` — pushati su origin con tag `v0.16.0`; `dist/MyRoad.exe`/`dist/MyRoad.apk` allegati alla [release GitHub](https://github.com/Gioixxx/MyRoad/releases/tag/v0.16.0), deploy GitHub Pages verde; verificato su tutti i livelli — 613 test, harness statistico, REST diretti contro Supabase live, playtest reale nel browser — vedi [[decisions]] per il dettaglio completo; piano completo fuori dal repo in `C:\Users\Gioix\.cursor\plans\due_classifiche_8e0866c3.plan.md`)
+**Stack:** Next.js 16 (App Router) · TypeScript strict · Tailwind v4 · Vitest · Capacitor (Android) · Supabase (classifica)  **Sprint:** piano "Due classifiche" completato e rilasciato come v0.16.0 (2026-08-19), seguito da v0.17.0 (2026-08-21, decisioni allenatore pesate su affinità relazioni + rival-clash + fix navigazione menu) e **v0.18.0** (2026-08-21, stessa giornata — dettaglio trofei/premi aggregato nella classifica globale, espandibile per riga)  **Aggiornamento:** 2026-08-21 (v0.18.0 rilasciata — vedi [[decisions]] per il dettaglio completo, incluso un bug reale di overload Postgres trovato e corretto verificando la migrazione SQL dal vivo; piano "Due classifiche" completo fuori dal repo in `C:\Users\Gioix\.cursor\plans\due_classifiche_8e0866c3.plan.md`)
 
 ## Contesto
 Clone testuale di "Copero — Simulador de carrera" (https://copero.com.ar/juegos/simulador-carrera):

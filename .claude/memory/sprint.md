@@ -903,6 +903,15 @@ Stato lavoro in corso. Aggiornato con /sprint. Backlog in [[backlog]], debito in
     v0.16.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.16.0). Deploy GitHub Pages verde.
     **Piano "Due classifiche" chiuso e rilasciato** — vedi [[decisions]] per il dettaglio completo.
 
+- [x] **Dettaglio trofei/premi nella classifica globale + release v0.18.0** (2026-08-21): su
+  richiesta dell'utente, aggiunto il dettaglio aggregato per competizione/tipo premio (es. "3×
+  Serie A · Pallone d'Oro") alla classifica globale, espandibile al click sulla riga — vedi
+  [[decisions]] per il dettaglio completo, incluso un bug reale trovato verificando la migrazione
+  SQL (`create or replace function` con parametri aggiunti crea un overload invece di sostituire
+  la funzione, corretto con `supabase/career-ranks-trophy-detail-fixup.sql`). 650 test verdi,
+  `tsc`/eslint puliti, verificato a fondo dal vivo contro Supabase live (nessun playtest nel
+  browser in questo giro — vedi [[tech-debt]]).
+
 ## Note tecniche emerse in fase 6
 - jsdom 30 + Node 22+ non espone `window.localStorage` di default (ExperimentalWarning nativa) — polyfill minimale in `vitest.setup.ts`, non è un problema di codice applicativo
 - `ClubStint` ora ha un campo `ovr` (OVR del giocatore alla fine di quel ciclo) — necessario per la CareerTable, che deve mostrare l'OVR storico per riga, non quello attuale

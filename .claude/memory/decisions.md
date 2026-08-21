@@ -1,18 +1,19 @@
 ---
 type: decisions
 tags: [memory, architecture]
-updated: [2026-08-19]
+updated: [2026-08-21]
 ---
 
 # Decisioni Architetturali
 Registro scelte tecniche con motivazioni.
 
-> **Archiviazione 2026-08-12, ripetuta 2026-08-19:** questo file supera periodicamente la soglia
-> di lettura diretta di 100KB del tool Read. Le decisioni dal 2026-08-04 al 2026-08-12 sono state
-> spostate in **`decisions-archive.md`** ([[decisions-archive]], **non auto-caricato** — leggerlo
-> on-demand con Grep/Read offset+limit quando serve contesto storico). Qui restano il template e
-> le decisioni dal 2026-08-13 in poi. Quando questo file si riavvicina ai 100KB, ripetere lo
-> stesso spostamento (le voci più vecchie in cima vanno in archivio, non cancellate).
+> **Archiviazione 2026-08-12, ripetuta 2026-08-19 e 2026-08-21:** questo file supera
+> periodicamente la soglia di lettura diretta di 100KB del tool Read. Le decisioni dal 2026-08-04
+> al 2026-08-14 (incluse) sono state spostate in **`decisions-archive.md`**
+> ([[decisions-archive]], **non auto-caricato** — leggerlo on-demand con Grep/Read offset+limit
+> quando serve contesto storico). Qui restano il template e le decisioni dal 2026-08-14 in poi.
+> Quando questo file si riavvicina ai 100KB, ripetere lo stesso spostamento (le voci più vecchie
+> in cima vanno in archivio, non cancellate).
 
 ## Template
 ### [Titolo breve]
@@ -23,154 +24,6 @@ Registro scelte tecniche con motivazioni.
 - **Impatto:** [moduli coinvolti] — entità in [[domain]], se formalizzata vedi [[adr]]
 
 ---
-
-### Cartellino mobile richiudibile — primo pezzo del backlog "alleggerimento informazioni mobile"
-- **Data:** 2026-08-13
-- **Decisione:** su segnalazione diretta dell'utente ("mostriamo un botto di informazioni...
-  dobbiamo rendere più semplice") dopo aver aperto il gioco in un iframe mobile 390×844 (stessa
-  tecnica di [[decisions-archive]], sessione 2026-08-12) e giocato alcuni cicli reali — confermato
-  che già la primissima schermata (offerta settore giovanile) impila timeline + cartellino
-  completo (OVR, potenziale, valore, patrimonio, clausola, popolarità, 5 barre attributi,
-  trofei/premi) + decisione, tutto senza gerarchia visiva. Proposte 4 ampiezze di intervento
-  all'utente (`AskUserQuestion`); scelta la più mirata: **solo il cartellino**. In `PlayerCard.tsx`
-  (usato con `compact` **solo** dal loop di gioco in `CareerGame.tsx`, nessun altro call site):
-  restano sempre visibili maglia/nome/club/età/OVR/potenziale + box Obiettivo; tutto il resto
-  (Valore/Patrimonio/Clausola/Popolarità, `AttributesPanel`, record di stagione, statistiche
-  presenze/gol/assist, contatore trofei/premi) è ora dentro un unico wrapper `<div>` richiudibile,
-  chiuso di default, dietro un bottone toggle "▾ Dettagli" con stato `detailsOpen` (`useState`).
-  Pattern CSS invece di rendering condizionale: `!showDetails ? "hidden lg:flex" : "flex"` sul
-  wrapper — a `lg:` (dove il loop passa al layout desktop a 3 colonne) resta **sempre** espanso e
-  il bottone toggle è nascosto (`lg:hidden`), esattamente come il comportamento preesistente;
-  sotto `lg:` (mobile **e** tablet, non solo telefono) parte chiuso. Rimossi in passaggio i vecchi
-  micro-toggle incoerenti che usavano la soglia `sm:` invece di `lg:` su `AttributesPanel`/record
-  grid/stats grid (create per un motivo diverso, la riga condensata valore+P·G·A ora ridondante
-  col nuovo toggle — eliminata) — tutta la sezione secondaria ora si apre/chiude come un blocco
-  unico invece di avere 3 soglie di breakpoint diverse e incoerenti tra loro.
-- **Perché:** `AttributesPanel` deve restare **interattivo** (click per impostare il focus di
-  allenamento, meccanica aggiunta nel pass di game-feel v0.11.0) anche su mobile — non poteva
-  essere semplicemente nascosto in permanenza sotto `lg:` come le altre sezioni, da qui la scelta
-  di un toggle esplicito invece di un CSS puro `hidden lg:flex` senza via di accesso su schermi
-  piccoli. Le altre 3 ampiezze proposte (Storico richiudibile, badge decisione/offerta ridotti al
-  tocco) restano deliberatamente fuori scope in questo giro — l'utente ha scelto l'intervento più
-  mirato, coerente con l'item di backlog già aperto ("da definire in una sessione dedicata...quali
-  schermate/informazioni toccare").
-- **Alternative:** rendering condizionale (`{showDetails ? <>...</> : null}`) invece di CSS
-  `hidden`/`flex` — scartato: smonterebbe/rimonterebbe `AttributesPanel` ad ogni toggle, perdendo
-  eventuali stati interni e rifacendo il lavoro di `useCountUp` sulle statistiche non necessario;
-  il pattern CSS-only (`hidden lg:flex`) è lo stesso già consolidato nel progetto per la
-  distinzione mobile/desktop (`lg:min-h-0`, `lg:grid-cols-[...]`), qui semplicemente combinato con
-  uno stato locale per il toggle sotto `lg:`.
-- **Impatto:** `src/components/features/career/PlayerCard.tsx` (unico file toccato). 517 test
-  invariati, `tsc --noEmit`/eslint/prettier puliti. **Verificato dal vivo** nell'iframe mobile
-  390px: cartellino ridotto da ~2 schermate a ~320px (nome/club/età/OVR/potenziale/Obiettivo),
-  toggle "Dettagli" apre/chiude correttamente tutta la sezione secondaria con la freccia che
-  ruota; verificato anche a piena larghezza (>1024px, layout desktop a 3 colonne) che il
-  comportamento resti identico a prima (tutto sempre visibile, nessun bottone toggle) — nessuna
-  regressione desktop. Storico e card di offerta/decisione **non toccate** in questo giro — vedi
-  [[backlog]], restano le prossime candidate se l'utente vuole proseguire l'alleggerimento.
-- **Aggiornamento stesso giorno — rilasciato come v0.11.1**: bump `package.json`/
-  `package-lock.json` 0.11.0→0.11.1 (patch: fix mirato a un solo componente, coerente col
-  criterio già usato per interventi di questa dimensione). `dist/MyRoad.exe` (FileVersion
-  0.11.1.0) e `dist/MyRoad.apk` (versionCode 1101/versionName 0.11.1, firma verificata con
-  `apksigner verify --print-certs` — stessa chiave stabile del progetto) rigenerati e allegati
-  alla [release GitHub v0.11.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.11.1). Prima di
-  questo giro, l'app installata sul tablet fisico dell'utente era già stata aggiornata con una
-  build locale identica (`adb install -r` di una `assembleRelease` con la stessa chiave, non
-  taggata né pubblicata) per farla vedere subito — questa release la allinea formalmente al
-  canale pubblico/auto-updater.
-
-### Classifica globale cross-utente — prima feature di rete del progetto (Supabase) — release v0.12.0
-- **Data:** 2026-08-13/14
-- **Decisione:** su richiesta esplicita dell'utente ("possiamo fare una sorta di classifica di
-  tutti gli utenti che giocano al gioco"), implementata la prima funzionalità di rete del progetto
-  — finora il gioco era interamente locale (`localStorage`, zero `fetch`/dipendenze di rete in
-  `src/`). Sessione di piano completo con ricerca preliminare (3 agenti Explore + 1 agente Plan)
-  seguita da diverse iterazioni di correzione **durante** l'implementazione, ognuna su richiesta
-  diretta dell'utente. Decisioni chiave, in ordine cronologico:
-  1. **Backend: Supabase** (Postgres + PostgREST), scelto tra 3 opzioni proposte via
-     `AskUserQuestion` (alternative: Cloudflare Workers+D1, Firebase Firestore) — nessun server
-     custom da scrivere/mantenere, RLS al posto di un livello di validazione applicativo.
-     **Database condiviso con un'altra applicazione dell'utente** — vincolo esplicito "non
-     cancellare nulla, aggiungi solo quello che ti serve": ogni oggetto nuovo ha prefisso
-     `myroad_` per escludere collisioni di namespace nello schema `public` condiviso.
-  2. **Identità: nickname libero, nessun account/login** (scelto tra 3 opzioni) — identità
-     anonima per-dispositivo (`device_id`, `crypto.randomUUID()` generato pigramente al primo
-     uso, persistito in `carriera:leaderboard-settings`). **Reso obbligatorio in corsa** (non
-     solo opzionale in Impostazioni come pianificato inizialmente): campo richiesto anche in
-     `IdentityForm.tsx`, non si può iniziare una carriera senza — motivo dell'utente: altrimenti
-     molti giocatori non lo avrebbero mai impostato e sarebbero rimasti fuori dalla classifica,
-     vanificando lo scopo "classifica di tutti gli utenti".
-  3. **Formato: 4 categorie stile Hall of Fame** (OVR più alto/più trofei/più ricco/più popolare),
-     non un punteggio composito — riusa esattamente gli stessi 4 assi della Hall of Fame locale
-     già esistente (`computeHallOfFame` in `satisfaction.ts`), ora globale invece che per-browser.
-  4. **Pubblicazione: automatica alla fine di ogni carriera, non un bottone** — cambiato in corsa
-     su richiesta esplicita ("l'invio deve essere automatico una volta finita la carriera"),
-     ribaltando la scelta iniziale (bottone "Pubblica il tuo punteggio" con stati idle/loading/
-     done/error). Effect dedicato in `CareerGame.tsx` (guardia `useRef`, stesso pattern di
-     `archivedRef` in `useCareerGame.ts` per l'archivio locale), `CareerSummary.tsx` reso
-     puramente passivo (riceve `publishStatus`, mostra solo una riga di testo inline).
-  5. **Consolidamento per dispositivo: dominanza di Pareto, non un criterio singolo** — prima
-     versione: una sola riga per `device_id`, sostituita solo se il nuovo OVR di picco era più
-     alto. **Corretto in corsa** su segnalazione dell'utente ("come ci comportiamo se ovr basso
-     ma più patrimonio o più trofei?"): con un solo criterio, una carriera con OVR basso ma tanti
-     trofei/patrimonio non entrava mai in classifica in nessuna categoria. Sostituito con
-     dominanza di Pareto sui 4 assi (OVR/trofei/patrimonio/popolarità): un dispositivo può avere
-     fino a una riga per specialità, un insert viene scartato solo se dominato su *tutti* gli assi
-     da una carriera già salvata dello stesso dispositivo.
-  6. **Propagazione nickname per dispositivo** — problema trovato dall'utente: con la dominanza
-     di Pareto, cambiare nickname nelle Impostazioni lasciava le righe vecchie con il nome
-     precedente, facendo apparire la stessa persona come account diversi. Risolto estendendo lo
-     stesso trigger: ogni insert (anche quello scartato) sincronizza il nickname corrente su
-     *tutte* le righe esistenti dello stesso `device_id`.
-  7. **Vista pubblica senza `device_id`** — analizzando il problema precedente, trovato un rischio
-     collegato non richiesto esplicitamente: la lettura pubblica (`select=*`) esponeva `device_id`
-     a chiunque ispezionasse le richieste di rete, raccoglibile per poi spoofare quel dispositivo.
-     Confermato con l'utente (`AskUserQuestion`) di chiuderlo nello stesso giro: nuova vista
-     `myroad_leaderboard_public` (colonne senza `device_id`/`client_entry_id`), policy di lettura
-     rimossa dalla tabella base, lettura pubblica spostata sulla vista.
-  8. **Vulnerabilità reale trovata e corretta durante la verifica della vista** (non pianificata,
-     scoperta testando dal vivo contro il DB reale): la vista, creata senza `security_invoker`
-     (per bypassare intenzionalmente la RLS in lettura), bypassava la RLS **anche in scrittura** —
-     Supabase concede di default privilegi ampi (INSERT/UPDATE/DELETE) ad `anon` su ogni nuovo
-     oggetto dello schema `public`, e avere concesso solo `grant select` non revocava quel default
-     preesistente. Confermato in pratica con `PATCH`/`DELETE` diretti sull'endpoint della vista:
-     un nickname è stato riscritto da remoto e una riga di test cancellata, prima di applicare
-     `revoke insert, update, delete on ... from anon` e riverificare (401 "permission denied" su
-     tutti e tre dopo il fix). Vedi `supabase/schema.sql` per la nota di avviso lasciata nel file.
-- **Perché:** ogni correzione in corsa è nata da un problema reale sollevato dall'utente durante
-  l'implementazione (mai anticipato a priori) — coerente con l'approccio "harness/verifica prima,
-  poi correggi" già consolidato nel progetto, qui applicato per la prima volta a un sistema con
-  stato condiviso cross-utente invece che al solo bilanciamento numerico locale.
-- **Alternative:** upsert lato client con policy RLS `UPDATE` per `anon` (per il consolidamento
-  per-dispositivo) — scartata: avrebbe richiesto una policy `using (true)` troppo permissiva,
-  permettendo a chiunque di sovrascrivere la riga di un altro conoscendone il `device_id`. Preferita
-  la soluzione con trigger `SECURITY DEFINER` (`myroad_leaderboard_keep_best`), che opera sempre e
-  solo sul `device_id` della riga in inserimento, mantenendo `anon` privo di qualunque grant
-  `UPDATE`/`DELETE` diretto sulla tabella per tutta la sessione.
-- **Impatto:** `supabase/schema.sql` (nuovo — tabella, indici, RLS, vista, trigger, tutto
-  documentato con il ragionamento inline), `.env` (nuovo, committato di proposito — chiave
-  pubblicabile Supabase, pensata per essere esposta lato client), `.gitignore` (`.env` ora
-  trackabile), `src/lib/leaderboard/{types,settings,client}.ts` (+test), `src/hooks/
-  useLeaderboardSettings.ts`, `src/components/features/career/Leaderboard.tsx` (+test), `
-  CareerGame.tsx`/`CareerSummary.tsx`/`SettingsPanel.tsx`/`IdentityForm.tsx` (+test) per il
-  wiring UI. Nessuna dipendenza nuova in `package.json` (fetch nativo, non `@supabase/supabase-js`
-  — SDK sovradimensionato per 2 sole operazioni REST). 543 test verdi, `tsc`/eslint puliti (solo i
-  4 warning pre-esistenti `react-hooks/set-state-in-effect`, invariati). **Verificato
-  approfonditamente dal vivo contro il progetto Supabase reale** (non solo test automatici) prima
-  del rilascio: dominanza di Pareto, propagazione nickname, RLS su tabella base e vista, `CHECK`
-  fuori range, tutti i vettori di scrittura sulla vista (INSERT/UPDATE/DELETE) prima e dopo la
-  `revoke`, submit+fetch reali su GitHub Pages dal sito pubblicato (non solo `localhost`). Bump
-  `package.json`/`package-lock.json` 0.11.1→**0.12.0** (minor, prima feature di rete del
-  progetto), `APP_RELEASE_DATE_ISO` aggiornato in `src/constants/app-info.ts`, `dist/MyRoad.exe`
-  (FileVersion 0.12.0.0) e `dist/MyRoad.apk` (versionCode 1200/versionName 0.12.0, firma
-  verificata con la stessa chiave stabile del progetto) rigenerati e allegati alla [release
-  GitHub v0.12.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.12.0). **Non verificato**: exe
-  desktop aperto e processo avviato correttamente, ma senza conferma visiva che submit/fetch
-  funzionino da quel runtime specifico (nessuno strumento disponibile in sessione per
-  ispezionare una finestra WebView2 nativa) — rischio basso, stesso bundle statico già verificato
-  su web e già noto per non avere restrizioni di rete specifiche (vedi ricerca iniziale di questa
-  feature), ma resta un gap di verifica per una sessione futura. Tabella di produzione ripulita
-  dai dati di test dall'utente stesso via Table Editor prima del rilascio.
 
 ### Nickname della classifica illeggibile su mobile — riga identità mai stata responsive
 - **Data:** 2026-08-14
@@ -1057,3 +910,63 @@ Registro scelte tecniche con motivazioni.
   **Non verificato in questo giro**: nessun nuovo playtest oltre a quello già fatto nella sessione
   precedente immediatamente prima del rilascio (stesso giorno) — non necessario, nessun codice è
   cambiato tra la verifica e il rilascio, solo bump di versione.
+
+### Dettaglio trofei/premi nella classifica globale — bug reale in un CREATE OR REPLACE FUNCTION con parametri aggiunti
+- **Data:** 2026-08-21
+- **Decisione:** su richiesta esplicita dell'utente ("valutiamo l'impatto e cosa dobbiamo
+  implementare"), sessione di pianificazione (2 agenti Explore paralleli + 1 agente Plan) seguita
+  da implementazione diretta. La classifica globale mostrava solo `trophy_count`/`award_count`
+  (numeri) — aggiunto il dettaglio **aggregato per competizione/tipo premio** (es. "3× Serie A ·
+  1× Champions League · Pallone d'Oro"), non l'elenco puntuale di ogni trofeo (una carriera può
+  averne fino a 300, l'elenco puntuale avrebbe gonfiato payload/UI senza motivo) — scelta
+  confermata dall'utente via `AskUserQuestion` insieme a "espandi la riga esistente al click"
+  (stesso idioma chevron già usato in `PlayerCard.tsx`), lista unica trofei club+nazionale (non
+  separati), righe solo testo (no immagini per riga). Nuovo `lib/career/trophy-breakdown.ts`
+  (`summarizeTrophies`/`summarizeAwards<T>`, generica per calciatore/allenatore) alimenta due
+  campi opzionali aggiunti a `ArchivedCareer`/`ArchivedCoachCareer` (nessun bump `STORAGE_VERSION`
+  necessario, additivi) calcolati in `buildArchiveEntry`/`buildCoachArchiveEntry` mentre il
+  `Player`/`Coach` completo è ancora in scope — il dato grezzo esisteva già in memoria nel punto
+  esatto di pubblicazione, veniva solo scartato subito dopo (`.length`).
+  - **Bug reale trovato verificando dal vivo la migrazione SQL** (`supabase/career-ranks-trophy-
+    detail.sql`, nuove colonne `trophy_breakdown`/`award_breakdown` jsonb + CHECK di dimensione
+    sulla tabella base, vista pubblica estesa, RPC `myroad_submit_career_rank` estesa con 2
+    parametri finali `default '[]'::jsonb` pensati come rete di sicurezza per un client non
+    ancora aggiornato): `create or replace function` che AGGIUNGE parametri (anche con default)
+    **non sostituisce la funzione esistente** — Postgres considera una lista di tipi argomento
+    diversa come una funzione nuova e distinta (vedi doc `CREATE FUNCTION`: "It is not possible to
+    change... the argument types of a function this way"). Risultato osservato: due overload
+    `myroad_submit_career_rank` (14 e 16 parametri) coesistevano sul DB, e PostgREST rifiutava con
+    `PGRST203` "Could not choose the best candidate function" qualunque chiamata con i soli 14
+    parametri vecchi — l'esatto opposto della rete di sicurezza voluta (rompe il client vecchio con
+    un errore invece di degradare in silenzio). Le chiamate con tutti e 16 i parametri (quello che
+    il client fa sempre da questo rilascio) risolvevano già senza ambiguità. Fix: nuovo
+    `supabase/career-ranks-trophy-detail-fixup.sql` con `drop function if exists` sulla firma a 14
+    parametri — stesso rituale già consolidato nel progetto (fixup incrementale separato dalla
+    migrazione originale, mai riscritta a posteriori).
+- **Perché:** riuso quasi totale di dati/pattern già esistenti (il grezzo `Trophy[]`/`Award[]` era
+  già in memoria, il toggle chevron già esisteva in `PlayerCard.tsx`) ha reso il lavoro applicativo
+  quasi interamente additivo — il solo punto realmente nuovo per questo progetto era una modifica
+  di firma a una funzione Postgres già in produzione, dove il vincolo reale (Postgres tratta un
+  cambio di argomenti come una funzione diversa, non un replace) non era mai stato incontrato prima
+  in nessuna delle migrazioni Supabase precedenti di questo progetto (tutte finora aggiungevano
+  solo colonne/viste/trigger, mai parametri a una funzione già esistente).
+- **Alternative:** per la RPC, `drop function` + `create function` esplicito fin dall'inizio
+  invece di `create or replace` — avrebbe evitato il problema a monte, ma il ragionamento errato
+  ("i parametri con default in coda sono compatibili con create or replace") sembrava plausibile
+  senza aver letto la nota specifica della documentazione Postgres su questo caso; il fixup
+  successivo ottiene lo stesso risultato finale.
+- **Impatto:** `src/lib/career/trophy-breakdown.ts` (+test, nuovo), `src/types/career.ts`/
+  `coach.ts` (+`trophyBreakdown?`/`awardBreakdown?`), `src/lib/career/storage.ts`/`src/lib/
+  coach-career/storage.ts` (+wiring in `buildArchiveEntry`/`buildCoachArchiveEntry`, +test),
+  `src/lib/leaderboard/{types,client}.ts` (+test), `src/components/features/career/
+  Leaderboard.tsx` (+test, riga espandibile). `supabase/career-ranks-trophy-detail.sql` (nuovo) +
+  `supabase/career-ranks-trophy-detail-fixup.sql` (nuovo, corregge l'overload). 650/650 test
+  verdi, `tsc --noEmit`/eslint puliti. **Verificato a fondo dal vivo contro Supabase live**: vista
+  pubblica con le nuove colonne, tabella base ancora chiusa ad anon (lettura e scrittura, incluso
+  un DELETE diretto confermato senza effetto reale — RLS filtra a zero righe anche per anon con un
+  grant implicito), RPC a 14 parametri (post-fixup) e a 16 parametri entrambe funzionanti, CHECK di
+  dimensione che rifiuta un payload sovradimensionato (100 voci finte, limite 60), dati di test
+  puliti ad ogni giro (`QATrophyDetail`/`QATrophyDetail2`/`QATrophyOversize`, incluse le
+  rivendicazioni nickname associate). **Non verificato in questo giro**: nessun playtest nel
+  browser (creare una carriera reale con più trofei/premi e vedere il pannello espanso renderizzato
+  con dati veri, non solo test/REST) — vedi [[tech-debt]] se si vuole chiudere anche quel punto.

@@ -1214,3 +1214,151 @@ updated: [2026-08-12]
   Android eseguita impostando `JAVA_HOME`/`ANDROID_HOME` manualmente nella sessione (stesso JBR di
   Android Studio già documentato per v0.10.0, non persistito nell'ambiente di default).
 
+
+### Cartellino mobile richiudibile — primo pezzo del backlog "alleggerimento informazioni mobile"
+- **Data:** 2026-08-13
+- **Decisione:** su segnalazione diretta dell'utente ("mostriamo un botto di informazioni...
+  dobbiamo rendere più semplice") dopo aver aperto il gioco in un iframe mobile 390×844 (stessa
+  tecnica di [[decisions-archive]], sessione 2026-08-12) e giocato alcuni cicli reali — confermato
+  che già la primissima schermata (offerta settore giovanile) impila timeline + cartellino
+  completo (OVR, potenziale, valore, patrimonio, clausola, popolarità, 5 barre attributi,
+  trofei/premi) + decisione, tutto senza gerarchia visiva. Proposte 4 ampiezze di intervento
+  all'utente (`AskUserQuestion`); scelta la più mirata: **solo il cartellino**. In `PlayerCard.tsx`
+  (usato con `compact` **solo** dal loop di gioco in `CareerGame.tsx`, nessun altro call site):
+  restano sempre visibili maglia/nome/club/età/OVR/potenziale + box Obiettivo; tutto il resto
+  (Valore/Patrimonio/Clausola/Popolarità, `AttributesPanel`, record di stagione, statistiche
+  presenze/gol/assist, contatore trofei/premi) è ora dentro un unico wrapper `<div>` richiudibile,
+  chiuso di default, dietro un bottone toggle "▾ Dettagli" con stato `detailsOpen` (`useState`).
+  Pattern CSS invece di rendering condizionale: `!showDetails ? "hidden lg:flex" : "flex"` sul
+  wrapper — a `lg:` (dove il loop passa al layout desktop a 3 colonne) resta **sempre** espanso e
+  il bottone toggle è nascosto (`lg:hidden`), esattamente come il comportamento preesistente;
+  sotto `lg:` (mobile **e** tablet, non solo telefono) parte chiuso. Rimossi in passaggio i vecchi
+  micro-toggle incoerenti che usavano la soglia `sm:` invece di `lg:` su `AttributesPanel`/record
+  grid/stats grid (create per un motivo diverso, la riga condensata valore+P·G·A ora ridondante
+  col nuovo toggle — eliminata) — tutta la sezione secondaria ora si apre/chiude come un blocco
+  unico invece di avere 3 soglie di breakpoint diverse e incoerenti tra loro.
+- **Perché:** `AttributesPanel` deve restare **interattivo** (click per impostare il focus di
+  allenamento, meccanica aggiunta nel pass di game-feel v0.11.0) anche su mobile — non poteva
+  essere semplicemente nascosto in permanenza sotto `lg:` come le altre sezioni, da qui la scelta
+  di un toggle esplicito invece di un CSS puro `hidden lg:flex` senza via di accesso su schermi
+  piccoli. Le altre 3 ampiezze proposte (Storico richiudibile, badge decisione/offerta ridotti al
+  tocco) restano deliberatamente fuori scope in questo giro — l'utente ha scelto l'intervento più
+  mirato, coerente con l'item di backlog già aperto ("da definire in una sessione dedicata...quali
+  schermate/informazioni toccare").
+- **Alternative:** rendering condizionale (`{showDetails ? <>...</> : null}`) invece di CSS
+  `hidden`/`flex` — scartato: smonterebbe/rimonterebbe `AttributesPanel` ad ogni toggle, perdendo
+  eventuali stati interni e rifacendo il lavoro di `useCountUp` sulle statistiche non necessario;
+  il pattern CSS-only (`hidden lg:flex`) è lo stesso già consolidato nel progetto per la
+  distinzione mobile/desktop (`lg:min-h-0`, `lg:grid-cols-[...]`), qui semplicemente combinato con
+  uno stato locale per il toggle sotto `lg:`.
+- **Impatto:** `src/components/features/career/PlayerCard.tsx` (unico file toccato). 517 test
+  invariati, `tsc --noEmit`/eslint/prettier puliti. **Verificato dal vivo** nell'iframe mobile
+  390px: cartellino ridotto da ~2 schermate a ~320px (nome/club/età/OVR/potenziale/Obiettivo),
+  toggle "Dettagli" apre/chiude correttamente tutta la sezione secondaria con la freccia che
+  ruota; verificato anche a piena larghezza (>1024px, layout desktop a 3 colonne) che il
+  comportamento resti identico a prima (tutto sempre visibile, nessun bottone toggle) — nessuna
+  regressione desktop. Storico e card di offerta/decisione **non toccate** in questo giro — vedi
+  [[backlog]], restano le prossime candidate se l'utente vuole proseguire l'alleggerimento.
+- **Aggiornamento stesso giorno — rilasciato come v0.11.1**: bump `package.json`/
+  `package-lock.json` 0.11.0→0.11.1 (patch: fix mirato a un solo componente, coerente col
+  criterio già usato per interventi di questa dimensione). `dist/MyRoad.exe` (FileVersion
+  0.11.1.0) e `dist/MyRoad.apk` (versionCode 1101/versionName 0.11.1, firma verificata con
+  `apksigner verify --print-certs` — stessa chiave stabile del progetto) rigenerati e allegati
+  alla [release GitHub v0.11.1](https://github.com/Gioixxx/MyRoad/releases/tag/v0.11.1). Prima di
+  questo giro, l'app installata sul tablet fisico dell'utente era già stata aggiornata con una
+  build locale identica (`adb install -r` di una `assembleRelease` con la stessa chiave, non
+  taggata né pubblicata) per farla vedere subito — questa release la allinea formalmente al
+  canale pubblico/auto-updater.
+
+### Classifica globale cross-utente — prima feature di rete del progetto (Supabase) — release v0.12.0
+- **Data:** 2026-08-13/14
+- **Decisione:** su richiesta esplicita dell'utente ("possiamo fare una sorta di classifica di
+  tutti gli utenti che giocano al gioco"), implementata la prima funzionalità di rete del progetto
+  — finora il gioco era interamente locale (`localStorage`, zero `fetch`/dipendenze di rete in
+  `src/`). Sessione di piano completo con ricerca preliminare (3 agenti Explore + 1 agente Plan)
+  seguita da diverse iterazioni di correzione **durante** l'implementazione, ognuna su richiesta
+  diretta dell'utente. Decisioni chiave, in ordine cronologico:
+  1. **Backend: Supabase** (Postgres + PostgREST), scelto tra 3 opzioni proposte via
+     `AskUserQuestion` (alternative: Cloudflare Workers+D1, Firebase Firestore) — nessun server
+     custom da scrivere/mantenere, RLS al posto di un livello di validazione applicativo.
+     **Database condiviso con un'altra applicazione dell'utente** — vincolo esplicito "non
+     cancellare nulla, aggiungi solo quello che ti serve": ogni oggetto nuovo ha prefisso
+     `myroad_` per escludere collisioni di namespace nello schema `public` condiviso.
+  2. **Identità: nickname libero, nessun account/login** (scelto tra 3 opzioni) — identità
+     anonima per-dispositivo (`device_id`, `crypto.randomUUID()` generato pigramente al primo
+     uso, persistito in `carriera:leaderboard-settings`). **Reso obbligatorio in corsa** (non
+     solo opzionale in Impostazioni come pianificato inizialmente): campo richiesto anche in
+     `IdentityForm.tsx`, non si può iniziare una carriera senza — motivo dell'utente: altrimenti
+     molti giocatori non lo avrebbero mai impostato e sarebbero rimasti fuori dalla classifica,
+     vanificando lo scopo "classifica di tutti gli utenti".
+  3. **Formato: 4 categorie stile Hall of Fame** (OVR più alto/più trofei/più ricco/più popolare),
+     non un punteggio composito — riusa esattamente gli stessi 4 assi della Hall of Fame locale
+     già esistente (`computeHallOfFame` in `satisfaction.ts`), ora globale invece che per-browser.
+  4. **Pubblicazione: automatica alla fine di ogni carriera, non un bottone** — cambiato in corsa
+     su richiesta esplicita ("l'invio deve essere automatico una volta finita la carriera"),
+     ribaltando la scelta iniziale (bottone "Pubblica il tuo punteggio" con stati idle/loading/
+     done/error). Effect dedicato in `CareerGame.tsx` (guardia `useRef`, stesso pattern di
+     `archivedRef` in `useCareerGame.ts` per l'archivio locale), `CareerSummary.tsx` reso
+     puramente passivo (riceve `publishStatus`, mostra solo una riga di testo inline).
+  5. **Consolidamento per dispositivo: dominanza di Pareto, non un criterio singolo** — prima
+     versione: una sola riga per `device_id`, sostituita solo se il nuovo OVR di picco era più
+     alto. **Corretto in corsa** su segnalazione dell'utente ("come ci comportiamo se ovr basso
+     ma più patrimonio o più trofei?"): con un solo criterio, una carriera con OVR basso ma tanti
+     trofei/patrimonio non entrava mai in classifica in nessuna categoria. Sostituito con
+     dominanza di Pareto sui 4 assi (OVR/trofei/patrimonio/popolarità): un dispositivo può avere
+     fino a una riga per specialità, un insert viene scartato solo se dominato su *tutti* gli assi
+     da una carriera già salvata dello stesso dispositivo.
+  6. **Propagazione nickname per dispositivo** — problema trovato dall'utente: con la dominanza
+     di Pareto, cambiare nickname nelle Impostazioni lasciava le righe vecchie con il nome
+     precedente, facendo apparire la stessa persona come account diversi. Risolto estendendo lo
+     stesso trigger: ogni insert (anche quello scartato) sincronizza il nickname corrente su
+     *tutte* le righe esistenti dello stesso `device_id`.
+  7. **Vista pubblica senza `device_id`** — analizzando il problema precedente, trovato un rischio
+     collegato non richiesto esplicitamente: la lettura pubblica (`select=*`) esponeva `device_id`
+     a chiunque ispezionasse le richieste di rete, raccoglibile per poi spoofare quel dispositivo.
+     Confermato con l'utente (`AskUserQuestion`) di chiuderlo nello stesso giro: nuova vista
+     `myroad_leaderboard_public` (colonne senza `device_id`/`client_entry_id`), policy di lettura
+     rimossa dalla tabella base, lettura pubblica spostata sulla vista.
+  8. **Vulnerabilità reale trovata e corretta durante la verifica della vista** (non pianificata,
+     scoperta testando dal vivo contro il DB reale): la vista, creata senza `security_invoker`
+     (per bypassare intenzionalmente la RLS in lettura), bypassava la RLS **anche in scrittura** —
+     Supabase concede di default privilegi ampi (INSERT/UPDATE/DELETE) ad `anon` su ogni nuovo
+     oggetto dello schema `public`, e avere concesso solo `grant select` non revocava quel default
+     preesistente. Confermato in pratica con `PATCH`/`DELETE` diretti sull'endpoint della vista:
+     un nickname è stato riscritto da remoto e una riga di test cancellata, prima di applicare
+     `revoke insert, update, delete on ... from anon` e riverificare (401 "permission denied" su
+     tutti e tre dopo il fix). Vedi `supabase/schema.sql` per la nota di avviso lasciata nel file.
+- **Perché:** ogni correzione in corsa è nata da un problema reale sollevato dall'utente durante
+  l'implementazione (mai anticipato a priori) — coerente con l'approccio "harness/verifica prima,
+  poi correggi" già consolidato nel progetto, qui applicato per la prima volta a un sistema con
+  stato condiviso cross-utente invece che al solo bilanciamento numerico locale.
+- **Alternative:** upsert lato client con policy RLS `UPDATE` per `anon` (per il consolidamento
+  per-dispositivo) — scartata: avrebbe richiesto una policy `using (true)` troppo permissiva,
+  permettendo a chiunque di sovrascrivere la riga di un altro conoscendone il `device_id`. Preferita
+  la soluzione con trigger `SECURITY DEFINER` (`myroad_leaderboard_keep_best`), che opera sempre e
+  solo sul `device_id` della riga in inserimento, mantenendo `anon` privo di qualunque grant
+  `UPDATE`/`DELETE` diretto sulla tabella per tutta la sessione.
+- **Impatto:** `supabase/schema.sql` (nuovo — tabella, indici, RLS, vista, trigger, tutto
+  documentato con il ragionamento inline), `.env` (nuovo, committato di proposito — chiave
+  pubblicabile Supabase, pensata per essere esposta lato client), `.gitignore` (`.env` ora
+  trackabile), `src/lib/leaderboard/{types,settings,client}.ts` (+test), `src/hooks/
+  useLeaderboardSettings.ts`, `src/components/features/career/Leaderboard.tsx` (+test), `
+  CareerGame.tsx`/`CareerSummary.tsx`/`SettingsPanel.tsx`/`IdentityForm.tsx` (+test) per il
+  wiring UI. Nessuna dipendenza nuova in `package.json` (fetch nativo, non `@supabase/supabase-js`
+  — SDK sovradimensionato per 2 sole operazioni REST). 543 test verdi, `tsc`/eslint puliti (solo i
+  4 warning pre-esistenti `react-hooks/set-state-in-effect`, invariati). **Verificato
+  approfonditamente dal vivo contro il progetto Supabase reale** (non solo test automatici) prima
+  del rilascio: dominanza di Pareto, propagazione nickname, RLS su tabella base e vista, `CHECK`
+  fuori range, tutti i vettori di scrittura sulla vista (INSERT/UPDATE/DELETE) prima e dopo la
+  `revoke`, submit+fetch reali su GitHub Pages dal sito pubblicato (non solo `localhost`). Bump
+  `package.json`/`package-lock.json` 0.11.1→**0.12.0** (minor, prima feature di rete del
+  progetto), `APP_RELEASE_DATE_ISO` aggiornato in `src/constants/app-info.ts`, `dist/MyRoad.exe`
+  (FileVersion 0.12.0.0) e `dist/MyRoad.apk` (versionCode 1200/versionName 0.12.0, firma
+  verificata con la stessa chiave stabile del progetto) rigenerati e allegati alla [release
+  GitHub v0.12.0](https://github.com/Gioixxx/MyRoad/releases/tag/v0.12.0). **Non verificato**: exe
+  desktop aperto e processo avviato correttamente, ma senza conferma visiva che submit/fetch
+  funzionino da quel runtime specifico (nessuno strumento disponibile in sessione per
+  ispezionare una finestra WebView2 nativa) — rischio basso, stesso bundle statico già verificato
+  su web e già noto per non avere restrizioni di rete specifiche (vedi ricerca iniziale di questa
+  feature), ma resta un gap di verifica per una sessione futura. Tabella di produzione ripulita
+  dai dati di test dall'utente stesso via Table Editor prima del rilascio.
