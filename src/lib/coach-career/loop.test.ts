@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { Club } from "@/types/career";
-import type { CoachIdentity } from "@/types/coach";
+import type { Club, RelationAffinity } from "@/types/career";
+import type { Coach, CoachIdentity } from "@/types/coach";
 import { createCoach, signWithClub } from "./engine";
 import { generateBoardCrisisDecision, generateCoachEndOfCycle, generateTacticalIdentityDecision } from "./decisions";
+import { getCoachRelation } from "./coach-relations";
 import {
   availableCategories,
   INITIAL_COACH_LOOP_CONTEXT,
@@ -95,6 +96,40 @@ describe("pickNextCoachDecision", () => {
     const next = pickNextCoachDecision(coach, INITIAL_COACH_LOOP_CONTEXT, [], () => 0.9);
     expect(next.category).toBe("scandal");
   });
+
+  it("forza rival-clash se il rivale esiste e gli altri trigger forzati non scattano", () => {
+    const signed = signWithClub(createCoach(IDENTITY), TEST_CLUB);
+    const coach: Coach = {
+      ...signed,
+      relations: [...signed.relations, { id: "rival", name: "Marco Bianchi", affinity: 0 }],
+    };
+    const next = pickNextCoachDecision(coach, INITIAL_COACH_LOOP_CONTEXT, [], () => 0);
+    expect(next.category).toBe("rival-clash");
+    expect(next.decision.options.map((o) => o.id)).toEqual(["confront", "ignore"]);
+  });
+
+  it("non forza rival-clash se è già capitato nel ciclo precedente", () => {
+    const signed = signWithClub(createCoach(IDENTITY), TEST_CLUB);
+    const coach: Coach = {
+      ...signed,
+      relations: [...signed.relations, { id: "rival", name: "Marco Bianchi", affinity: 0 }],
+    };
+    const next = pickNextCoachDecision(coach, INITIAL_COACH_LOOP_CONTEXT, ["rival-clash"], () => 0);
+    expect(next.category).not.toBe("rival-clash");
+  });
+
+  it("non forza board-crisis a fiducia 25 se la società è amica", () => {
+    const signed = signWithClub(createCoach(IDENTITY), TEST_CLUB);
+    const coach: Coach = {
+      ...signed,
+      boardConfidence: 25,
+      relations: signed.relations.map((rel) =>
+        rel.id === "board" ? { ...rel, affinity: 2 as RelationAffinity } : rel,
+      ),
+    };
+    const next = pickNextCoachDecision(coach, INITIAL_COACH_LOOP_CONTEXT, [], () => 0.9);
+    expect(next.category).not.toBe("board-crisis");
+  });
 });
 
 describe("resolveCoachCycle", () => {
@@ -163,5 +198,45 @@ describe("resolveCoachCycle", () => {
     expect(result.coach.clubHistory[0].outcome.leagueFinish).toBe("title");
     expect(result.newTrophies.some((t) => t.competition === strongClub.competitions.league)).toBe(true);
     expect(result.coach.trophies.length).toBeGreaterThan(0);
+  });
+
+  it("alza l'affinità società se l'obiettivo del ciclo è raggiunto", () => {
+    const coach = {
+      ...signWithClub(createCoach(IDENTITY), TEST_CLUB),
+      currentObjective: {
+        id: "league-finish-0",
+        kind: "league-finish" as const,
+        target: 0,
+        label: "La società chiede: evita la retrocessione",
+      },
+    };
+    const decision = generateTacticalIdentityDecision(coach);
+    const option = decision.options[0];
+    const before = getCoachRelation(coach, "board")!.affinity;
+
+    const result = resolveCoachCycle(coach, INITIAL_COACH_LOOP_CONTEXT, "tactical-identity", option, "normal", () => 0.5);
+
+    expect(result.objectiveResult?.met).toBe(true);
+    expect(getCoachRelation(result.coach, "board")?.affinity).toBe(before + 1);
+  });
+
+  it("abbassa l'affinità società se l'obiettivo del ciclo è mancato", () => {
+    const coach = {
+      ...signWithClub(createCoach(IDENTITY), TEST_CLUB),
+      reputation: 1,
+      currentObjective: {
+        id: "league-finish-4",
+        kind: "league-finish" as const,
+        target: 4,
+        label: "La società chiede: vinci il campionato",
+      },
+    };
+    const decision = generateTacticalIdentityDecision(coach);
+    const option = decision.options[0];
+
+    const result = resolveCoachCycle(coach, INITIAL_COACH_LOOP_CONTEXT, "tactical-identity", option, "normal", () => 0);
+
+    expect(result.objectiveResult?.met).toBe(false);
+    expect(getCoachRelation(result.coach, "board")?.affinity).toBe(-1);
   });
 });

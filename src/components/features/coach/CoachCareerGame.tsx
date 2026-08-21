@@ -11,10 +11,11 @@ import { TACTICAL_SYSTEM_LABELS, type TacticalSystem } from "@/lib/career/tactic
 import { deriveArchetype, ARCHETYPE_LABELS } from "@/lib/career/traits";
 import { SHADOW_RUMOR_THRESHOLD } from "@/lib/career/shadow";
 import { formatAffinity } from "@/lib/career/relations";
-import { COACH_RELATION_LABELS } from "@/lib/coach-career/coach-relations";
+import { COACH_RELATION_HINTS, COACH_RELATION_LABELS } from "@/lib/coach-career/coach-relations";
 import { checkNicknameAvailable, isLeaderboardConfigured, submitCoachCareerRank } from "@/lib/leaderboard/client";
 import { isValidNickname } from "@/lib/leaderboard/settings";
 import type { PublishStatus } from "@/lib/leaderboard/types";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
@@ -438,6 +439,7 @@ export function CoachCareerGame({ onBack, seedEntry }: CoachCareerGameProps) {
           <Button variant="ghost" onClick={onBack} className="px-0 text-xs">
             ← Menu
           </Button>
+          <ThemeToggle />
         </div>
       </header>
 
@@ -486,16 +488,24 @@ export function CoachCareerGame({ onBack, seedEntry }: CoachCareerGameProps) {
               <p className="text-xs text-(--color-text-muted)">Obiettivo: {coach.currentObjective.label}</p>
             ) : null}
             {coach.relations.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5 border-t border-(--color-border) pt-2">
-                {coach.relations.map((rel) => (
-                  <span
-                    key={rel.id}
-                    className="rounded bg-(--color-surface-raised) px-1.5 py-0.5 text-[11px] text-(--color-text-muted)"
-                    title={rel.name}
-                  >
-                    {COACH_RELATION_LABELS[rel.id]} {formatAffinity(rel.affinity)}
-                  </span>
-                ))}
+              <div className="flex flex-col gap-1.5 border-t border-(--color-border) pt-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {coach.relations.map((rel) => (
+                    <span
+                      key={rel.id}
+                      className="rounded bg-(--color-surface-raised) px-1.5 py-0.5 text-[11px] text-(--color-text-muted)"
+                      title={`${rel.name} · ${COACH_RELATION_HINTS[rel.id]}`}
+                      aria-label={`${COACH_RELATION_LABELS[rel.id]} ${formatAffinity(rel.affinity)}. ${COACH_RELATION_HINTS[rel.id]}`}
+                    >
+                      {COACH_RELATION_LABELS[rel.id]} {formatAffinity(rel.affinity)}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[11px] leading-snug text-(--color-text-muted)">
+                  {coach.relations
+                    .map((rel) => `${COACH_RELATION_LABELS[rel.id]}: ${COACH_RELATION_HINTS[rel.id]}`)
+                    .join(" · ")}
+                </p>
               </div>
             ) : null}
           </Card>

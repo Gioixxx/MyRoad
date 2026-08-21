@@ -99,7 +99,7 @@ const OBJECTIVE_LEAGUE_FINISH_LABELS: Record<LeagueFinish, string> = {
 /** Testo alternativo per il rank 3 ("continental-qualification") quando il club **non** è in
  * tier 1 — lì quel rank corrisponde alla zona `promotion` (vedi `zoneToLeagueFinish`), non a una
  * qualificazione europea reale. Criticità trovata in review del piano "Due classifiche": senza
- * questo distinguo, il brief societario di un club di Serie B/Championship mostrerebbe "qualifica
+ * questo distinguo, l'obiettivo societario di un club di Serie B/Championship mostrerebbe "qualifica
  * il club a una coppa europea" anche quando l'obiettivo reale è solo la promozione. */
 const OBJECTIVE_PROMOTION_LABEL = "porta il club in una categoria superiore";
 
@@ -117,7 +117,7 @@ function objectiveLabelFor(finish: LeagueFinish, clubTier: number): string {
 }
 
 /**
- * Brief della società per il ciclo corrente — Fase A copre solo `"league-finish"` (piazzamento
+ * Obiettivo della società per il ciclo corrente — Fase A copre solo `"league-finish"` (piazzamento
  * minimo atteso in base a prestigio/reputazione, stessa formula di `rollCoachSeasonOutcome`);
  * `"cup-run"`/`"no-sacking"`/`"reputation-gain"` restano pronti nel tipo per la Fase B.
  */

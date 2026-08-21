@@ -10,11 +10,17 @@ type Mode = "player" | "coach";
 export default function Home() {
   const [mode, setMode] = useState<Mode>("player");
   const [coachSeed, setCoachSeed] = useState<ArchivedCareer | null>(null);
+  // Una volta tornati dall'Allenatore, il calciatore deve sempre mostrare il menu principale
+  // invece di riprendere silenziosamente un'eventuale carriera in corso non correlata — vedi
+  // CareerGame's `startAtMenu`. Resta true per il resto della sessione: ogni futuro "← Menu"
+  // dall'Allenatore deve avere lo stesso comportamento, non solo il primo.
+  const [playerStartAtMenu, setPlayerStartAtMenu] = useState(false);
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-x-hidden">
       {mode === "player" ? (
         <CareerGame
+          startAtMenu={playerStartAtMenu}
           onCoachCareer={(seedEntry) => {
             setCoachSeed(seedEntry ?? null);
             setMode("coach");
@@ -22,7 +28,13 @@ export default function Home() {
         />
       ) : (
         <div className="mx-auto flex w-full max-w-[88rem] min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto px-4 py-2 sm:gap-3 sm:py-3 lg:overflow-hidden">
-          <CoachCareerGame seedEntry={coachSeed} onBack={() => setMode("player")} />
+          <CoachCareerGame
+            seedEntry={coachSeed}
+            onBack={() => {
+              setPlayerStartAtMenu(true);
+              setMode("player");
+            }}
+          />
         </div>
       )}
     </main>

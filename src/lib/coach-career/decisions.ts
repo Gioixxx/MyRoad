@@ -12,6 +12,7 @@ import { clubs } from "@/data/clubs";
 import { TACTICAL_SYSTEM_LABELS, type TacticalSystem } from "@/lib/career/tactics";
 import { expectedLeagueFinishRank, LEAGUE_FINISH_ORDER } from "./season-outcome";
 import { rollCoachCycleObjective } from "./coach-satisfaction";
+import { coachRelationAffinity, getCoachRelation } from "./coach-relations";
 
 function outcome(weight: number, resultText: string, extra?: Partial<CoachDelta>): CoachDecisionOutcome {
   return { weight, effect: { ...extra }, resultText };
@@ -122,7 +123,7 @@ export function generateCoachEndOfCycle(coach: Coach, rng: Rng = Math.random): C
         id: "renew",
         label: `Rinnova con il ${club.name}`,
         hint: "Resti alla guida del club, nessun nuovo mandato societario",
-        outcomes: [outcome(100, "La società ti conferma alla guida del club.", { popularityDelta: 1 })],
+        outcomes: [outcome(100, "La società ti conferma alla guida del club.", { popularityDelta: 1, relationsDelta: { board: 1 } })],
       },
       ...offers.map((c) =>
         withHint(
@@ -141,7 +142,7 @@ export function generateCoachEndOfCycle(coach: Coach, rng: Rng = Math.random): C
 }
 
 /**
- * Brief societario per il ciclo — un'unica opzione (mirror concettuale di come il calciatore
+ * Obiettivo societario per il ciclo — un'unica opzione (mirror concettuale di come il calciatore
  * riceve `currentObjective` come roll automatico a fine ciclo, reso qui un evento a sé stante per
  * dare peso narrativo alla pressione societaria). L'obiettivo mostrato è deterministico
  * (`rollCoachCycleObjective` non usa RNG), quindi il testo generato qui e l'obiettivo
@@ -155,12 +156,12 @@ export function generateBoardBrief(coach: Coach): CoachDecision {
   return {
     id: `board-brief-${coach.age}`,
     category: "board-brief",
-    title: "Il brief della società",
+    title: "L'obiettivo della società",
     description: objective.label,
     options: [
       {
         id: "accept-brief",
-        label: "Accetta il brief",
+        label: "Accetta l'obiettivo",
         outcomes: [outcome(100, "Prendi nota dell'obiettivo stagionale della società.")],
       },
     ],
@@ -193,8 +194,13 @@ export function generateTacticalIdentityDecision(coach: Coach): CoachDecision {
  * Crisi societaria — **forzata** quando `boardConfidence` scende sotto la soglia d'allarme (vedi
  * `shouldTriggerBoardCrisis` in loop.ts). L'esonero (`sacked: true`) è applicato genericamente da
  * `resolveCoachCycle`, stesso principio dei flag `retire`/`club`/`newSystem` sulle altre opzioni.
+ * I pesi di sopravvivenza seguono l'affinità con la società: amica rende più facile chiedere tempo,
+ * ostile alza l'esonero.
  */
 export function generateBoardCrisisDecision(coach: Coach): CoachDecision {
+  const board = coachRelationAffinity(coach, "board");
+  const askSurvive = clamp(60 + board * 10, 40, 80);
+  const allInSurvive = clamp(30 + board * 8, 14, 46);
   return {
     id: `board-crisis-${coach.age}`,
     category: "board-crisis",
@@ -206,8 +212,8 @@ export function generateBoardCrisisDecision(coach: Coach): CoachDecision {
         label: "Chiedi tempo alla società",
         hint: "Rischio di esonero moderato",
         outcomes: [
-          outcome(60, "La società ti concede un'ultima chance.", { boardConfidenceDelta: 15 }),
-          outcome(40, "La pazienza è finita: sei stato esonerato.", { sacked: true }),
+          outcome(askSurvive, "La società ti concede un'ultima chance.", { boardConfidenceDelta: 15 }),
+          outcome(100 - askSurvive, "La pazienza è finita: sei stato esonerato.", { sacked: true }),
         ],
       },
       {
@@ -223,16 +229,19 @@ export function generateBoardCrisisDecision(coach: Coach): CoachDecision {
         label: "Punta tutto sulla prossima gara",
         hint: "Tutto o niente",
         outcomes: [
-          outcome(30, "Una vittoria pesante ti salva la panchina.", { boardConfidenceDelta: 30, reputationDelta: 2 }),
-          outcome(70, "Il rischio non paga: sei stato esonerato.", { sacked: true }),
+          outcome(allInSurvive, "Una vittoria pesante ti salva la panchina.", { boardConfidenceDelta: 30, reputationDelta: 2 }),
+          outcome(100 - allInSurvive, "Il rischio non paga: sei stato esonerato.", { sacked: true }),
         ],
       },
     ],
   };
 }
 
-/** Conferenza stampa — categoria ordinaria (non forzata), mirror di "controversial-statement". */
+/** Conferenza stampa — categoria ordinaria (non forzata), mirror di "controversial-statement".
+ * Se la stampa è già ostile (`press <= -1`) i pesi della gaffe salgono. */
 export function generatePressConferenceDecision(coach: Coach): CoachDecision {
+  const press = coachRelationAffinity(coach, "press");
+  const speakOk = clamp(60 + press * 10, 40, 80);
   return {
     id: `press-conference-${coach.age}`,
     category: "press-conference",
@@ -244,8 +253,15 @@ export function generatePressConferenceDecision(coach: Coach): CoachDecision {
         label: "Parla senza filtri",
         hint: "Rischio mediatico",
         outcomes: [
-          outcome(60, "Le tue parole dirette conquistano tifosi e stampa.", { popularityDelta: 4 }),
-          outcome(40, "Una frase di troppo finisce in prima pagina.", { shadowDelta: 8, popularityDelta: -3 }),
+          outcome(speakOk, "Le tue parole dirette conquistano tifosi e stampa.", {
+            popularityDelta: 4,
+            relationsDelta: { press: 1 },
+          }),
+          outcome(100 - speakOk, "Una frase di troppo finisce in prima pagina.", {
+            shadowDelta: 8,
+            popularityDelta: -3,
+            relationsDelta: { press: -1 },
+          }),
         ],
       },
       {
@@ -259,8 +275,43 @@ export function generatePressConferenceDecision(coach: Coach): CoachDecision {
 }
 
 /** Confronto col capitano — mirror concettuale di "coach-role-request" calciatore, invertito
- * (qui è il capitano a rivolgersi all'allenatore). */
+ * (qui è il capitano a rivolgersi all'allenatore). Se l'affinità è già ostile lo spogliatoio
+ * è in rivolta: opzioni più dure, con rischio sulla fiducia societaria. */
 export function generateCaptainRelationsDecision(coach: Coach): CoachDecision {
+  const captain = coachRelationAffinity(coach, "captain");
+  if (captain <= -1) {
+    return {
+      id: `captain-relations-${coach.age}`,
+      category: "captain-relations",
+      title: "Lo spogliatoio è in rivolta",
+      description: "Il capitano porta le proteste della squadra: il gruppo non segue più le tue indicazioni.",
+      options: [
+        {
+          id: "placate",
+          label: "Placa i malumori",
+          hint: "Ricostruisci il rapporto · la società ti vede debole",
+          outcomes: [
+            outcome(100, "Ascolti le proteste e riallinei il gruppo, a costo di apparire incerto.", {
+              relationsDelta: { captain: 1 },
+              boardConfidenceDelta: -3,
+            }),
+          ],
+        },
+        {
+          id: "raise-tones",
+          label: "Alza i toni",
+          hint: "Polso fermo · lo spogliatoio si allontana ancora",
+          outcomes: [
+            outcome(100, "Imposti la linea senza mediazioni: la società apprezza, lo spogliatoio no.", {
+              relationsDelta: { captain: -1 },
+              boardConfidenceDelta: 4,
+            }),
+          ],
+        },
+      ],
+    };
+  }
+
   return {
     id: `captain-relations-${coach.age}`,
     category: "captain-relations",
@@ -294,8 +345,45 @@ export function generateCaptainRelationsDecision(coach: Coach): CoachDecision {
 }
 
 /** Sessione di mercato astratta — mai una vera rosa, solo una scelta di tier di spesa con un
- * effetto immediato (non un mercato di trasferimento simulato). */
+ * `outcomeBonus` sul roll della stessa stagione (già cablato da `advanceSeasons`). Se la società
+ * è ostile (`board <= -1`) il menu libero sparisce: o accetti l'acquisto imposto o rifiuti. */
 export function generateTransferBudgetDecision(coach: Coach): CoachDecision {
+  if (coachRelationAffinity(coach, "board") <= -1) {
+    return {
+      id: `transfer-budget-${coach.age}`,
+      category: "transfer-window-budget",
+      title: "Sessione di mercato",
+      description: "La dirigenza vuole imporre un acquisto. Accetti o pretendi i tuoi profili?",
+      options: [
+        {
+          id: "accept-imposed",
+          label: "Accetta l'acquisto imposto",
+          hint: "Spinta in stagione · non è il profilo che volevi",
+          outcomeBonus: 1.12,
+          outcomes: [
+            outcome(100, "Accetti il colpo voluto dalla dirigenza: pace in società, rosa non tua.", {
+              relationsDelta: { board: 1 },
+              boardConfidenceDelta: 5,
+              popularityDelta: 2,
+            }),
+          ],
+        },
+        {
+          id: "refuse-imposed",
+          label: "Rifiuta e pretendi i tuoi profili",
+          hint: "La società non la prende bene",
+          outcomeBonus: 0.97,
+          outcomes: [
+            outcome(100, "Tieni il punto sui tuoi profili: la dirigenza lo registra come uno sgarbo.", {
+              relationsDelta: { board: -1 },
+              boardConfidenceDelta: -8,
+            }),
+          ],
+        },
+      ],
+    };
+  }
+
   return {
     id: `transfer-budget-${coach.age}`,
     category: "transfer-window-budget",
@@ -305,27 +393,40 @@ export function generateTransferBudgetDecision(coach: Coach): CoachDecision {
       {
         id: "invest-youth",
         label: "Investi sui giovani",
-        hint: "Costruisci per il futuro",
-        outcomes: [outcome(100, "Punti su un progetto a lungo termine.", { popularityDelta: 1 })],
+        hint: "Spinta leggera in stagione · la società apprezza il progetto",
+        outcomeBonus: 1.04,
+        outcomes: [
+          outcome(100, "Punti su un progetto a lungo termine.", {
+            popularityDelta: 1,
+            relationsDelta: { board: 1 },
+          }),
+        ],
       },
       {
         id: "marquee-signing",
         label: "Un colpo ad effetto",
-        hint: "Spesa alta, aspettative alte",
+        hint: "Spinta in stagione · la società storce il naso",
+        outcomeBonus: 1.12,
         outcomes: [
           outcome(100, "Un acquisto di richiamo accende l'entusiasmo dei tifosi.", {
             popularityDelta: 3,
             savingsDelta: -20_000,
             boardConfidenceDelta: -3,
+            relationsDelta: { board: -1 },
           }),
         ],
       },
       {
         id: "balance-books",
         label: "Tieni i conti in ordine",
-        hint: "La società apprezza la prudenza",
+        hint: "Nessuna spinta · la società apprezza",
+        outcomeBonus: 1.0,
         outcomes: [
-          outcome(100, "Gestisci il budget con prudenza.", { savingsDelta: 15_000, boardConfidenceDelta: 3 }),
+          outcome(100, "Gestisci il budget con prudenza.", {
+            savingsDelta: 15_000,
+            boardConfidenceDelta: 3,
+            relationsDelta: { board: 1 },
+          }),
         ],
       },
     ],
@@ -407,6 +508,45 @@ export function generateCoachScandalDecision(coach: Coach): CoachDecision {
             shadowDelta: 5,
             popularityDelta: -10,
             shadowFlags: { scandalOccurred: true },
+          }),
+        ],
+      },
+    ],
+  };
+}
+
+/** Scontro col rivale — **forzato** a bassa probabilità quando il rivale esiste già
+ * (`maybeSpawnCoachRival`). Non entra nel pool ordinario, stesso schema di `cup-run`. */
+export function generateRivalClashDecision(coach: Coach): CoachDecision {
+  const rival = getCoachRelation(coach, "rival");
+  if (!rival) {
+    throw new Error("generateRivalClashDecision richiede un rivale");
+  }
+  return {
+    id: `rival-clash-${coach.age}`,
+    category: "rival-clash",
+    title: "Scontro con il rivale",
+    description: `${rival.name} è sulla tua strada. Come reagisci?`,
+    options: [
+      {
+        id: "confront",
+        label: "Affrontalo",
+        hint: "Spinta in stagione · il rivale non dimentica",
+        outcomeBonus: 1.08,
+        outcomes: [
+          outcome(100, `Accetti lo scontro con ${rival.name}: la sfida alza il livello, e i rancori.`, {
+            relationsDelta: { rival: -1 },
+            popularityDelta: 2,
+          }),
+        ],
+      },
+      {
+        id: "ignore",
+        label: "Ignora la provocazione",
+        hint: "Nessuna spinta · il clima si distende",
+        outcomes: [
+          outcome(100, `Non dai peso a ${rival.name}: la tensione si sgonfia.`, {
+            relationsDelta: { rival: 1 },
           }),
         ],
       },

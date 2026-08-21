@@ -167,6 +167,13 @@ describe("applyCoachDelta", () => {
     expect(next.popularity).toBe(coach.popularity + 3);
     expect(next.wallet.savingsEur).toBe(1000);
   });
+
+  it("applica relationsDelta clampando l'affinità", () => {
+    const coach = signWithClub(createCoach(IDENTITY), TEST_CLUB);
+    const next = applyCoachDelta(coach, { relationsDelta: { board: 3, captain: -1 } });
+    expect(next.relations.find((r) => r.id === "board")?.affinity).toBe(2);
+    expect(next.relations.find((r) => r.id === "captain")?.affinity).toBe(-1);
+  });
 });
 
 describe("checkCoachRetirement", () => {

@@ -1,4 +1,4 @@
-import type { Club } from "@/types/career";
+import type { Club, RelationAffinity } from "@/types/career";
 import type { Coach, CoachRelation, CoachRelationId } from "@/types/coach";
 import { clampAffinity, pickName } from "@/lib/career/relations";
 import { cyclesAtClub } from "@/lib/shared/club-tenure";
@@ -10,11 +10,43 @@ export const COACH_RELATION_LABELS: Record<CoachRelationId, string> = {
   rival: "Rivale",
 };
 
+/** Hint visibile in UI: perché l'affinità di questo NPC conta, non un numero opaco. */
+export const COACH_RELATION_HINTS: Record<CoachRelationId, string> = {
+  board: "influenza la pazienza della società",
+  press: "influenza le conferenze e il rischio mediatico",
+  captain: "influenza i risultati di stagione",
+  rival: "può scatenare uno scontro diretto",
+};
+
+/** Fiducia sotto la quale scatta la crisi, a società neutrale (affinità 0). */
+export const SACK_WARNING_THRESHOLD_BASE = 30;
+/** ±3% a affinità capitano ±2 — magnitudine contenuta, stesso ordine del fit tattico. */
+export const CAPTAIN_SEASON_MULTIPLIER_STEP = 0.015;
+/** 4 punti di soglia esonero per ogni scatto di affinità società. */
+const BOARD_SACK_THRESHOLD_STEP = 4;
+
 export function getCoachRelation(
   coach: Pick<Coach, "relations">,
   id: CoachRelationId,
 ): CoachRelation | undefined {
   return coach.relations.find((rel) => rel.id === id);
+}
+
+export function coachRelationAffinity(
+  coach: Pick<Coach, "relations">,
+  id: CoachRelationId,
+): RelationAffinity {
+  return getCoachRelation(coach, id)?.affinity ?? 0;
+}
+
+/** Moltiplicatore di stagione dallo spogliatoio (solo capitano): 0.97…1.03. */
+export function relationsSeasonMultiplier(coach: Pick<Coach, "relations">): number {
+  return 1 + coachRelationAffinity(coach, "captain") * CAPTAIN_SEASON_MULTIPLIER_STEP;
+}
+
+/** Soglia di fiducia sotto cui scatta la crisi: società amica alza la pazienza, ostile la taglia. */
+export function sackWarningThreshold(coach: Pick<Coach, "relations">): number {
+  return SACK_WARNING_THRESHOLD_BASE - coachRelationAffinity(coach, "board") * BOARD_SACK_THRESHOLD_STEP;
 }
 
 export function upsertCoachRelation(relations: CoachRelation[], next: CoachRelation): CoachRelation[] {

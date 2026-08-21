@@ -14,7 +14,7 @@ import { applyShadowDelta } from "@/lib/career/shadow";
 import { applyTraitsDelta, NEUTRAL_TRAITS } from "@/lib/career/traits";
 import { clubTacticalSystem, tacticalFitMultiplier, type TacticalFit } from "@/lib/career/tactics";
 import { expectedLeagueFinishRank, LEAGUE_FINISH_RANK, rollCoachSeasonOutcome } from "./season-outcome";
-import { applyCoachRelationsDelta, relationsOnNewJob } from "./coach-relations";
+import { applyCoachRelationsDelta, relationsOnNewJob, relationsSeasonMultiplier } from "./coach-relations";
 import { emptyCoachPersonalRecords } from "./coach-satisfaction";
 import { applySeasonToClub } from "@/lib/shared/league-season";
 
@@ -294,7 +294,10 @@ export function advanceSeasons(
   }
 
   const cycleId = (coach.cyclesPlayed ?? 0) + 1;
-  const fitMultiplier = tacticalFitMultiplier(coachTacticalFit(coach, coach.club)) * outcomeBonusMultiplier;
+  const fitMultiplier =
+    tacticalFitMultiplier(coachTacticalFit(coach, coach.club)) *
+    relationsSeasonMultiplier(coach) *
+    outcomeBonusMultiplier;
 
   let club = coach.club;
   let reputation = coach.reputation;

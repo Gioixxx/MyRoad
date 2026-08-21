@@ -21,7 +21,7 @@ import {
   sackCoach,
   signWithClub,
 } from "./engine";
-import { maybeSpawnCoachRival } from "./coach-relations";
+import { getCoachRelation, maybeSpawnCoachRival, sackWarningThreshold } from "./coach-relations";
 import { cyclesAtClub } from "@/lib/shared/club-tenure";
 import {
   evaluateCoachObjective,
@@ -41,6 +41,7 @@ import {
   generateCupRunDecision,
   generateJobOffers,
   generatePressConferenceDecision,
+  generateRivalClashDecision,
   generateTacticalIdentityDecision,
   generateTransferBudgetDecision,
 } from "./decisions";
@@ -64,16 +65,16 @@ const COACH_DEFAULT_CATEGORY_WEIGHT = 5;
 const COACH_REPEAT_PENALTY = 0.15;
 const RECENT_CATEGORIES_WINDOW = 3;
 
-/** Sotto questa fiducia societaria scatta la crisi forzata (vedi `shouldTriggerBoardCrisis`). */
-const SACK_WARNING_THRESHOLD = 30;
+/** Sotto questa fiducia societaria scatta la crisi forzata (vedi `shouldTriggerBoardCrisis`).
+ * Il valore numerico vive in `sackWarningThreshold` (modulato dall'affinità società). */
 const CUP_RUN_TRIGGER_CHANCE = 0.15;
 const CONTINENTAL_CAMPAIGN_TRIGGER_CHANCE = 0.15;
+const RIVAL_CLASH_TRIGGER_CHANCE = 0.12;
 /** Stessa soglia usata da `rollCoachSeasonOutcome` per abilitare il roll continentale. */
 const CONTINENTAL_CAMPAIGN_MIN_REPUTATION = 60;
 
-/** Categorie disponibili nel pool ordinario (pesato) — le categorie forzate (`board-crisis`/
- * `cup-run`/`continental-campaign`/`scandal`) non vi compaiono mai, sono controllate a parte in
- * `pickNextCoachDecision` prima del pool, stessa architettura del calciatore. */
+/** Categorie forzate (`board-crisis`/`cup-run`/`continental-campaign`/`scandal`/`rival-clash`)
+ * non vi compaiono mai, sono controllate a parte in `pickNextCoachDecision` prima del pool. */
 export function availableCategories(coach: Coach): CoachDecisionCategory[] {
   if (!coach.club) return ["job-search"];
   return [
@@ -109,7 +110,7 @@ export function pushRecentCoachCategory(
 }
 
 function shouldTriggerBoardCrisis(coach: Coach, recentCategories: CoachDecisionCategory[]): boolean {
-  return Boolean(coach.club) && coach.boardConfidence < SACK_WARNING_THRESHOLD && !recentCategories.includes("board-crisis");
+  return Boolean(coach.club) && coach.boardConfidence < sackWarningThreshold(coach) && !recentCategories.includes("board-crisis");
 }
 
 function shouldTriggerCupRun(coach: Coach, rng: Rng): boolean {
@@ -131,6 +132,14 @@ function shouldTriggerCoachScandal(coach: Coach, recentCategories: CoachDecision
   return coach.shadow >= SHADOW_SCANDAL_THRESHOLD && !recentCategories.includes("scandal");
 }
 
+function shouldTriggerRivalClash(coach: Coach, recentCategories: CoachDecisionCategory[], rng: Rng): boolean {
+  return (
+    Boolean(getCoachRelation(coach, "rival")) &&
+    !recentCategories.includes("rival-clash") &&
+    rng() < RIVAL_CLASH_TRIGGER_CHANCE
+  );
+}
+
 export interface NextCoachDecision {
   decision: CoachDecision;
   category: CoachDecisionCategory;
@@ -138,8 +147,8 @@ export interface NextCoachDecision {
 }
 
 /** Sceglie la prossima decisione del ciclo: trigger forzati in ordine di priorità (crisi
- * societaria → corsa in coppa → campagna continentale → scandalo), poi il pool pesato ordinario —
- * stessa architettura a cascata di `pickNextDecision` calciatore. */
+ * societaria → corsa in coppa → campagna continentale → scandalo → scontro col rivale), poi il
+ * pool pesato ordinario — stessa architettura a cascata di `pickNextDecision` calciatore. */
 export function pickNextCoachDecision(
   coach: Coach,
   context: CoachLoopContext,
@@ -161,6 +170,9 @@ export function pickNextCoachDecision(
   }
   if (shouldTriggerCoachScandal(coach, recentCategories)) {
     return { decision: generateCoachScandalDecision(coach), category: "scandal", context };
+  }
+  if (shouldTriggerRivalClash(coach, recentCategories, rng)) {
+    return { decision: generateRivalClashDecision(coach), category: "rival-clash", context };
   }
 
   const categories = availableCategories(coach);
@@ -308,7 +320,12 @@ export function resolveCoachCycle(
     const evaluated = evaluateCoachObjective(pendingObjective, lastStint.outcome);
     const firstTime = evaluated.met && !(nextCoach.objectiveKindsCelebrated ?? []).includes(pendingObjective.kind);
     if (evaluated.met) {
-      nextCoach = applyCoachDelta(nextCoach, { popularityDelta: OBJECTIVE_MET_POPULARITY_BONUS });
+      nextCoach = applyCoachDelta(nextCoach, {
+        popularityDelta: OBJECTIVE_MET_POPULARITY_BONUS,
+        relationsDelta: { board: 1 },
+      });
+    } else {
+      nextCoach = applyCoachDelta(nextCoach, { relationsDelta: { board: -1 } });
     }
     if (firstTime) {
       nextCoach = {

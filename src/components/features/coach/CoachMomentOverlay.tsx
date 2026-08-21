@@ -215,7 +215,7 @@ export function CoachMomentOverlay({ moment, onContinue }: CoachMomentOverlayPro
   } else if (moment.kind === "objective") {
     eyebrow = "Obiettivo raggiunto";
     title = moment.label;
-    detail = "Hai completato il brief della società per questa stagione.";
+    detail = "Hai raggiunto l'obiettivo della società per questa stagione.";
     visual = (
       <span className="flex h-20 w-20 items-center justify-center rounded-full bg-(--color-success)/20 text-(--color-success)">
         <Target size={40} aria-hidden="true" />

@@ -39,7 +39,7 @@ export const LEAGUE_FINISH_ORDER: LeagueFinish[] = [
  * sottoperformare le attese del club) ma **non** sono lo stesso evento narrativo — chi mostra
  * copy all'utente deve leggere `CoachSeasonOutcome.zone`, non `leagueFinish` (vedi piano "Due
  * classifiche", criticità 2: `coach-satisfaction.ts`/`decisions.ts` leggevano `leagueFinish` per
- * il brief societario, mostrando "qualifica il club a una coppa europea" anche per una semplice
+ * l'obiettivo societario, mostrando "qualifica il club a una coppa europea" anche per una semplice
  * promozione dalla Championship). */
 export function zoneToLeagueFinish(zone: LeagueZone): LeagueFinish {
   switch (zone) {

@@ -94,7 +94,7 @@ export interface CoachSeasonTitleEntry {
 
 export type CoachCycleObjectiveKind = "league-finish" | "cup-run" | "no-sacking" | "reputation-gain";
 
-/** Obiettivo del brief societario per il ciclo corrente. */
+/** Obiettivo societario per il ciclo corrente. */
 export interface CoachCycleObjective {
   id: string;
   label: string;
@@ -166,6 +166,7 @@ export type CoachDecisionCategory =
   | "cup-run"
   | "continental-campaign"
   | "scandal"
+  | "rival-clash"
   | "narrative";
 
 export interface CoachDecisionOutcome {

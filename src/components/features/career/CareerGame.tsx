@@ -321,10 +321,14 @@ function SetupStepDots({ current }: { current: Step }) {
 
 interface CareerGameProps {
   onCoachCareer: (seedEntry?: ArchivedCareer) => void;
+  /** true quando si torna dalla modalità Allenatore ("← Menu"): forza il menu principale invece
+   * di riprendere silenziosamente un'eventuale carriera calciatore in corso non correlata. */
+  startAtMenu?: boolean;
 }
 
-export function CareerGame({ onCoachCareer }: CareerGameProps) {
+export function CareerGame({ onCoachCareer, startAtMenu = false }: CareerGameProps) {
   const [step, setStep] = useState<Step>("menu");
+  const [menuOverride, setMenuOverride] = useState(startAtMenu);
   const [speed, setSpeed] = useState<GameSpeed | null>(null);
   const [archiveEntries, setArchiveEntries] = useState<ArchivedCareer[]>([]);
   const { state, startCareer, chooseOption, setTrainingFocus, restart, isResuming } = useCareerGame();
@@ -349,7 +353,7 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
   const chooseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cycleBusy = useRef(false);
 
-  const showPlaying = state !== null;
+  const showPlaying = state !== null && !menuOverride;
   const isRetired = state?.retired ?? false;
   const awaitingResolve = resolvePhase !== null || decisionExiting;
 
@@ -471,6 +475,13 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
     setStep("menu");
   }, []);
 
+  // Non distruttivo (a differenza di "Ricomincia"): torna al menu senza toccare la carriera in
+  // corso, che resta ripresa in background finché non si sceglie "Giocatore singolo" per rientrarci.
+  const handleGoMenuFromPlay = useCallback(() => {
+    setStep("menu");
+    setMenuOverride(true);
+  }, []);
+
   const handleShowSettings = useCallback(() => {
     setStep("settings");
   }, []);
@@ -522,8 +533,8 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
   );
   const showSeason = Boolean(state?.lastOutcome && resolvePhase === "season");
   const showOutcome = Boolean(state?.lastOutcome && resolvePhase === "outcome");
-  const showSummary = Boolean(state?.retired && !awaitingResolve);
-  const showPlayShell = Boolean(state && (!isRetired || awaitingResolve));
+  const showSummary = Boolean(state?.retired && !awaitingResolve && !menuOverride);
+  const showPlayShell = Boolean(state && (!isRetired || awaitingResolve) && !menuOverride);
 
   const isSetup = !showPlaying;
   const isMenu = isSetup && step === "menu";
@@ -557,6 +568,9 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
         <header className="flex shrink-0 items-center justify-between gap-4">
           <p className="font-display text-lg tracking-[0.2em] gold-metal-text">CARRIERA</p>
           <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={handleGoMenuFromPlay} className="px-0 text-xs">
+              ← Menu
+            </Button>
             <Button variant="ghost" onClick={handleRestart} className="px-0 text-xs">
               Ricomincia
             </Button>
@@ -611,7 +625,7 @@ export function CareerGame({ onCoachCareer }: CareerGameProps) {
           {!showPlaying && step === "menu" ? (
             <Card key="step-menu" className="animate-step-in flex flex-col gap-4 p-5 sm:p-7">
               <MainMenu
-                onSinglePlayer={() => setStep("speed")}
+                onSinglePlayer={() => (state ? setMenuOverride(false) : setStep("speed"))}
                 onCoach={() => onCoachCareer()}
                 onSettings={handleShowSettings}
                 onQuit={handleQuit}
