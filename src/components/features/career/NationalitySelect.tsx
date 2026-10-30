@@ -10,9 +10,11 @@ interface NationalitySelectProps {
   value: string | null;
   onChange: (countryName: string) => void;
   id?: string;
+  /** Stile del campo chiuso: sostituisce quello incassato di default (`input-recessed`). */
+  className?: string;
 }
 
-export function NationalitySelect({ value, onChange, id }: NationalitySelectProps) {
+export function NationalitySelect({ value, onChange, id, className }: NationalitySelectProps) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -55,7 +57,8 @@ export function NationalitySelect({ value, onChange, id }: NationalitySelectProp
         aria-haspopup="listbox"
         aria-expanded={open}
         className={cn(
-          "input-recessed flex w-full items-center justify-between rounded-md px-3 py-2 text-sm",
+          "flex w-full items-center justify-between",
+          className ?? "input-recessed rounded-md px-3 py-2 text-sm",
         )}
       >
         {selected ? (

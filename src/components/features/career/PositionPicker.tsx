@@ -20,6 +20,9 @@ const PITCH_ROWS: Position[][] = [
   ["GK"],
 ];
 
+const PITCH_LINE = "border-white/40";
+
+/** Campo verde visto dall'alto con un bottone per ruolo; quello scelto è pieno con alone. */
 export function PositionPicker({
   value,
   onChange,
@@ -31,40 +34,39 @@ export function PositionPicker({
       role="radiogroup"
       aria-label="Ruolo in campo"
       className={cn(
-        "relative flex min-w-0 flex-col justify-between overflow-x-hidden overflow-y-auto rounded-xl border-2 border-white/20 lg:min-h-0 lg:overflow-hidden",
-        compact ? "gap-1 p-2" : "gap-2 p-3 sm:gap-3 sm:p-4",
+        "relative flex min-w-0 flex-col justify-between overflow-hidden border-[3px]",
+        PITCH_LINE,
+        compact ? "gap-1 p-2" : "gap-2 px-2.5 py-4",
         className,
       )}
       style={{
-        backgroundImage: `
-          linear-gradient(180deg, color-mix(in srgb, #0d2a1c 70%, transparent), color-mix(in srgb, #0a1f15 80%, transparent)),
-          repeating-linear-gradient(
-            90deg,
-            transparent,
-            transparent 14px,
-            color-mix(in srgb, #1a4a32 35%, transparent) 14px,
-            color-mix(in srgb, #1a4a32 35%, transparent) 28px
-          ),
-          linear-gradient(180deg, #14352b, #0f2a20)
-        `,
+        backgroundColor: "var(--color-pitch)",
+        backgroundImage:
+          "repeating-linear-gradient(180deg, rgb(255 255 255 / 0.06) 0 3.25rem, transparent 3.25rem 6.5rem)",
       }}
     >
       <div
-        className="pointer-events-none absolute inset-x-0 top-1/2 h-px bg-white/20"
+        className="pointer-events-none absolute inset-x-0 top-1/2 h-0.5 bg-white/40"
         aria-hidden="true"
       />
       <div
         className={cn(
-          "pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20",
-          compact ? "h-10 w-10" : "h-12 w-12 sm:h-16 sm:w-16",
+          "pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2",
+          PITCH_LINE,
+          compact ? "h-10 w-10" : "h-20 w-20",
         )}
         aria-hidden="true"
       />
+      <div
+        className={cn("pointer-events-none absolute inset-x-[22%] top-0 h-[13%] border-2 border-t-0", PITCH_LINE)}
+        aria-hidden="true"
+      />
+      <div
+        className={cn("pointer-events-none absolute inset-x-[22%] bottom-0 h-[13%] border-2 border-b-0", PITCH_LINE)}
+        aria-hidden="true"
+      />
       {PITCH_ROWS.map((row, i) => (
-        <div
-          key={i}
-          className={cn("relative z-10 flex justify-center", compact ? "gap-1.5" : "gap-2 sm:gap-3")}
-        >
+        <div key={i} className="relative z-10 flex items-center justify-around">
           {row.map((position) => {
             const selected = position === value;
             return (
@@ -75,15 +77,12 @@ export function PositionPicker({
                 aria-checked={selected}
                 onClick={() => onChange(position)}
                 className={cn(
-                  "flex shrink-0 items-center justify-center rounded-full font-bold",
-                  "border border-white/25 backdrop-blur-[2px]",
-                  "transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-focus-glow)",
-                  compact
-                    ? "h-7 w-9 text-[10px]"
-                    : "h-11 w-12 text-[11px] sm:h-12 sm:w-14 sm:text-xs",
+                  "md-label flex shrink-0 items-center justify-center rounded-full border-2 tracking-normal",
+                  "transition-[transform,background-color,border-color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-focus-glow)",
+                  compact ? "h-8 w-8 text-[11px]" : "h-12 w-12 text-base sm:h-13 sm:w-13 sm:text-[17px]",
                   selected
-                    ? "selection-glow scale-105 bg-white/25 text-white"
-                    : "bg-white/10 text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] hover:bg-white/20 hover:scale-105",
+                    ? "md-fill scale-105 border-white/80 shadow-[0_0_0_4px_color-mix(in_srgb,var(--club-primary)_35%,transparent),0_0_22px_color-mix(in_srgb,var(--club-primary)_70%,transparent)]"
+                    : "border-white/55 bg-black/45 text-white hover:scale-105 hover:border-white",
                 )}
               >
                 {POSITION_LABELS[position]}

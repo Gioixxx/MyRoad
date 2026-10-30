@@ -13,7 +13,7 @@ interface JerseyProps {
   crestLabel?: string;
   /** Bandiera cucita in basso a destra, per ricordare la nazionalità. */
   country?: Country;
-  size?: "sm" | "md" | "lg";
+  size?: keyof typeof SIZE;
   className?: string;
 }
 
@@ -21,6 +21,7 @@ const SIZE = {
   sm: { box: "h-16 w-16", flag: 12 },
   md: { box: "h-28 w-28", flag: 16 },
   lg: { box: "h-40 w-40", flag: 22 },
+  xl: { box: "h-72 w-72", flag: 28 },
 } as const;
 
 const BODY_PATH =

@@ -619,13 +619,13 @@ export function CareerGame({ onCoachCareer, startAtMenu = false }: CareerGamePro
       style={showPlaying ? clubStyle(state?.player.club?.id) : undefined}
       className={cn(
         "mx-auto flex w-full min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden px-4",
-        (showPlaying || isMenu) && "matchday-shell",
+        (showPlaying || isMenu || isIdentity) && "matchday-shell",
         showPlayShell
           ? "max-w-[88rem] gap-2 overflow-y-auto py-2 sm:gap-3 sm:py-3 lg:overflow-hidden"
           : showSummary
             ? "max-w-[88rem] gap-2 overflow-y-auto py-2 sm:gap-3 sm:py-3 lg:overflow-hidden"
             : isIdentity
-              ? "max-w-6xl gap-2 overflow-hidden py-2 sm:py-3"
+              ? "max-w-[81rem] gap-3 overflow-y-auto py-2 sm:py-4 lg:overflow-hidden"
               : isMenu
                 ? "max-w-6xl gap-3 overflow-y-auto py-4 sm:py-6"
                 : "max-w-4xl gap-3 overflow-y-auto py-4 sm:py-6",
@@ -652,15 +652,22 @@ export function CareerGame({ onCoachCareer, startAtMenu = false }: CareerGamePro
             )}
             <ThemeToggle />
           </div>
-          {isMenu ? null : (
+          {isIdentity ? (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <h1 className="md-heading text-3xl text-(--color-text) sm:text-[2.875rem] sm:leading-none">
+                Crea la tua identità
+              </h1>
+              <span className="md-fill md-slant md-label py-1 pr-6 pl-2.5 text-[15px]">
+                Passo 2 di 2
+              </span>
+            </div>
+          ) : isMenu ? null : (
             <div className="text-center">
               <p className="font-display text-xs tracking-[0.25em] gold-metal-text">
                 My Road - L&apos;Ascesa
               </p>
               <h1 className="font-display text-2xl text-(--color-text) sm:text-3xl">
-                {isIdentity
-                  ? "Crea la tua identità"
-                  : isArchive
+                {isArchive
                     ? "Le mie carriere"
                     : isLeaderboard
                       ? "Classifica"
@@ -668,14 +675,9 @@ export function CareerGame({ onCoachCareer, startAtMenu = false }: CareerGamePro
                         ? "Impostazioni"
                         : "Costruisci la tua carriera da calciatore"}
               </h1>
-              {isIdentity ? (
-                <p className="mt-0.5 font-display text-sm tracking-[0.2em] gold-metal-text">
-                  Passo 2 di 2
-                </p>
-              ) : null}
             </div>
           )}
-          {step === "speed" || step === "identity" ? <SetupStepDots current={step} /> : null}
+          {step === "speed" ? <SetupStepDots current={step} /> : null}
         </header>
       )}
 
@@ -730,17 +732,14 @@ export function CareerGame({ onCoachCareer, startAtMenu = false }: CareerGamePro
           ) : null}
 
           {!showPlaying && step === "identity" ? (
-            <Card
-              key="step-identity"
-              className="animate-step-in flex min-h-0 flex-1 flex-col overflow-y-auto p-3 sm:p-5 lg:overflow-hidden"
-            >
+            <div key="step-identity" className="animate-step-in flex flex-col lg:min-h-0 lg:flex-1">
               <IdentityForm
                 onSubmit={handleIdentitySubmitted}
                 nickname={nickname}
                 onNicknameChange={setNickname}
                 deviceId={deviceId}
               />
-            </Card>
+            </div>
           ) : null}
 
           {!showPlaying && step === "archive" ? (
