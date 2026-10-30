@@ -1,0 +1,43 @@
+{
+  "dominio": "blender",
+  "richiede": [
+    "addon:blender"
+  ],
+  "guida": ".claude/consoleclaude/stacks/blender.md",
+  "id": "blender-stills",
+  "titolo": "Pochi fotogrammi di una scena",
+  "quando": "Prima del render intero: pochi fotogrammi in PNG per controllare pose e inquadratura (poi aprili con Read).",
+  "rischio": "scrittura",
+  "comando": [
+    "powershell",
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    ".claude/consoleclaude/tools/blender/blender-kit.ps1",
+    "stills",
+    "{scena}",
+    "{fotogrammi}",
+    "--out={out}"
+  ],
+  "timeoutS": 600,
+  "parametri": {
+    "scena": {
+      "tipo": "percorso",
+      "esiste": true
+    },
+    "fotogrammi": {
+      "tipo": "stringa",
+      "pattern": "[0-9]{1,5}(,[0-9]{1,5}){0,11}",
+      "max": 80
+    },
+    "out": {
+      "tipo": "percorso",
+      "obbligatorio": false,
+      "default": "anim/out/stills"
+    }
+  },
+  "uscite": [
+    "{out}"
+  ]
+}

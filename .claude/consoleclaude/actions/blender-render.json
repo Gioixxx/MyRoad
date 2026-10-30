@@ -1,0 +1,47 @@
+{
+  "dominio": "blender",
+  "richiede": [
+    "addon:blender"
+  ],
+  "guida": ".claude/consoleclaude/stacks/blender.md",
+  "id": "blender-render",
+  "titolo": "Render di una scena",
+  "quando": "Per il video finale (o la sequenza PNG) di una scena già controllata con i fotogrammi. Un render alla volta.",
+  "rischio": "scrittura",
+  "comando": [
+    "powershell",
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    ".claude/consoleclaude/tools/blender/blender-kit.ps1",
+    "render",
+    "{scena}",
+    "--out={out}",
+    "--mode={modo}"
+  ],
+  "timeoutS": 1800,
+  "parametri": {
+    "scena": {
+      "tipo": "percorso",
+      "esiste": true
+    },
+    "out": {
+      "tipo": "percorso",
+      "obbligatorio": false,
+      "default": "anim/out"
+    },
+    "modo": {
+      "tipo": "enum",
+      "valori": [
+        "webm",
+        "png"
+      ],
+      "obbligatorio": false,
+      "default": "webm"
+    }
+  },
+  "uscite": [
+    "{out}"
+  ]
+}

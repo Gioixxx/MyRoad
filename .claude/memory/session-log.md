@@ -9,6 +9,13 @@ Snapshot automatici del lavoro in corso, salvati da `save_context.py` su PreComp
 (feature `enforcementHooks`) e ricaricati all'avvio da `session_start.py`. Gestito automaticamente:
 le entry sotto sono sovrascritte per `sessionId` (rolling, ultime ~10). Vedi [[sprint]] per i task attivi.
 
+<!-- session:e06e4f2a-a757-43de-82a5-88bbd74b9141 -->
+### Sessione — 2026-10-30
+- **Branch:** main · **Quando:** 2026-10-30→2026-10-30
+- **Ultima richiesta:** usa figcraft per ridisegnare il gioco
+- **File toccati:** .claude/launch.json, app/globals.css, constants/design-tokens.ts, components/VersionBadge.tsx, career/SettingsPanel.tsx, data/country-labels.ts, data/country-labels.test.ts, career/NationalitySelect.tsx, career/CountryFlag.tsx, career/decisions.ts, career/OfferPanel.tsx
+- **Comandi:** git; cd; cat; grep; sed; f=src/components/features/career/PlayerCard.tsx; python; npx; node
+
 <!-- session:4bb00b97-a481-4d18-96e9-2cbd6cac6d0d -->
 ### Agente allenatore e posizionamento pulsanti — 2026-08-20
 - **Branch:** main · **Quando:** 2026-08-20→2026-08-20
@@ -66,10 +73,3 @@ le entry sotto sono sovrascritte per `sessionId` (rolling, ultime ~10). Vedi [[s
 - **Ultima richiesta:** procediamo con commit, push e release aggiorna la info a schermo
 - **File toccati:** career/PlayerCard.tsx, memory/decisions.md, memory/backlog.md, memory/MEMORY.md, Carriera/package.json, memory/sprint.md, plans/luminous-jingling-locket.md, supabase/schema.sql, Carriera/.gitignore, Carriera/.env, leaderboard/types.ts, leaderboard/settings.ts, leaderboard/client.ts, hooks/useLeaderboardSettings.ts, career/Leaderboard.tsx
 - **Comandi:** git; ls; find; netstat; npx; wc; adb; test; grep; sed
-
-<!-- session:e7b017c5-8566-4e96-9e05-25adf224fe32 -->
-### tactical-fit-agent-mechanics — 2026-08-12
-- **Branch:** main · **Quando:** 2026-08-12→2026-08-12
-- **Ultima richiesta:** La carriera di un calciatore professionista nella realtà è guidata da dinamiche biologiche, psicologiche e contrattuali fortemente imprevedibili. Crescita non lineare e sviluppo tardivo: Lo sviluppo…
-- **File toccati:** plans/la-carriera-di-un-curious-breeze.md, career/tactics.ts, career/tactics.test.ts, career/progression.ts, career/engine.ts, career/OfferPanel.tsx, career/CareerGame.tsx, career/PlayerCard.tsx, types/career.ts, career/wallet.ts, career/engine.test.ts, career/wallet.test.ts, career/storage.ts, career/storage.test.ts, career/decisions.ts
-- **Comandi:** git; grep; cd; cat; node; tasklist; netstat

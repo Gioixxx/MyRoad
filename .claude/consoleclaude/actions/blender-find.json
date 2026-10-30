@@ -1,0 +1,21 @@
+{
+  "dominio": "blender",
+  "richiede": [
+    "addon:blender"
+  ],
+  "guida": ".claude/consoleclaude/stacks/blender.md",
+  "id": "blender-find",
+  "titolo": "Dov'è Blender",
+  "quando": "Per sapere se Blender c'è e che versione è, prima di lavorare a un'animazione.",
+  "rischio": "lettura",
+  "comando": [
+    "powershell",
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    ".claude/consoleclaude/tools/blender/blender-kit.ps1",
+    "find"
+  ],
+  "timeoutS": 60
+}

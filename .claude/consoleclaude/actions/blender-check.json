@@ -1,0 +1,21 @@
+{
+  "dominio": "blender",
+  "richiede": [
+    "addon:blender"
+  ],
+  "guida": ".claude/consoleclaude/stacks/blender.md",
+  "id": "blender-check",
+  "titolo": "Controllo di Blender",
+  "quando": "Per vedere motore EEVEE, GPU e video WebM con alfa, prima di un render.",
+  "rischio": "lettura",
+  "comando": [
+    "powershell",
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    ".claude/consoleclaude/tools/blender/blender-kit.ps1",
+    "check"
+  ],
+  "timeoutS": 120
+}

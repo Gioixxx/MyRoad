@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "figcraft": {
+      "command": "C:\\Program Files\\FigCraft\\figcraft-cli.exe",
+      "args": [
+        "mcp",
+        "--automation-read-root",
+        "C:\\Dev\\Carriera",
+        "--automation-write-root",
+        "C:\\Dev\\Carriera\\design"
+      ]
+    }
+  }
+}
