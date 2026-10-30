@@ -3,6 +3,7 @@ import type { ClubStint, Player } from "@/types/career";
 import { cn } from "@/lib/utils";
 import { ClubCrest } from "./ClubCrest";
 import { OvrBadge } from "./OvrBadge";
+import { clubStyle } from "./club-style";
 
 interface CareerTableProps {
   player: Player;
@@ -59,9 +60,9 @@ export function CareerTable({ player, pendingLabel, compact = false }: CareerTab
   }
 
   return (
-    <div className="chalk-panel min-w-0 rounded-xl">
+    <div className="md-panel min-w-0">
       {/* Mobile (o colonna stretta con compact): card rows — no horizontal scroll */}
-      <ul className={cn("divide-y divide-(--color-border)", !compact && "md:hidden")}>
+      <ul className={cn("flex flex-col gap-px", !compact && "md:hidden")}>
         {pendingLabel ? (
           <li className="animate-pulse px-3 py-2.5 text-sm text-(--color-text-muted)">
             <span className="mr-2 text-xs">{player.age}</span>
@@ -72,16 +73,25 @@ export function CareerTable({ player, pendingLabel, compact = false }: CareerTab
           const trophyCount = trophiesByAge.get(stint.ageTo) ?? 0;
           const awardCount = awardsByAge.get(stint.ageTo) ?? 0;
           return (
-            <li key={index} className="flex flex-col gap-2 px-3 py-2.5 odd:bg-(--color-surface-raised)/40">
+            <li
+              key={index}
+              style={clubStyle(stint.club.id)}
+              className={cn(
+                "flex flex-col gap-1.5 border-l-4 px-3 py-2.5",
+                index === 0 && !pendingLabel
+                  ? "border-(--club-primary) bg-(--color-text)/8"
+                  : "border-transparent odd:bg-(--color-text)/4",
+              )}
+            >
               <div className="flex min-w-0 items-center gap-2">
-                <span className="shrink-0 text-xs text-(--color-text-muted)">{stint.ageFrom}</span>
+                <span className="md-label w-6 shrink-0 text-sm text-(--color-text-muted)">{stint.ageFrom}</span>
                 <ClubCrest
                   crestUrl={stint.club.crestUrl}
                   clubName={stint.club.name}
                   size={16}
                   className="shrink-0"
                 />
-                <span className="min-w-0 truncate font-medium text-(--color-text)">
+                <span className="md-heading min-w-0 truncate text-lg leading-tight text-(--color-text)">
                   {stint.club.name}
                 </span>
                 {stint.type === "loan" ? (
@@ -91,7 +101,7 @@ export function CareerTable({ player, pendingLabel, compact = false }: CareerTab
                 <AwardChip count={awardCount} />
                 <OvrBadge ovr={stint.ovr} size="sm" className="ml-auto shrink-0" />
               </div>
-              <p className="pl-6 text-xs text-(--color-text-muted)">
+              <p className="pl-8 text-xs text-(--color-text-muted)">
                 {seasonFinishLabel(stint)} ·{" "}
                 {isGoalkeeper
                   ? `${stint.stats.apps} pres. · ${stint.stats.goalsAgainst ?? 0} gol subiti · ${stint.stats.cleanSheets ?? 0} clean sheet`

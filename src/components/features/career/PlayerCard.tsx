@@ -101,10 +101,16 @@ export function PlayerCard({
   return (
     <div
       className={cn(
-        "dossier-perforated chalk-panel flex flex-col rounded-2xl gold-metal-border",
+        "md-panel relative isolate flex flex-col overflow-hidden",
         compact ? "gap-2.5 p-3 sm:p-4 lg:gap-4 lg:p-5" : "gap-4 p-5"
       )}
     >
+      <span
+        aria-hidden="true"
+        className="md-heading md-watermark pointer-events-none absolute -top-6 -right-3 -z-10 text-[11rem] leading-none select-none"
+      >
+        {player.number}
+      </span>
       <div className="flex items-center gap-3 sm:gap-4">
         <JerseyBadge
           number={player.number}
@@ -189,8 +195,8 @@ export function PlayerCard({
           </div>
           <p
             className={cn(
-              "font-display truncate leading-tight text-(--color-text)",
-              compact ? "text-xl lg:text-2xl" : "text-2xl"
+              "md-heading truncate leading-none text-(--color-text)",
+              compact ? "text-3xl lg:text-2xl xl:text-3xl" : "text-3xl"
             )}
           >
             {player.lastName.toUpperCase()}
@@ -225,14 +231,14 @@ export function PlayerCard({
       </div>
 
       {player.currentObjective ? (
-        <div className="flex items-start gap-2 rounded-lg border border-(--color-accent)/25 bg-(--color-surface) px-3 py-2">
+        <div className="flex items-start gap-2 border-l-4 border-(--color-success) bg-(--color-text)/5 px-3 py-2">
           <Target
             size={14}
-            className="mt-0.5 shrink-0 text-(--color-accent)"
+            className="mt-0.5 shrink-0 text-(--color-success)"
             aria-hidden="true"
           />
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold tracking-wide text-(--color-accent) uppercase">
+            <p className="md-label text-xs text-(--color-success)">
               Obiettivo
             </p>
             <p className="truncate text-xs text-(--color-text)">
@@ -264,7 +270,7 @@ export function PlayerCard({
           !showDetails ? "hidden lg:flex" : "flex"
         )}
       >
-        <div className="flex flex-col gap-1.5 rounded-lg bg-(--color-surface) px-3 py-2 text-sm">
+        <div className="flex flex-col gap-1.5 rounded-sm bg-(--color-text)/5 px-3 py-2 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-(--color-text-muted)">Valore</span>
             <span className="font-semibold text-(--color-text)">
@@ -298,10 +304,10 @@ export function PlayerCard({
           key={recordsFlashKey || "records"}
           className="grid grid-cols-3 gap-2 text-center"
         >
-          <div className="rounded-lg bg-(--color-surface) py-2">
+          <div className="rounded-sm bg-(--color-text)/5 py-2">
             <p
               className={cn(
-                "font-display text-lg",
+                "md-heading text-2xl leading-none",
                 (
                   isGoalkeeper
                     ? recordsFlashKey.includes("clean sheet")
@@ -319,10 +325,10 @@ export function PlayerCard({
               {isGoalkeeper ? "Rec. inviolate" : "Rec. gol"}
             </p>
           </div>
-          <div className="rounded-lg bg-(--color-surface) py-2">
+          <div className="rounded-sm bg-(--color-text)/5 py-2">
             <p
               className={cn(
-                "font-display text-lg",
+                "md-heading text-2xl leading-none",
                 recordsFlashKey.includes("assist")
                   ? "text-(--color-accent)"
                   : "text-(--color-text)"
@@ -334,10 +340,10 @@ export function PlayerCard({
               Rec. assist
             </p>
           </div>
-          <div className="rounded-lg bg-(--color-surface) py-2">
+          <div className="rounded-sm bg-(--color-text)/5 py-2">
             <p
               className={cn(
-                "font-display text-lg",
+                "md-heading text-2xl leading-none",
                 recordsFlashKey.includes("presenze")
                   ? "text-(--color-accent)"
                   : "text-(--color-text)"
@@ -352,24 +358,24 @@ export function PlayerCard({
         </div>
 
         <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-lg bg-(--color-surface) py-2">
-            <p className="font-display text-lg text-(--color-text)">
+          <div className="rounded-sm bg-(--color-text)/5 py-2">
+            <p className="md-heading text-2xl leading-none text-(--color-text)">
               {displayApps}
             </p>
             <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">
               Pres.
             </p>
           </div>
-          <div className="rounded-lg bg-(--color-surface) py-2">
-            <p className="font-display text-lg text-(--color-text)">
+          <div className="rounded-sm bg-(--color-text)/5 py-2">
+            <p className="md-heading text-2xl leading-none text-(--color-text)">
               {isGoalkeeper ? displayGoalsAgainst : displayGoals}
             </p>
             <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">
               {isGoalkeeper ? "Gol subiti" : "Gol"}
             </p>
           </div>
-          <div className="rounded-lg bg-(--color-surface) py-2">
-            <p className="font-display text-lg text-(--color-text)">
+          <div className="rounded-sm bg-(--color-text)/5 py-2">
+            <p className="md-heading text-2xl leading-none text-(--color-text)">
               {isGoalkeeper ? displayCleanSheets : displayAssists}
             </p>
             <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">

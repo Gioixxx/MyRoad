@@ -11,7 +11,7 @@ interface AttributesPanelProps {
 
 function barClasses(value: number): string {
   if (value >= 80) return "bg-(--color-ovr-gold)";
-  if (value >= 55) return "bg-(--color-accent)";
+  if (value >= 55) return "bg-[var(--club-primary,var(--color-accent))]";
   return "bg-(--color-text-muted)";
 }
 
@@ -27,7 +27,7 @@ export function AttributesPanel({
   const interactive = Boolean(onTrainingFocus);
 
   return (
-    <div className={cn("flex flex-col gap-1.5 rounded-lg bg-(--color-surface) px-3 py-2", className)}>
+    <div className={cn("flex flex-col gap-1.5 rounded-sm bg-(--color-text)/5 px-3 py-2", className)}>
       {keys.map((key) => {
         const value = Math.max(0, Math.min(99, values[key]));
         const focused = trainingFocus === key;
@@ -54,19 +54,19 @@ export function AttributesPanel({
           >
             <span
               className={cn(
-                "w-20 shrink-0 text-left",
+                "md-label w-20 shrink-0 text-left text-[13px]",
                 focused ? "font-semibold text-(--color-accent)" : "text-(--color-text-muted)",
               )}
             >
               {label}
             </span>
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-(--color-surface-raised)">
+            <div className="h-2 flex-1 overflow-hidden bg-(--color-text)/10">
               <div
-                className={cn("h-full rounded-full transition-all", barClasses(value))}
+                className={cn("h-full transition-all", barClasses(value))}
                 style={{ width: `${value}%` }}
               />
             </div>
-            <span className="w-6 shrink-0 text-right font-semibold text-(--color-text) tabular-nums">
+            <span className="md-heading w-7 shrink-0 text-right text-base text-(--color-text) tabular-nums">
               {value}
             </span>
           </button>

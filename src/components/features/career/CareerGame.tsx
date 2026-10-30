@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
-import type { ArchivedCareer, GameSpeed, PlayerIdentity } from "@/types/career";
+import type { ArchivedCareer, GameSpeed, Player, PlayerIdentity } from "@/types/career";
 import { useCareerGame, type CycleOutcomeSummary } from "@/hooks/useCareerGame";
 import { useBackgroundMusic } from "@/hooks/useBackgroundMusic";
 import { useLeaderboardSettings } from "@/hooks/useLeaderboardSettings";
@@ -33,6 +33,7 @@ import { PlayerCard } from "./PlayerCard";
 import { SettingsPanel } from "./SettingsPanel";
 import { SpeedSelect } from "./SpeedSelect";
 import { ClubCrest } from "./ClubCrest";
+import { clubStyle } from "./club-style";
 
 type Step = "menu" | "speed" | "identity" | "archive" | "leaderboard" | "settings";
 type ResolvePhase = "season" | "moments" | "outcome" | null;
@@ -48,6 +49,68 @@ const SAVINGS_FORMATTER = new Intl.NumberFormat("it-IT", {
   maximumFractionDigits: 1,
 });
 
+/** Barra "scoreboard" della partita: club, piazzamento, stagione, OVR e comandi. */
+function PlayScoreboard({
+  player,
+  ovrDelta,
+  onMenu,
+  onRestart,
+}: {
+  player: Player;
+  ovrDelta: number;
+  onMenu: () => void;
+  onRestart: () => void;
+}) {
+  const lastStint = player.clubHistory.at(-1);
+  const finish =
+    lastStint?.leaguePosition !== undefined
+      ? `${lastStint.club.competitions.league} · ${lastStint.leaguePosition}°`
+      : player.club?.competitions.league;
+
+  return (
+    <header className="flex shrink-0 flex-wrap items-stretch gap-y-2 drop-shadow-lg">
+      <div className="md-slant flex min-w-0 items-center gap-2 bg-(--color-text) py-1.5 pr-7 pl-3 text-(--color-background)">
+        {player.club ? (
+          <ClubCrest crestUrl={player.club.crestUrl} clubName={player.club.name} size={26} />
+        ) : null}
+        <span className="md-heading truncate text-xl sm:text-2xl">
+          {player.club?.name ?? "Svincolato"}
+        </span>
+      </div>
+      {finish ? (
+        <div className="md-segment md-label -ml-3 hidden items-center bg-(--color-surface-raised) px-7 text-sm text-(--color-text) sm:flex">
+          {finish}
+        </div>
+      ) : null}
+      <div className="md-segment md-label -ml-3 hidden items-center bg-(--color-surface-raised) px-7 text-sm text-(--color-text-muted) md:flex">
+        Stagione {player.clubHistory.length + 1} · {player.age} anni
+      </div>
+      <div className="min-w-2 flex-1" />
+      <div
+        className="md-segment md-fill flex items-center gap-2 py-1 pr-5 pl-7"
+        aria-label={`OVR ${player.ovr}${ovrDelta !== 0 ? `, ${ovrDelta > 0 ? "+" : ""}${ovrDelta} nell'ultima stagione` : ""}`}
+      >
+        <span className="md-label text-xs" aria-hidden="true">OVR</span>
+        <span className="md-heading text-3xl leading-none" aria-hidden="true">{player.ovr}</span>
+        {ovrDelta !== 0 ? (
+          <span className="md-label text-xs" aria-hidden="true">
+            {ovrDelta > 0 ? "▲" : "▼"} {Math.abs(ovrDelta)}
+          </span>
+        ) : null}
+      </div>
+      <nav className="ml-2 flex items-center gap-1 sm:gap-2">
+        <Button variant="ghost" onClick={onMenu} className="md-label px-2 text-xs">
+          Menu
+        </Button>
+        <Button variant="ghost" onClick={onRestart} className="md-label px-2 text-xs">
+          Ricomincia
+        </Button>
+        <ThemeToggle />
+      </nav>
+    </header>
+  );
+}
+
 function SeasonBeat({
   playerAge,
   ageBefore,
@@ -62,8 +125,8 @@ function SeasonBeat({
   seasonTitle?: string | null;
 }) {
   return (
-    <Card className="animate-step-in flex flex-col items-center gap-3 border-(--color-accent)/30 p-6 text-center sm:p-8">
-      <p className="font-display text-sm tracking-[0.25em] gold-metal-text">Stagione in corso</p>
+    <div className="md-panel animate-step-in flex flex-col items-center gap-3 p-6 text-center sm:p-8">
+      <p className="md-slant md-fill md-label py-1 pr-6 pl-3 text-xs">Stagione in corso</p>
       <div className="flex items-center gap-2 text-(--color-text-muted)">
         {crestUrl && clubName ? (
           <ClubCrest crestUrl={crestUrl} clubName={clubName} size={22} />
@@ -72,18 +135,18 @@ function SeasonBeat({
           {clubName ?? "Svincolato"}
         </span>
       </div>
-      <p className="font-display text-3xl text-(--color-text)">
+      <p className="md-heading text-5xl text-(--color-text)">
         {ageBefore}
-        <span className="mx-2 text-(--color-accent)">→</span>
+        <span className="mx-3 text-(--color-accent)">→</span>
         {playerAge}
-        <span className="ml-2 text-lg tracking-wide text-(--color-text-muted)">anni</span>
+        <span className="ml-2 text-xl text-(--color-text-muted)">anni</span>
       </p>
       {seasonTitle ? (
-        <p className="font-display text-sm tracking-wide text-(--color-accent)">{seasonTitle}</p>
+        <p className="md-label text-sm text-(--color-accent)">{seasonTitle}</p>
       ) : (
         <p className="animate-pulse text-sm text-(--color-text-muted)">Stagione in corso…</p>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -124,18 +187,14 @@ function OutcomeBanner({
   const deltaNegative = delta < 0;
 
   return (
-    <Card className="animate-step-in flex flex-col gap-3 border-(--color-accent)/40 p-4 sm:p-5">
-      <div>
-        {outcome.seasonTitle ? (
-          <p className="font-display text-sm tracking-[0.2em] text-(--color-accent)">
-            {outcome.seasonTitle.label}
-          </p>
-        ) : (
-          <p className="font-display text-sm tracking-[0.2em] gold-metal-text">Esito</p>
-        )}
+    <div className="md-panel animate-step-in flex flex-col gap-3 p-4 sm:p-5">
+      <div className="flex flex-col items-start gap-2">
+        <p className="md-slant md-fill md-label py-1 pr-6 pl-3 text-xs">
+          {outcome.seasonTitle ? outcome.seasonTitle.label : "Esito"}
+        </p>
         <p
           className={cn(
-            "font-semibold text-(--color-text) transition-opacity duration-300",
+            "md-heading text-2xl text-(--color-text) transition-opacity duration-300 sm:text-3xl",
             stage >= 0 ? "opacity-100" : "opacity-0",
           )}
         >
@@ -294,7 +353,7 @@ function OutcomeBanner({
       >
         Continua
       </Button>
-    </Card>
+    </div>
   );
 }
 
@@ -551,8 +610,10 @@ export function CareerGame({ onCoachCareer, startAtMenu = false }: CareerGamePro
 
   return (
     <div
+      style={showPlaying ? clubStyle(state?.player.club?.id) : undefined}
       className={cn(
         "mx-auto flex w-full min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden px-4",
+        showPlaying && "matchday-shell",
         showPlayShell
           ? "max-w-[88rem] gap-2 overflow-y-auto py-2 sm:gap-3 sm:py-3 lg:overflow-hidden"
           : showSummary
@@ -564,19 +625,13 @@ export function CareerGame({ onCoachCareer, startAtMenu = false }: CareerGamePro
     >
       <audio ref={audioRef} src={withBasePath("/audio/passaggio-di-spogliatoio.mp3")} loop preload="auto" className="hidden" />
 
-      {showPlaying ? (
-        <header className="flex shrink-0 items-center justify-between gap-4">
-          <p className="font-display text-lg tracking-[0.2em] gold-metal-text">CARRIERA</p>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={handleGoMenuFromPlay} className="px-0 text-xs">
-              ← Menu
-            </Button>
-            <Button variant="ghost" onClick={handleRestart} className="px-0 text-xs">
-              Ricomincia
-            </Button>
-            <ThemeToggle />
-          </div>
-        </header>
+      {showPlaying && state ? (
+        <PlayScoreboard
+          player={state.player}
+          ovrDelta={state.lastOutcome?.ovrDelta ?? 0}
+          onMenu={handleGoMenuFromPlay}
+          onRestart={handleRestart}
+        />
       ) : (
         <header className="flex shrink-0 flex-col gap-2">
           <div className="flex items-center justify-between">
@@ -730,10 +785,10 @@ export function CareerGame({ onCoachCareer, startAtMenu = false }: CareerGamePro
                     ) : null}
 
                     {showDecision && state.currentDecision ? (
-                      <Card
+                      <div
                         key={`decision-${decisionKey}`}
                         className={cn(
-                          "p-4 shadow-lg shadow-black/5 sm:p-5",
+                          "md-panel p-4 sm:p-6",
                           decisionExiting ? "animate-step-out" : "animate-step-in",
                         )}
                       >
@@ -754,14 +809,14 @@ export function CareerGame({ onCoachCareer, startAtMenu = false }: CareerGamePro
                             onChoose={handleChoose}
                           />
                         )}
-                      </Card>
+                      </div>
                     ) : null}
                   </div>
                 </div>
 
                 <div className="flex min-w-0 flex-col gap-2 lg:min-h-0 lg:max-h-full">
-                  <p className="shrink-0 font-display text-sm tracking-[0.15em] text-(--color-text-muted) uppercase">
-                    Storico
+                  <p className="md-heading shrink-0 bg-(--color-text) px-3 py-1.5 text-lg text-(--color-background)">
+                    Storico carriera
                   </p>
                   <div className="min-w-0 flex-1 overflow-y-auto lg:min-h-0">
                     <CareerTable

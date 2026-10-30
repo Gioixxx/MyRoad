@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bebas_Neue, Geist, Geist_Mono } from "next/font/google";
+import { Barlow_Condensed, Bebas_Neue, Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { VersionBadge } from "@/components/VersionBadge";
 import "./globals.css";
@@ -20,6 +20,13 @@ const bebasNeue = Bebas_Neue({
   subsets: ["latin"],
 });
 
+const barlowCondensed = Barlow_Condensed({
+  variable: "--font-barlow-condensed",
+  weight: ["600", "700", "800"],
+  style: ["normal", "italic"],
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "My Road - L'Ascesa",
   description: "Simulatore testuale della carriera di un calciatore",
@@ -36,7 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="it"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} h-dvh overflow-x-hidden antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${bebasNeue.variable} ${barlowCondensed.variable} h-dvh overflow-x-hidden antialiased`}
     >
       <body className="field-atmosphere flex h-dvh min-h-0 flex-col overflow-x-hidden pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
