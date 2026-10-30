@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { countries } from "@/data/countries";
+import { countryLabel } from "@/data/country-labels";
 import { cn } from "@/lib/utils";
 import { CountryFlag } from "./CountryFlag";
 
@@ -21,14 +22,23 @@ export function NationalitySelect({ value, onChange, id }: NationalitySelectProp
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return countries;
-    return countries.filter((c) => c.name.toLowerCase().includes(q));
+    return countries.filter(
+      (c) => countryLabel(c.name).toLowerCase().includes(q) || c.name.toLowerCase().includes(q),
+    );
   }, [query]);
+
+  // Chiudere azzera anche la ricerca: altrimenti alla riapertura la lista resta filtrata.
+  function close() {
+    setOpen(false);
+    setQuery("");
+  }
 
   useEffect(() => {
     if (!open) return;
     function handleClickOutside(event: MouseEvent) {
       if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
         setOpen(false);
+        setQuery("");
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -40,8 +50,8 @@ export function NationalitySelect({ value, onChange, id }: NationalitySelectProp
       <button
         id={id}
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
+        onClick={() => (open ? close() : setOpen(true))}
+        onKeyDown={(e) => e.key === "Escape" && close()}
         aria-haspopup="listbox"
         aria-expanded={open}
         className={cn(
@@ -56,7 +66,7 @@ export function NationalitySelect({ value, onChange, id }: NationalitySelectProp
               fallbackEmoji={selected.flag}
               size={18}
             />
-            {selected.name}
+            {countryLabel(selected.name)}
           </span>
         ) : (
           <span className="text-(--color-text-muted)">Cerca un paese…</span>
@@ -72,7 +82,7 @@ export function NationalitySelect({ value, onChange, id }: NationalitySelectProp
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
+            onKeyDown={(e) => e.key === "Escape" && close()}
             placeholder="Cerca…"
             aria-label="Cerca nazionalità"
             className="input-recessed w-full rounded-none border-0 border-b border-(--color-border) px-3 py-2 text-sm outline-none"
@@ -89,8 +99,7 @@ export function NationalitySelect({ value, onChange, id }: NationalitySelectProp
                     aria-selected={c.name === value}
                     onClick={() => {
                       onChange(c.name);
-                      setOpen(false);
-                      setQuery("");
+                      close();
                     }}
                     className={cn(
                       "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-(--color-surface-raised)",
@@ -99,7 +108,7 @@ export function NationalitySelect({ value, onChange, id }: NationalitySelectProp
                     )}
                   >
                     <CountryFlag code={c.code} name={c.name} fallbackEmoji={c.flag} size={18} />
-                    {c.name}
+                    {countryLabel(c.name)}
                   </button>
                 </li>
               ))

@@ -6,6 +6,7 @@ import { checkNicknameAvailable, isLeaderboardConfigured } from "@/lib/leaderboa
 import { isValidNickname } from "@/lib/leaderboard/settings";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
+import { VersionBadge } from "@/components/VersionBadge";
 import { cn } from "@/lib/utils";
 
 interface SettingsPanelProps {
@@ -124,6 +125,8 @@ export function SettingsPanel({
       <Button variant="secondary" onClick={onBack} className="self-center">
         Torna al menu
       </Button>
+
+      <VersionBadge variant="inline" className="lg:hidden" />
     </div>
   );
 }

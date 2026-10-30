@@ -151,7 +151,7 @@ export function PlayerCard({
             ) : null}
             {player.playStyles.length > 0 ? (
               <span
-                className="rounded bg-(--color-ovr-gold)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide whitespace-nowrap text-(--color-ovr-gold) uppercase"
+                className="rounded bg-(--color-ovr-gold)/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide whitespace-nowrap text-(--color-accent) uppercase"
                 title={player.playStyles
                   .map((id) => PLAY_STYLE_LABELS[id])
                   .join(", ")}
@@ -307,7 +307,7 @@ export function PlayerCard({
                     ? recordsFlashKey.includes("clean sheet")
                     : recordsFlashKey.includes("gol")
                 )
-                  ? "text-(--color-ovr-gold)"
+                  ? "text-(--color-accent)"
                   : "text-(--color-text)"
               )}
             >
@@ -316,7 +316,7 @@ export function PlayerCard({
                 : player.records.bestSeasonGoals}
             </p>
             <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">
-              {isGoalkeeper ? "Best CS" : "Best gol"}
+              {isGoalkeeper ? "Rec. inviolate" : "Rec. gol"}
             </p>
           </div>
           <div className="rounded-lg bg-(--color-surface) py-2">
@@ -324,14 +324,14 @@ export function PlayerCard({
               className={cn(
                 "font-display text-lg",
                 recordsFlashKey.includes("assist")
-                  ? "text-(--color-ovr-gold)"
+                  ? "text-(--color-accent)"
                   : "text-(--color-text)"
               )}
             >
               {player.records.bestSeasonAssists}
             </p>
             <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">
-              Best ast
+              Rec. assist
             </p>
           </div>
           <div className="rounded-lg bg-(--color-surface) py-2">
@@ -339,14 +339,14 @@ export function PlayerCard({
               className={cn(
                 "font-display text-lg",
                 recordsFlashKey.includes("presenze")
-                  ? "text-(--color-ovr-gold)"
+                  ? "text-(--color-accent)"
                   : "text-(--color-text)"
               )}
             >
               {player.records.bestSeasonApps}
             </p>
             <p className="text-[11px] tracking-wide text-(--color-text-muted) uppercase">
-              Best pr
+              Rec. pres.
             </p>
           </div>
         </div>
@@ -400,7 +400,7 @@ export function PlayerCard({
               aria-hidden="true"
               className={
                 trophyCount > 0
-                  ? "text-(--color-ovr-gold)"
+                  ? "text-(--color-accent)"
                   : "text-(--color-text-muted)"
               }
             />
@@ -430,7 +430,7 @@ export function PlayerCard({
               aria-hidden="true"
               className={
                 awardCount > 0
-                  ? "text-(--color-ovr-gold)"
+                  ? "text-(--color-accent)"
                   : "text-(--color-text-muted)"
               }
             />

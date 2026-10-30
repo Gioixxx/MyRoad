@@ -155,7 +155,7 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5 pl-7 sm:pl-0">
                           <div className="flex flex-col items-end">
-                            <p className="font-display text-sm leading-none text-(--color-ovr-gold)">
+                            <p className="font-display text-sm leading-none text-(--color-accent)">
                               {entry.careerScore.toLocaleString("it-IT")}
                             </p>
                             <p className="text-[11px] text-(--color-text-muted)">

@@ -34,7 +34,7 @@ function TrophyChip({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
     <span
-      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-(--color-ovr-gold)/15 px-1.5 py-0.5 text-(--color-ovr-gold)"
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-(--color-ovr-gold)/15 px-1.5 py-0.5 text-(--color-accent)"
       title={`${count} ${count === 1 ? "trofeo vinto" : "trofei vinti"} in questa stagione`}
     >
       <Trophy size={13} aria-hidden="true" />
@@ -47,7 +47,7 @@ function AwardChip({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
     <span
-      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-(--color-ovr-gold)/15 px-1.5 py-0.5 text-(--color-ovr-gold)"
+      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-(--color-ovr-gold)/15 px-1.5 py-0.5 text-(--color-accent)"
       title={`${count} ${count === 1 ? "premio individuale" : "premi individuali"} in questa stagione`}
     >
       <AwardIcon size={13} aria-hidden="true" />

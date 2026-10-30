@@ -2,6 +2,7 @@
 
 import { Star } from "lucide-react";
 import type { Decision, DecisionOption, Player } from "@/types/career";
+import { countryLabel } from "@/data/country-labels";
 import { cn } from "@/lib/utils";
 import { favorableOutcomeWeight } from "@/lib/career/decisions";
 import { tacticalFit, TACTICAL_FIT_LABELS } from "@/lib/career/tactics";
@@ -95,7 +96,7 @@ export function OfferPanel({ decision, player, onChoose }: OfferPanelProps) {
               {option.club ? (
                 <>
                   <span className="text-xs text-(--color-text-muted)">
-                    {option.club.country} · {option.club.competitions.league}
+                    {countryLabel(option.club.country)} · {option.club.competitions.league}
                   </span>
                   <PrestigeStars prestige={option.club.prestige} />
                   <TacticalFitChip player={player} club={option.club} />

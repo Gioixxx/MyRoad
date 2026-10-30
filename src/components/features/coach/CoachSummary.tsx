@@ -162,7 +162,7 @@ export function CoachSummary({ coach, onRestart, onShowArchive, archive = [], pu
 
       {recentTitles.length > 0 ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <span className="font-display text-sm tracking-[0.15em] text-(--color-ovr-gold) uppercase">
+          <span className="font-display text-sm tracking-[0.15em] text-(--color-accent) uppercase">
             Titoli di stagione
           </span>
           {recentTitles.map((t, i) => (
@@ -179,7 +179,7 @@ export function CoachSummary({ coach, onRestart, onShowArchive, archive = [], pu
 
       {hasHighlights ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <span className="font-display text-sm tracking-[0.15em] text-(--color-ovr-gold) uppercase">Momenti</span>
+          <span className="font-display text-sm tracking-[0.15em] text-(--color-accent) uppercase">Momenti</span>
           {highlightTrophies.map((t, i) => (
             <span
               key={`hl-trophy-${i}`}
@@ -243,7 +243,7 @@ export function CoachSummary({ coach, onRestart, onShowArchive, archive = [], pu
               ))}
               {awards.map((a, i) => (
                 <li key={`award-${i}`} className="flex min-w-0 items-center gap-2">
-                  <AwardIcon size={16} aria-hidden="true" className="shrink-0 text-(--color-ovr-gold)" />
+                  <AwardIcon size={16} aria-hidden="true" className="shrink-0 text-(--color-accent)" />
                   <span className="min-w-0 text-(--color-text)">
                     {COACH_AWARD_LABELS[a.type]}
                     <span className="text-(--color-text-muted)">

@@ -200,7 +200,7 @@ export function MomentOverlay({ moment, onContinue }: MomentOverlayProps) {
     title = PLAY_STYLE_LABELS[moment.playStyleId];
     detail = "Hai sviluppato un tratto distintivo che ti rende unico in campo.";
     visual = (
-      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-(--color-ovr-gold)/20 text-(--color-ovr-gold)">
+      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-(--color-ovr-gold)/20 text-(--color-accent)">
         <Sparkles size={40} aria-hidden="true" />
       </span>
     );

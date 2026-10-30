@@ -12,7 +12,8 @@
   --color-text-muted: #4a564f;
   --color-primary: #a8842e;
   --color-primary-hover: #c9a24b;
-  --color-accent: #c9a24b;
+  /* Oro scuro: l'oro #c9a24b su salvia/pergamena scende sotto 2.5:1 come testo. */
+  --color-accent: #7a5c17;
   --color-pitch: #14352b;
   --color-success: #3f8f5f;
   --color-warning: #c9a24b;
@@ -24,6 +25,8 @@
   --color-on-gold: #1b2320;
   --gold-gradient: linear-gradient(145deg, #f0d78a 0%, #d4b268 42%, #a8842e 100%);
   --gold-gradient-hover: linear-gradient(145deg, #f5e0a0 0%, #d4b268 40%, #b8923a 100%);
+  /* Testo metallico: nel tema chiaro serve un oro bruno, il gradiente dei bottoni sparisce. */
+  --gold-text-gradient: linear-gradient(145deg, #8a6a1c 0%, #7a5c17 50%, #5e4510 100%);
 }
 
 .dark {
@@ -47,6 +50,7 @@
   --color-on-gold: #1b2320;
   --gold-gradient: linear-gradient(145deg, #f0d78a 0%, #d4b268 42%, #a8842e 100%);
   --gold-gradient-hover: linear-gradient(145deg, #f5e0a0 0%, #d4b268 40%, #b8923a 100%);
+  --gold-text-gradient: var(--gold-gradient);
 }
 
 @theme inline {
@@ -106,7 +110,7 @@ body {
 }
 
 .gold-metal-text {
-  background-image: var(--gold-gradient);
+  background-image: var(--gold-text-gradient);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

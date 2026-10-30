@@ -62,7 +62,7 @@ export function CareerTimeline({ player }: CareerTimelineProps) {
           <span
             key={`${m.kind}-${m.age}-${i}`}
             title={m.title}
-            className="absolute top-0 -translate-x-1/2 text-(--color-ovr-gold)"
+            className="absolute top-0 -translate-x-1/2 text-(--color-accent)"
             style={{ left: `${ageToPercent(m.age)}%` }}
           >
             {m.kind === "trophy" ? (

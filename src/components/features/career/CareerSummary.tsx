@@ -197,7 +197,7 @@ export function CareerSummary({
 
       {recentTitles.length > 0 ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <span className="font-display text-sm tracking-[0.15em] text-(--color-ovr-gold) uppercase">
+          <span className="font-display text-sm tracking-[0.15em] text-(--color-accent) uppercase">
             Titoli di stagione
           </span>
           {recentTitles.map((t, i) => (
@@ -214,7 +214,7 @@ export function CareerSummary({
 
       {player.playStyles.length > 0 ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <span className="font-display text-sm tracking-[0.15em] text-(--color-ovr-gold) uppercase">
+          <span className="font-display text-sm tracking-[0.15em] text-(--color-accent) uppercase">
             Stili di gioco
           </span>
           {player.playStyles.map((id) => (
@@ -230,7 +230,7 @@ export function CareerSummary({
 
       {hasHighlights ? (
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <span className="font-display text-sm tracking-[0.15em] text-(--color-ovr-gold) uppercase">
+          <span className="font-display text-sm tracking-[0.15em] text-(--color-accent) uppercase">
             Momenti
           </span>
           {highlightTrophies.map((t, i) => (

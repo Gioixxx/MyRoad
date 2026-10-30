@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { countryLabel } from "@/data/country-labels";
 import { cn } from "@/lib/utils";
 
 interface CountryFlagProps {
@@ -19,10 +20,11 @@ interface CountryFlagProps {
  */
 export function CountryFlag({ code, name, fallbackEmoji, size = 20, className }: CountryFlagProps) {
   const [failed, setFailed] = useState(false);
+  const title = countryLabel(name);
 
   if (failed) {
     return (
-      <span aria-hidden="true" className={cn("shrink-0", className)} title={name}>
+      <span aria-hidden="true" className={cn("shrink-0", className)} title={title}>
         {fallbackEmoji}
       </span>
     );
@@ -39,7 +41,7 @@ export function CountryFlag({ code, name, fallbackEmoji, size = 20, className }:
       loading="lazy"
       onError={() => setFailed(true)}
       className={cn("shrink-0 rounded-[2px] object-cover", className)}
-      title={name}
+      title={title}
     />
   );
 }

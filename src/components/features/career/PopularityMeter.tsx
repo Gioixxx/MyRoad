@@ -19,7 +19,7 @@ export function PopularityMeter({ value, className }: PopularityMeterProps) {
       <Star
         size={14}
         aria-hidden="true"
-        className={clamped >= 80 ? "text-(--color-ovr-gold)" : "text-(--color-text-muted)"}
+        className={clamped >= 80 ? "text-(--color-accent)" : "text-(--color-text-muted)"}
       />
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-(--color-surface)">
         <div

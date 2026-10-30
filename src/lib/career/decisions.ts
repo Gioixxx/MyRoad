@@ -12,6 +12,7 @@ import type {
 } from "@/types/career";
 import { clubs, clubsByCountry } from "@/data/clubs";
 import { countries } from "@/data/countries";
+import { countryLabel } from "@/data/country-labels";
 import { clamp, type Rng } from "./progression";
 import { isNationalTeamBanned, shadowMultiplier } from "./shadow";
 import { ATTRIBUTE_LABELS, attributeKeysForPosition, peaksFromAttributes } from "./attributes";
@@ -816,7 +817,7 @@ export function generateTaxTrouble(player: Player, rng: Rng = Math.random): Deci
   return {
     id: `tax-trouble-${player.age}`,
     category: "narrative",
-    title: `Grane fiscali in ${player.club.country}`,
+    title: `Grane fiscali (${countryLabel(player.club.country)})`,
     description: "Un'indagine fiscale mette in dubbio il tuo futuro nel paese.",
     options: [
       {
@@ -961,11 +962,12 @@ export function isNationalitySwitchEligible(player: Player): boolean {
 export function generateNationalitySwitch(player: Player, rng: Rng = Math.random): Decision {
   const alternatives = countries.filter((c) => c.name !== player.nationality);
   const newCountryName = shuffle(alternatives, rng)[0]?.name ?? player.nationality;
+  const newCountryLabel = countryLabel(newCountryName);
   return {
     id: `nationality-switch-${player.age}`,
     category: "narrative",
     title: "Un nonno di un altro paese",
-    description: `Scopri di avere un nonno ${newCountryName}: potresti essere eleggibile per giocare con quella nazionale invece che con la tua.`,
+    description: `Scopri di avere un nonno con origini straniere (${newCountryLabel}): potresti essere eleggibile per giocare con quella nazionale invece che con la tua.`,
     options: [
       {
         id: "stay",
@@ -974,9 +976,9 @@ export function generateNationalitySwitch(player: Player, rng: Rng = Math.random
       },
       {
         id: "switch",
-        label: `Scegli la nazionalità ${newCountryName}`,
+        label: `Scegli la nazionale: ${newCountryLabel}`,
         newNationality: newCountryName,
-        outcomes: [outcome(100, `Cambi nazionalità sportiva: da oggi rappresenti ${newCountryName}.`)],
+        outcomes: [outcome(100, `Cambi nazionalità sportiva: da oggi giochi per la nazionale (${newCountryLabel}).`)],
       },
     ],
   };

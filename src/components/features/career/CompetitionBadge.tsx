@@ -25,7 +25,7 @@ export function CompetitionBadge({ competition, size = 20, className }: Competit
       <Trophy
         size={size * 0.7}
         aria-hidden="true"
-        className={cn("shrink-0 text-(--color-ovr-gold)", className)}
+        className={cn("shrink-0 text-(--color-accent)", className)}
       />
     );
   }

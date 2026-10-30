@@ -175,7 +175,7 @@ export function CoachMomentOverlay({ moment, onContinue }: CoachMomentOverlayPro
     title = COACH_AWARD_LABELS[moment.award.type];
     detail = moment.award.club ? `${moment.award.club.name} · ${moment.award.age} anni` : `${moment.award.age} anni`;
     visual = (
-      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-(--color-ovr-gold)/20 text-(--color-ovr-gold)">
+      <span className="flex h-20 w-20 items-center justify-center rounded-full bg-(--color-ovr-gold)/20 text-(--color-accent)">
         <AwardIcon size={40} aria-hidden="true" />
       </span>
     );

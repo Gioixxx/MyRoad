@@ -79,7 +79,7 @@ function SeasonBeat({
         <span className="ml-2 text-lg tracking-wide text-(--color-text-muted)">anni</span>
       </p>
       {seasonTitle ? (
-        <p className="font-display text-sm tracking-wide text-(--color-ovr-gold)">{seasonTitle}</p>
+        <p className="font-display text-sm tracking-wide text-(--color-accent)">{seasonTitle}</p>
       ) : (
         <p className="animate-pulse text-sm text-(--color-text-muted)">Stagione in corso…</p>
       )}
@@ -127,7 +127,7 @@ function OutcomeBanner({
     <Card className="animate-step-in flex flex-col gap-3 border-(--color-accent)/40 p-4 sm:p-5">
       <div>
         {outcome.seasonTitle ? (
-          <p className="font-display text-sm tracking-[0.2em] text-(--color-ovr-gold)">
+          <p className="font-display text-sm tracking-[0.2em] text-(--color-accent)">
             {outcome.seasonTitle.label}
           </p>
         ) : (
@@ -207,8 +207,8 @@ function OutcomeBanner({
         {outcome.brokenRecords.length > 0 ? (
           <ul className="flex flex-col gap-0.5">
             {outcome.brokenRecords.map((label) => (
-              <li key={label} className="text-xs text-(--color-ovr-gold)">
-                Record: {label}
+              <li key={label} className="text-xs text-(--color-accent)">
+                {label}
               </li>
             ))}
           </ul>
@@ -223,7 +223,7 @@ function OutcomeBanner({
             {outcome.newTrophies.map((trophy, i) => (
               <li
                 key={i}
-                className="flex items-center gap-2 text-sm font-medium text-(--color-ovr-gold)"
+                className="flex items-center gap-2 text-sm font-medium text-(--color-accent)"
               >
                 <CompetitionBadge competition={trophy.competition} size={18} />
                 <span>Vinci: {trophy.competition}</span>
@@ -233,7 +233,7 @@ function OutcomeBanner({
         ) : null}
 
         {outcome.newAward ? (
-          <p className="flex items-center gap-2 text-sm font-medium text-(--color-ovr-gold)">
+          <p className="flex items-center gap-2 text-sm font-medium text-(--color-accent)">
             <AwardBadge type={outcome.newAward.type} size={18} />
             {AWARD_LABELS[outcome.newAward.type]}
           </p>

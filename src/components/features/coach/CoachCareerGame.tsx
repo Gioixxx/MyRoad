@@ -223,7 +223,7 @@ function CoachOutcomeBanner({ outcome, onContinue }: { outcome: CoachCycleOutcom
     <Card className="animate-step-in flex flex-col gap-3 border-(--color-accent)/40 p-4 sm:p-5">
       <div>
         {outcome.seasonTitle ? (
-          <p className="font-display text-sm tracking-[0.2em] text-(--color-ovr-gold)">{outcome.seasonTitle.label}</p>
+          <p className="font-display text-sm tracking-[0.2em] text-(--color-accent)">{outcome.seasonTitle.label}</p>
         ) : (
           <p className="font-display text-sm tracking-[0.2em] gold-metal-text">Esito</p>
         )}

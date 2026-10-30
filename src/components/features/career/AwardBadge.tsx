@@ -26,7 +26,7 @@ export function AwardBadge({ type, size = 20, className }: AwardBadgeProps) {
       <Award
         size={size * 0.7}
         aria-hidden="true"
-        className={cn("shrink-0 text-(--color-ovr-gold)", className)}
+        className={cn("shrink-0 text-(--color-accent)", className)}
       />
     );
   }
