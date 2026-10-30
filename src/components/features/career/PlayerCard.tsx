@@ -19,10 +19,11 @@ import { POSITION_LABELS } from "@/lib/career/position-labels";
 import { tacticalFit, TACTICAL_FIT_LABELS } from "@/lib/career/tactics";
 import { prospectStatusLine } from "@/lib/career/decisions";
 import { RELATION_LABELS, formatAffinity } from "@/lib/career/relations";
+import { clubKit } from "@/lib/career/kits";
 import { cn } from "@/lib/utils";
 import { AttributesPanel } from "./AttributesPanel";
 import { ClubCrest } from "./ClubCrest";
-import { JerseyBadge } from "./JerseyBadge";
+import { Jersey } from "./Jersey";
 import { OvrBadge } from "./OvrBadge";
 import { PopularityMeter } from "./PopularityMeter";
 
@@ -112,7 +113,8 @@ export function PlayerCard({
         {player.number}
       </span>
       <div className="flex items-center gap-3 sm:gap-4">
-        <JerseyBadge
+        <Jersey
+          kit={clubKit(player.club?.id)}
           number={player.number}
           lastName={player.lastName}
           country={country}

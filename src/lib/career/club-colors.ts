@@ -87,6 +87,21 @@ export function readableOn(background: string): string {
   return contrastRatio(lum, darkLum) >= contrastRatio(lum, 1) ? DARK_ON_COLOR : LIGHT_ON_COLOR;
 }
 
+/** Rapporto di contrasto WCAG tra due colori esadecimali (1 se uno dei due non è valido). */
+export function contrastBetween(a: string, b: string): number {
+  const ra = parseHex(a);
+  const rb = parseHex(b);
+  if (!ra || !rb) return 1;
+  return contrastRatio(relativeLuminance(ra), relativeLuminance(rb));
+}
+
+/** Distanza RGB tra due colori esadecimali (0 se uno dei due non è valido). */
+export function hexDistance(a: string, b: string): number {
+  const ra = parseHex(a);
+  const rb = parseHex(b);
+  return ra && rb ? distance(ra, rb) : 0;
+}
+
 /**
  * Sceglie primario e secondario dai colori sociali (in ordine di importanza, come li dà
  * TheSportsDB): il primario è il primo colore "vivo", così un club bianco-rosso usa il rosso

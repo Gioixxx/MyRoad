@@ -1,6 +1,7 @@
 import type { Country } from "@/data/countries";
 import { cn } from "@/lib/utils";
-import { JerseyBadge } from "./JerseyBadge";
+import { nationalKit } from "@/lib/career/kits";
+import { Jersey } from "./Jersey";
 
 interface JerseyCardProps {
   lastName: string;
@@ -20,6 +21,7 @@ export function JerseyCard({
 }: JerseyCardProps) {
   const displayName = lastName.trim() ? lastName.trim().toUpperCase() : "COGNOME";
   const displayNumber = number && number > 0 ? number : "—";
+  const kit = nationalKit(country?.code);
   const serial = String(number && number > 0 ? number : 0).padStart(6, "0");
 
   return (
@@ -42,7 +44,8 @@ export function JerseyCard({
       </span>
 
       {compact ? (
-        <JerseyBadge
+        <Jersey
+          kit={kit}
           number={displayNumber}
           lastName={lastName}
           country={country}
@@ -50,14 +53,16 @@ export function JerseyCard({
         />
       ) : (
         <>
-          <JerseyBadge
+          <Jersey
+            kit={kit}
             number={displayNumber}
             lastName={lastName}
             country={country}
             size="md"
             className="lg:hidden"
           />
-          <JerseyBadge
+          <Jersey
+            kit={kit}
             number={displayNumber}
             lastName={lastName}
             country={country}
