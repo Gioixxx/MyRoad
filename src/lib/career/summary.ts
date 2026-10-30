@@ -1,4 +1,4 @@
-import type { Club, ClubStint, Player, StatLine } from "@/types/career";
+import type { Club, ClubStint, Player, StatLine, Trophy } from "@/types/career";
 import { cyclesAtClub } from "@/lib/shared/club-tenure";
 
 export interface ClubSummary {
@@ -62,4 +62,57 @@ export function summarizeClubHistory(clubHistory: ClubStint[]): ClubSummary[] {
 /** OVR più alto raggiunto in carriera (storico dei cicli + valore attuale). */
 export function peakOvr(player: Pick<Player, "ovr" | "clubHistory">): number {
   return Math.max(player.ovr, ...player.clubHistory.map((s) => s.ovr));
+}
+
+/** Una casella del nastro "anno per anno": la stagione iniziata a `age`. */
+export interface RibbonSeason {
+  age: number;
+  club: Club;
+  trophies: number;
+}
+
+/** Stagioni consecutive nello stesso club, per l'etichetta sotto il nastro. */
+export interface RibbonSegment {
+  club: Club;
+  seasons: number;
+}
+
+export interface CareerRibbon {
+  seasons: RibbonSeason[];
+  segments: RibbonSegment[];
+}
+
+/**
+ * Nastro della carriera, una casella per stagione nel club in cui è stata giocata. Una stint
+ * copre le stagioni da `ageFrom` a `ageTo - 1` (una sola dal piano "Due classifiche", fino a tre
+ * nei salvataggi precedenti); i trofei sono registrati all'età di fine stagione, quindi una
+ * stagione iniziata a `age` conta quelli con `age + 1`.
+ */
+export function buildCareerRibbon(
+  clubHistory: ClubStint[],
+  trophies: Pick<Trophy, "age">[],
+): CareerRibbon {
+  const seasons: RibbonSeason[] = [];
+  for (const stint of clubHistory) {
+    const lastAge = Math.max(stint.ageFrom, stint.ageTo - 1);
+    for (let age = stint.ageFrom; age <= lastAge; age++) {
+      seasons.push({
+        age,
+        club: stint.club,
+        trophies: trophies.filter((t) => t.age === age + 1).length,
+      });
+    }
+  }
+
+  const segments: RibbonSegment[] = [];
+  for (const season of seasons) {
+    const last = segments.at(-1);
+    if (last && last.club.id === season.club.id) {
+      last.seasons += 1;
+    } else {
+      segments.push({ club: season.club, seasons: 1 });
+    }
+  }
+
+  return { seasons, segments };
 }

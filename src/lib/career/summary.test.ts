@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ClubStint, Player } from "@/types/career";
 import { getClub } from "@/data/clubs";
-import { peakOvr, summarizeClubHistory } from "./summary";
+import { buildCareerRibbon, peakOvr, summarizeClubHistory } from "./summary";
 
 const JUVENTUS = getClub("juventus")!;
 const SEVILLA = getClub("sevilla")!;
@@ -77,5 +77,33 @@ describe("peakOvr", () => {
       clubHistory: [stint({ ovr: 82 }), stint({ ovr: 75 })],
     } satisfies Pick<Player, "ovr" | "clubHistory">;
     expect(peakOvr(player)).toBe(82);
+  });
+});
+
+describe("buildCareerRibbon", () => {
+  it("dovrebbe creare una casella per ogni stagione di una stint su più anni", () => {
+    const { seasons } = buildCareerRibbon([stint({ ageFrom: 16, ageTo: 19 })], []);
+    expect(seasons.map((s) => s.age)).toEqual([16, 17, 18]);
+  });
+
+  it("dovrebbe contare i trofei vinti a fine di quella stagione", () => {
+    const history = [stint({ ageFrom: 16, ageTo: 17 }), stint({ ageFrom: 17, ageTo: 18 })];
+    const { seasons } = buildCareerRibbon(history, [{ age: 18 }, { age: 18 }]);
+    expect(seasons.map((s) => s.trophies)).toEqual([0, 2]);
+  });
+
+  it("dovrebbe unire in un segmento le stagioni consecutive nello stesso club", () => {
+    const history = [
+      stint({ ageFrom: 16, ageTo: 17 }),
+      stint({ ageFrom: 17, ageTo: 18 }),
+      stint({ club: SEVILLA, ageFrom: 18, ageTo: 19 }),
+      stint({ ageFrom: 19, ageTo: 20 }),
+    ];
+    const { segments } = buildCareerRibbon(history, []);
+    expect(segments.map((s) => [s.club.id, s.seasons])).toEqual([
+      ["juventus", 2],
+      ["sevilla", 1],
+      ["juventus", 1],
+    ]);
   });
 });
