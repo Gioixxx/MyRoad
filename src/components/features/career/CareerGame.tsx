@@ -390,6 +390,8 @@ export function CareerGame({ onCoachCareer, startAtMenu = false }: CareerGamePro
   const [menuOverride, setMenuOverride] = useState(startAtMenu);
   const [speed, setSpeed] = useState<GameSpeed | null>(null);
   const [archiveEntries, setArchiveEntries] = useState<ArchivedCareer[]>([]);
+  // Archivio e classifica si aprono sia dal menu sia dalla scelta del ritmo: "indietro" torna lì.
+  const [subpageReturn, setSubpageReturn] = useState<Step>("speed");
   const { state, startCareer, chooseOption, setTrainingFocus, restart, isResuming } = useCareerGame();
   const prefersReducedMotion = usePrefersReducedMotion();
   const { audioRef, volume, muted, setVolume, setMuted } = useBackgroundMusic();
@@ -519,24 +521,28 @@ export function CareerGame({ onCoachCareer, startAtMenu = false }: CareerGamePro
 
   const handleShowArchive = useCallback(() => {
     setArchiveEntries(loadArchive());
+    setSubpageReturn(step);
     setStep("archive");
-  }, []);
+  }, [step]);
 
   const handleBackFromArchive = useCallback(() => {
-    setStep("speed");
-  }, []);
+    setStep(subpageReturn);
+  }, [subpageReturn]);
 
   const handleShowLeaderboard = useCallback(() => {
+    setSubpageReturn(step);
     setStep("leaderboard");
-  }, []);
+  }, [step]);
 
   const handleGoMenu = useCallback(() => {
+    setArchiveEntries(loadArchive());
     setStep("menu");
   }, []);
 
   // Non distruttivo (a differenza di "Ricomincia"): torna al menu senza toccare la carriera in
   // corso, che resta ripresa in background finché non si sceglie "Giocatore singolo" per rientrarci.
   const handleGoMenuFromPlay = useCallback(() => {
+    setArchiveEntries(loadArchive());
     setStep("menu");
     setMenuOverride(true);
   }, []);
@@ -613,14 +619,16 @@ export function CareerGame({ onCoachCareer, startAtMenu = false }: CareerGamePro
       style={showPlaying ? clubStyle(state?.player.club?.id) : undefined}
       className={cn(
         "mx-auto flex w-full min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden px-4",
-        showPlaying && "matchday-shell",
+        (showPlaying || isMenu) && "matchday-shell",
         showPlayShell
           ? "max-w-[88rem] gap-2 overflow-y-auto py-2 sm:gap-3 sm:py-3 lg:overflow-hidden"
           : showSummary
             ? "max-w-[88rem] gap-2 overflow-y-auto py-2 sm:gap-3 sm:py-3 lg:overflow-hidden"
             : isIdentity
               ? "max-w-6xl gap-2 overflow-hidden py-2 sm:py-3"
-              : "max-w-4xl gap-3 overflow-y-auto py-4 sm:py-6",
+              : isMenu
+                ? "max-w-6xl gap-3 overflow-y-auto py-4 sm:py-6"
+                : "max-w-4xl gap-3 overflow-y-auto py-4 sm:py-6",
       )}
     >
       <audio ref={audioRef} src={withBasePath("/audio/passaggio-di-spogliatoio.mp3")} loop preload="auto" className="hidden" />
@@ -644,31 +652,29 @@ export function CareerGame({ onCoachCareer, startAtMenu = false }: CareerGamePro
             )}
             <ThemeToggle />
           </div>
-          <div className="text-center">
-            <p className="font-display text-xs tracking-[0.25em] gold-metal-text">
-              My Road - L&apos;Ascesa
-            </p>
-            <h1 className="font-display text-2xl text-(--color-text) sm:text-3xl">
-              {isIdentity
-                ? "Crea la tua identità"
-                : isArchive
-                  ? "Le mie carriere"
-                  : isLeaderboard
-                    ? "Classifica"
-                    : isSettings
-                      ? "Impostazioni"
-                      : "Costruisci la tua carriera da calciatore"}
-            </h1>
-            {isIdentity ? (
-              <p className="mt-0.5 font-display text-sm tracking-[0.2em] gold-metal-text">
-                Passo 2 di 2
+          {isMenu ? null : (
+            <div className="text-center">
+              <p className="font-display text-xs tracking-[0.25em] gold-metal-text">
+                My Road - L&apos;Ascesa
               </p>
-            ) : isMenu ? (
-              <p className="mt-0.5 text-sm text-(--color-text-muted)">
-                Scegli chi sei, affronta le decisioni che contano, scrivi la tua leggenda.
-              </p>
-            ) : null}
-          </div>
+              <h1 className="font-display text-2xl text-(--color-text) sm:text-3xl">
+                {isIdentity
+                  ? "Crea la tua identità"
+                  : isArchive
+                    ? "Le mie carriere"
+                    : isLeaderboard
+                      ? "Classifica"
+                      : isSettings
+                        ? "Impostazioni"
+                        : "Costruisci la tua carriera da calciatore"}
+              </h1>
+              {isIdentity ? (
+                <p className="mt-0.5 font-display text-sm tracking-[0.2em] gold-metal-text">
+                  Passo 2 di 2
+                </p>
+              ) : null}
+            </div>
+          )}
           {step === "speed" || step === "identity" ? <SetupStepDots current={step} /> : null}
         </header>
       )}
@@ -678,14 +684,18 @@ export function CareerGame({ onCoachCareer, startAtMenu = false }: CareerGamePro
       ) : (
         <>
           {!showPlaying && step === "menu" ? (
-            <Card key="step-menu" className="animate-step-in flex flex-col gap-4 p-5 sm:p-7">
+            <div key="step-menu" className="animate-step-in flex flex-1 items-center">
               <MainMenu
                 onSinglePlayer={() => (state ? setMenuOverride(false) : setStep("speed"))}
                 onCoach={() => onCoachCareer()}
                 onSettings={handleShowSettings}
                 onQuit={handleQuit}
+                onLeaderboard={handleShowLeaderboard}
+                onArchive={archiveEntries.length > 0 ? handleShowArchive : undefined}
+                currentPlayer={state && !state.retired ? state.player : null}
+                onResume={() => setMenuOverride(false)}
               />
-            </Card>
+            </div>
           ) : null}
 
           {!showPlaying && step === "settings" ? (
